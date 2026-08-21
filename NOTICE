@@ -1,0 +1,17 @@
+Ludus Engine
+Copyright (c) 2026 Milad Nalbandi
+
+This product is licensed under the GNU Affero General Public License v3.0 or later.
+See LICENSE for the full text.
+
+Portions of this repository are licensed separately:
+
+  contracts/   Apache License 2.0 (see contracts/LICENSE)
+               The wire schemas. Speaking a protocol should not require a licence.
+
+  sdk/unity/   Apache License 2.0 (see sdk/unity/LICENSE)
+               Client SDKs are permissively licensed so that linking one into a game
+               places no obligation on that game.
+
+  samples/     CC0 1.0 Universal (public domain dedication)
+               Demo content, written for this repository. Copy it freely.

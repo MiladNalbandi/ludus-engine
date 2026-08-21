@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # A tag never becomes a release without a green build. Publishing something that was
+      # not tested is how a broken version ends up permanently in a registry.
+      - name: Verify
+        run: ./mvnw -B verify
+
+      - name: Set the release version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          ./mvnw -B versions:set -DnewVersion="$VERSION" -DgenerateBackupPoms=false
+
+      - name: Package
+        run: ./mvnw -B -DskipTests package
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push the image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.engine
+          # arm64 as well as amd64: plenty of contributors and small deployments are arm.
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ env.VERSION }}
+            ghcr.io/${{ github.repository }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Publish the release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: engine/engine-bootstrap/target/ludus-engine.jar

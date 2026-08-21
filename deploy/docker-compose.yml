@@ -1,0 +1,42 @@
+name: ludus
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${LUDUS_DB_NAME:-ludus}
+      POSTGRES_USER: ${LUDUS_DB_USER:-ludus}
+      POSTGRES_PASSWORD: ${LUDUS_DB_PASSWORD:?set LUDUS_DB_PASSWORD in deploy/.env}
+    volumes:
+      - ludus-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${LUDUS_DB_USER:-ludus} -d ${LUDUS_DB_NAME:-ludus}"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    restart: unless-stopped
+    # Not published to the host. Nothing outside this stack needs to reach the database.
+
+  engine:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.engine
+    image: ghcr.io/miladnalbandi/ludus-engine:${LUDUS_VERSION:-latest}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      LUDUS_DB_HOST: postgres
+      LUDUS_DB_PORT: 5432
+      LUDUS_DB_NAME: ${LUDUS_DB_NAME:-ludus}
+      LUDUS_DB_USER: ${LUDUS_DB_USER:-ludus}
+      LUDUS_DB_PASSWORD: ${LUDUS_DB_PASSWORD}
+      LUDUS_LOG_LEVEL: ${LUDUS_LOG_LEVEL:-INFO}
+    ports:
+      # Bound to loopback by default. Put a reverse proxy in front before exposing this;
+      # /actuator/prometheus is reachable by anything that can reach the port.
+      - "127.0.0.1:${LUDUS_PORT:-8080}:8080"
+    restart: unless-stopped
+
+volumes:
+  ludus-db:

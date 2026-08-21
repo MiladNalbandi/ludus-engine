@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.ludus</groupId>
+    <artifactId>ludus-engine-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+  <artifactId>engine-domain</artifactId>
+  <name>Ludus Engine :: Domain</name>
+  <description>Pure Java domain model. No framework dependencies, enforced by the build.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <!-- The domain must stay framework-free. This is the structural half of that rule:
+               a Spring or Jakarta import here is a build failure, not a review comment.
+               ArchUnit in engine-bootstrap covers the rules Maven cannot express. -->
+          <execution>
+            <id>domain-stays-framework-free</id>
+            <goals><goal>enforce</goal></goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <message>engine-domain must not depend on any framework. See docs/architecture/hexagonal.md</message>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>org.springframework*:*</exclude>
+                    <exclude>jakarta.*:*</exclude>
+                    <exclude>com.fasterxml.jackson*:*</exclude>
+                    <exclude>org.hibernate*:*</exclude>
+                    <exclude>com.networknt:*</exclude>
+                    <exclude>io.jsonwebtoken:*</exclude>
+                  </excludes>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,70 @@
+spring:
+  application:
+    name: ludus-engine
+  autoconfigure:
+    exclude:
+      # Boot would otherwise create an in-memory user and log a generated password on every
+      # start. Nothing authenticates against it — the baseline chain has no basic or form login
+      # — so all it does is imply the engine has a login it does not yet have. Drops out on its
+      # own once a real UserDetailsService is registered.
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://${LUDUS_DB_HOST:localhost}:${LUDUS_DB_PORT:5432}/${LUDUS_DB_NAME:ludus}
+    username: ${LUDUS_DB_USER:ludus}
+    password: ${LUDUS_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      # Never 'update'. The schema is owned by Flyway; 'validate' turns a drift between an
+      # entity and a migration into a failed boot instead of a silent divergence.
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: false
+    fail-on-missing-locations: false
+
+server:
+  port: ${LUDUS_PORT:8080}
+  shutdown: graceful
+  error:
+    include-message: never
+    include-stacktrace: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+  prometheus:
+    metrics:
+      export:
+        # Metrics export is opt-in from Spring Boot 3.5 onwards; without this the scrape
+        # endpoint is never registered and /actuator/prometheus quietly 404s.
+        enabled: true
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /docs
+
+ludus:
+  version: ${LUDUS_VERSION:0.0.1-SNAPSHOT}
+  tenancy:
+    # 'single' resolves every request to the seeded default project and is what a self-hosted
+    # install wants. 'multi' arrives in the SaaS phase; the project boundary exists in the
+    # schema from the first migration so that switch is configuration, not a rewrite.
+    mode: ${LUDUS_TENANCY_MODE:single}
+
+logging:
+  level:
+    root: INFO
+    io.ludus: ${LUDUS_LOG_LEVEL:INFO}

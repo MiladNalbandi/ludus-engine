@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.ludus</groupId>
+    <artifactId>ludus-engine-parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+  <artifactId>engine-application</artifactId>
+  <name>Ludus Engine :: Application</name>
+  <description>Use cases and ports. Depends on the domain only.</description>
+
+  <dependencies>
+    <dependency>
+      <groupId>io.ludus</groupId>
+      <artifactId>engine-domain</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <executions>
+          <!-- Use cases are plain objects wired in engine-bootstrap. Keeping the framework out
+               is what lets every service test run as a plain JUnit test with hand-written fakes
+               and no Spring context. -->
+          <execution>
+            <id>application-stays-framework-free</id>
+            <goals><goal>enforce</goal></goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <message>engine-application must not depend on a framework or on any adapter. See docs/architecture/hexagonal.md</message>
+                  <searchTransitive>true</searchTransitive>
+                  <excludes>
+                    <exclude>org.springframework*:*</exclude>
+                    <exclude>jakarta.persistence:*</exclude>
+                    <exclude>org.hibernate*:*</exclude>
+                    <exclude>io.ludus:engine-adapter-persistence</exclude>
+                    <exclude>io.ludus:engine-adapter-web</exclude>
+                    <exclude>io.ludus:engine-adapter-security</exclude>
+                  </excludes>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

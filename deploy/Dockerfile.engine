@@ -1,0 +1,53 @@
+# syntax=docker/dockerfile:1
+
+# Build in the image so that a clone plus Docker is the only prerequisite. The dependency
+# layer is cached separately from the source, so an ordinary code change does not re-resolve
+# the world.
+FROM eclipse-temurin:21-jdk AS build
+WORKDIR /src
+
+COPY mvnw ./
+COPY .mvn .mvn
+COPY pom.xml ./
+COPY engine/engine-contracts/pom.xml            engine/engine-contracts/
+COPY engine/engine-domain/pom.xml               engine/engine-domain/
+COPY engine/engine-application/pom.xml          engine/engine-application/
+COPY engine/engine-adapter-persistence/pom.xml  engine/engine-adapter-persistence/
+COPY engine/engine-adapter-web/pom.xml          engine/engine-adapter-web/
+COPY engine/engine-adapter-security/pom.xml     engine/engine-adapter-security/
+COPY engine/engine-bootstrap/pom.xml            engine/engine-bootstrap/
+# Warm the dependency cache from the poms alone. This is best-effort: go-offline cannot
+# resolve the sibling modules that do not exist yet, so a non-zero exit here is expected and
+# means only that the next step downloads a little more.
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q dependency:go-offline || true
+
+COPY contracts contracts
+COPY engine engine
+RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q -DskipTests package
+
+FROM eclipse-temurin:21-jre AS runtime
+
+# A non-root user, because a container that does not need root should not have it.
+# curl is here for the healthcheck. A healthcheck that does not actually call the application
+# reports healthy while it is down, which is worse than having none.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/* \
+ && groupadd --system --gid 1001 ludus \
+ && useradd --system --uid 1001 --gid ludus --home /app ludus
+WORKDIR /app
+
+COPY --from=build /src/engine/engine-bootstrap/target/ludus-engine.jar app.jar
+RUN chown -R ludus:ludus /app
+USER ludus
+
+EXPOSE 8080
+
+# MaxRAMPercentage rather than a fixed heap, so the container honours whatever memory limit it
+# is actually given instead of a number guessed at build time.
+ENV JAVA_OPTS="-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+
+HEALTHCHECK --interval=15s --timeout=3s --start-period=45s --retries=5 \
+  CMD curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"' || exit 1
+
+ENTRYPOINT ["sh", "-c", "exec java $JAVA_OPTS -jar app.jar"]

@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: "/"
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    groups:
+      # One pull request for routine bumps; majors stay separate so they get read properly.
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule: { interval: weekly, day: monday }
+    groups:
+      actions:
+        patterns: ["*"]
+
+  - package-ecosystem: docker
+    directory: "/deploy"
+    schedule: { interval: weekly, day: monday }

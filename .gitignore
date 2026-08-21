@@ -1,0 +1,17 @@
+target/
+node_modules/
+.next/
+out/
+dist/
+*.log
+*.class
+*.jar
+*.war
+.env
+.env.local
+*.tsbuildinfo
+.DS_Store
+.idea/
+*.iml
+.vscode/
+data/
