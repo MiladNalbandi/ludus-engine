@@ -42,6 +42,7 @@ engine does that — Ludus tells it what to build.
 |---|---|
 | [Roadmap](roadmap.md) | Where this is going and in what order |
 | [Contributing](../CONTRIBUTING.md) | Build, test, and the rules a change has to respect |
+| [Brand assets](../assets/brand/README.md) | The mark, the palette, and which variant to use at which size |
 | [Security policy](../SECURITY.md) | Reporting a vulnerability |
 
 ## A note on these docs

@@ -1,11 +1,21 @@
-# Ludus
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/logo-horizontal-dark.png">
+    <img src="assets/brand/logo-horizontal.png" alt="Ludus" width="380">
+  </picture>
+</p>
 
-**An open-source backend engine for 2D games.** Author your maps, entities and behaviours as
-data in a web editor; your game fetches them at runtime and builds the level from them. Ship a
-balance change without shipping a build.
+<p align="center">
+  <strong>An open-source backend engine for 2D games.</strong><br>
+  Author your maps, entities and behaviours as data in a web editor; your game fetches them at
+  runtime and builds the level from them. Ship a balance change without shipping a build.
+</p>
 
-[![CI](https://github.com/miladnalbandi/ludus-engine/actions/workflows/ci.yml/badge.svg)](https://github.com/miladnalbandi/ludus-engine/actions/workflows/ci.yml)
-[![Licence: AGPL v3](https://img.shields.io/badge/licence-AGPL--3.0-blue.svg)](LICENSE)
+<p align="center">
+  <a href="https://github.com/miladnalbandi/ludus-engine/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/miladnalbandi/ludus-engine/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="Licence: AGPL v3" src="https://img.shields.io/badge/licence-AGPL--3.0-blue.svg"></a>
+  <a href="https://github.com/miladnalbandi/ludus-engine/issues/18"><img alt="Roadmap" src="https://img.shields.io/badge/roadmap-%2318-5B4FE9"></a>
+</p>
 
 > **Status: early.** `v0.0.1` is the foundation — the build, the architecture guardrails, the
 > content contract and a running (empty) service. The content API arrives in `v0.2.0`. The

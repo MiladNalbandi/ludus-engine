@@ -11,6 +11,14 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- Brand assets under `assets/brand/`: the mark in light, dark, simplified and monochrome
+  variants, horizontal lockups, favicons and an avatar, with usage notes. Two marks ship on
+  purpose — the detailed one has half-pixel gaps at favicon size, so a simplified solid form
+  covers anything below 48 px, and `contact-sheet.png` shows both rasterised at real pixel
+  sizes so the cutoff is visible rather than asserted.
+- The README header now shows the lockup, switching between the light and dark variants with
+  the reader's colour scheme.
+
 - Documentation set under `docs/`: an index, a getting-started guide, a deployment guide, and
   concept pages for the content model and for the caching / change-detection protocol. Pages
   mark planned behaviour explicitly and link to the issue tracking it, so nothing documented
