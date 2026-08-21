@@ -81,6 +81,8 @@ every build. If a sample and the contract disagree, CI fails.
 
 ## Roadmap
 
+Tracked in [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18), with one issue per phase and the reasoning behind the ordering.
+
 | | Release | |
 |---|---|---|
 | ✅ | `v0.0.1` | Foundation: build, architecture guardrails, content contract, running service |
@@ -101,10 +103,20 @@ by git URL and version it independently. It will be **Apache-2.0**, not AGPL: se
 
 ## Documentation
 
-- [Architecture overview](docs/architecture/overview.md)
-- [Hexagonal rules and how they are enforced](docs/architecture/hexagonal.md)
-- [Configuration reference](docs/operations/configuration.md)
-- [Decision records](docs/architecture/adr/)
+**[Start at the documentation index](docs/README.md)**, or jump straight to:
+
+- [Getting started](docs/guides/getting-started.md) — run it locally and confirm it works
+- [The content model](docs/concepts/content-model.md) — documents, schemas, drafts and publication
+- [Caching and change detection](docs/concepts/caching.md) — how clients know content changed
+- [Architecture overview](docs/architecture/overview.md) and the
+  [hexagonal rules](docs/architecture/hexagonal.md) that the build enforces
+- [Deployment](docs/operations/deployment.md) and the
+  [configuration reference](docs/operations/configuration.md)
+- [Decision records](docs/architecture/adr/) — including options that were rejected, and why
+
+The docs live in the repository rather than in a wiki, so a behaviour change and its
+documentation land in the same commit and the same review. If you prefer a wiki,
+`scripts/publish-wiki.sh` mirrors `docs/` into one.
 
 ## Contributing
 

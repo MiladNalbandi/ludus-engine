@@ -9,6 +9,23 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ## [Unreleased]
 
+### Added
+
+- Documentation set under `docs/`: an index, a getting-started guide, a deployment guide, and
+  concept pages for the content model and for the caching / change-detection protocol. Pages
+  mark planned behaviour explicitly and link to the issue tracking it, so nothing documented
+  here describes something that does not work.
+- `scripts/publish-wiki.sh` mirrors `docs/` into the GitHub Wiki for anyone who prefers reading
+  it there. The repository remains the source of truth; the wiki is a published copy.
+- A roadmap issue per phase, tracked in
+  [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18).
+
+### Fixed
+
+- Commits are now attributed to the maintainer's GitHub account. The initial history used an
+  email address that is not verified on that account, so GitHub rendered the commits as an
+  unlinked name with no avatar and did not count them as contributions.
+
 ## [0.0.1] - 2026-08-21
 
 The foundation. Nothing to play with yet; everything to build on.
