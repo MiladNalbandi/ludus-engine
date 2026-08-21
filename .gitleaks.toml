@@ -5,17 +5,17 @@ title = "Ludus Engine"
 [extend]
 useDefault = true
 
-[[allowlist]]
-description = "Licence texts and sample content contain no secrets."
+# One table, not an array of tables. gitleaks 8.24 decodes the global allowlist as a map, and
+# an array here fails config loading outright — which does not fail the scan, it fails *before*
+# the scan, so the job errors without ever having looked at the repository.
+[allowlist]
+description = "Licence texts, sample content, and documented placeholders. None are credentials."
 paths = [
   '''LICENSE''',
   '''contracts/LICENSE''',
   '''sdk/unity/LICENSE''',
   '''samples/waves/.*\.json''',
 ]
-
-[[allowlist]]
-description = "Documented placeholders. These are examples, not credentials."
 regexes = [
   '''change-me-[a-z-]+''',
   '''ludus_dev_[a-z0-9_]+''',
