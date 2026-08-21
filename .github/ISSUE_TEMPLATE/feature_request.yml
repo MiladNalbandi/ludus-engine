@@ -1,0 +1,40 @@
+name: Feature request
+description: Suggest something Ludus should be able to do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The roadmap in the README shows what is already planned and roughly when. If your idea
+        is on it, an issue is still useful — it tells us it matters to someone.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >
+        What are you trying to do that you cannot do today? Describe the situation rather than
+        the solution — it often turns out there is a better answer than the one either of us
+        thought of first.
+    validations: { required: true }
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you have in mind
+    validations: { required: true }
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you have tried or considered instead
+
+  - type: dropdown
+    id: contributing
+    attributes:
+      label: Would you be interested in implementing it?
+      options:
+        - "Yes, with some guidance"
+        - "Yes"
+        - "No, just suggesting"
+    validations: { required: true }

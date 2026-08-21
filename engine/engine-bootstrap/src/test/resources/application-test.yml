@@ -1,0 +1,13 @@
+# The context test only needs the application to compose and serve. Real schema behaviour is
+# covered against a Postgres container, not here, so this profile deliberately avoids both.
+spring:
+  datasource:
+    url: jdbc:h2:mem:ludus;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: none
+  flyway:
+    enabled: false

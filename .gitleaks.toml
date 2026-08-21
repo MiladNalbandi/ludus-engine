@@ -1,0 +1,22 @@
+# Secret scanning runs on every push and on the full history. This repository is public and
+# starts from an empty history precisely so nothing has to be redacted after the fact.
+title = "Ludus Engine"
+
+[extend]
+useDefault = true
+
+[[allowlist]]
+description = "Licence texts and sample content contain no secrets."
+paths = [
+  '''LICENSE''',
+  '''contracts/LICENSE''',
+  '''sdk/unity/LICENSE''',
+  '''samples/waves/.*\.json''',
+]
+
+[[allowlist]]
+description = "Documented placeholders. These are examples, not credentials."
+regexes = [
+  '''change-me-[a-z-]+''',
+  '''ludus_dev_[a-z0-9_]+''',
+]

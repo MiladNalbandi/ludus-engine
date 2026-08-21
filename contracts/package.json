@@ -1,0 +1,15 @@
+{
+  "name": "@ludus/contracts",
+  "version": "0.0.1",
+  "description": "Ludus wire schemas. The single source of truth shared by the engine, the editor and every client.",
+  "license": "Apache-2.0",
+  "files": ["schemas"],
+  "exports": {
+    "./schemas/wave/v1.json": "./schemas/wave/v1.json"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/miladnalbandi/ludus-engine.git",
+    "directory": "contracts"
+  }
+}

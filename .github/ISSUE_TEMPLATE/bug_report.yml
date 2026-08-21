@@ -1,0 +1,57 @@
+name: Bug report
+description: Something behaves differently from how it is documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. The most useful thing you can include is the smallest set of
+        steps that reproduces it.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you expected, and what you got instead.
+    validations: { required: true }
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. docker compose -f deploy/docker-compose.yml up
+        2. curl ...
+        3. ...
+    validations: { required: true }
+
+  - type: input
+    id: version
+    attributes:
+      label: Ludus version
+      description: A release tag, or the commit you are on.
+    validations: { required: true }
+
+  - type: dropdown
+    id: deployment
+    attributes:
+      label: How are you running it
+      options:
+        - docker compose (the quickstart)
+        - A container image, deployed some other way
+        - From source (./mvnw)
+        - Other
+    validations: { required: true }
+
+  - type: input
+    id: postgres
+    attributes:
+      label: PostgreSQL version
+      placeholder: "16.4"
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Engine logs
+      description: The relevant portion. Please remove anything sensitive first.
+      render: shell

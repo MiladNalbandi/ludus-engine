@@ -1,0 +1,103 @@
+{
+  "id": "demo_pressure",
+  "schema_version": 1,
+  "version": "1.0.0",
+  "name": "Pressure",
+  "description": "A multi-step movement sequence with per-step fire rules and a ring burst, showing how behaviour changes over the life of one entity.",
+  "category": "hard",
+  "published": false,
+  "duration": 60,
+  "difficulty_range": { "min_phase": 2, "max_phase": 6 },
+  "constraints": {
+    "time_limit": 60,
+    "max_lights": 6,
+    "max_bullets_on_screen": 150
+  },
+  "progression_config": {
+    "order": 2,
+    "cube_scoring": {
+      "enemy_destroyed": 12,
+      "enemy_out_of_view": 1,
+      "bonus_collected": 15
+    },
+    "difficulty_bonus_factor": 0.5,
+    "surrender_penalty_factor": 0.5,
+    "completion_conditions": {
+      "type": "all",
+      "time_elapsed": 60,
+      "score_reached": 400
+    }
+  },
+  "spawn_rules": [
+    {
+      "entity_type": "light",
+      "count": 3,
+      "spawn_delay": 1.0,
+      "spawn_interval": 3.0,
+      "spawn_position": { "type": "near_player", "player_offset": 4.0 },
+      "light_size": { "min": 0.8, "max": 1.2, "random": true },
+      "movement_rules": {
+        "loop": true,
+        "loop_count": 3,
+        "sequence": [
+          {
+            "type": "dash",
+            "duration": 1.5,
+            "dash_config": {
+              "direction": "towards_player",
+              "speed": 6.0,
+              "distance": 4.0,
+              "ease": "OutCubic"
+            }
+          },
+          {
+            "type": "wait",
+            "duration": 1.0,
+            "wait_config": { "duration": 1.0, "wiggle": true, "wiggle_amplitude": 0.2, "wiggle_frequency": 4.0 },
+            "fire_rules": {
+              "enabled": true,
+              "pattern": "ring",
+              "interval": 0.5,
+              "targeting": { "type": "fixed", "fixed_angle": 0.0 },
+              "bullet_config": { "speed": 2.5, "speed_variance": 0.3 },
+              "ring_config": { "count": 12, "radius": 0.5 }
+            }
+          },
+          {
+            "type": "patrol",
+            "duration": 6.0,
+            "patrol_config": {
+              "bounds": { "x_min": -4.0, "x_max": 4.0, "y_min": 8.0, "y_max": 12.0 },
+              "speed": 2.5,
+              "direction": "both"
+            },
+            "fire_rules": {
+              "enabled": true,
+              "pattern": "burst",
+              "interval": 2.5,
+              "interval_variance": 0.4,
+              "targeting": { "type": "towards_player", "player_target_chance": 0.7 },
+              "bullet_config": { "speed": 4.0 },
+              "burst_config": { "count": 4, "delay": 0.12 },
+              "difficulty_scaling": { "interval_multiplier": 0.85, "speed_multiplier": 1.1, "count_addition": 1 }
+            }
+          }
+        ]
+      },
+      "cube_rules": {
+        "enemy_chance": 0.75,
+        "bonus_distribution": { "green": 0.4, "pink": 0.25, "yellow": 0.2, "red": 0.15 }
+      }
+    }
+  ],
+  "visual_config": {
+    "vibe_type": "electric_storm",
+    "intensity": 0.9,
+    "primary_color": "#f97316",
+    "secondary_color": "#ef4444",
+    "animation_speed": 1.4,
+    "particle_config": { "enabled": true, "density": 0.8, "speed_multiplier": 1.2, "size_multiplier": 1.0 },
+    "fade_in": 0.8,
+    "fade_out": 2.0
+  }
+}

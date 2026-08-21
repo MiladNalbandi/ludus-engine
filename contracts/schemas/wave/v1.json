@@ -1,0 +1,1346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ludus.dev/schemas/wave/v1.json",
+  "title": "Wave",
+  "description": "The contract between the editor (author), the engine (validate and serve) and the game client (consume). A wave is a timed arrangement of entity spawns, movement and fire behaviour.",
+  "type": "object",
+  "required": [
+    "id",
+    "name",
+    "version",
+    "spawn_rules",
+    "constraints",
+    "progression_config"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-z0-9_]+$"
+    },
+    "schema_version": {
+      "type": "integer",
+      "const": 1,
+      "description": "Wave contract generation, a monotonic integer. Compatibility rule: a client ignores any wave whose schema_version exceeds the version it was built against and plays the rest — one unreadable wave costs one wave, never the session. Bump ONLY on breaking changes (removal, rename, redefinition); additive fields and new enum values do not bump it. Optional on the wire: the engine stamps the current generation when a document omits it."
+    },
+    "version": {
+      "type": "string",
+      "description": "Author-facing content version, e.g. 1.0.0. Not used for negotiation."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "wave_name": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "category": {
+      "enum": [
+        "easy",
+        "medium",
+        "hard",
+        "custom"
+      ]
+    },
+    "published": {
+      "type": "boolean",
+      "description": "Only published waves are served on public routes."
+    },
+    "duration": {
+      "type": "number",
+      "exclusiveMinimum": 0
+    },
+    "difficulty_range": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Fields are optional to tolerate partial authored data.",
+      "properties": {
+        "min_phase": {
+          "type": "number"
+        },
+        "max_phase": {
+          "type": "number"
+        },
+        "min_score": {
+          "type": "number"
+        },
+        "max_score": {
+          "type": "number"
+        }
+      }
+    },
+    "constraints": {
+      "type": "object",
+      "required": [
+        "time_limit"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "time_limit": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "REQUIRED and > 0. A wave without it never completes and traps the player on it forever ."
+        },
+        "max_lights": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20
+        },
+        "max_bullets_on_screen": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 300
+        }
+      }
+    },
+    "progression_config": {
+      "type": "object",
+      "required": [
+        "order",
+        "cube_scoring"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "order": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Unique across waves; the server rejects collisions and auto-assigns on create."
+        },
+        "score_thresholds": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_score_to_start": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "time_contribution": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "points_per_second": {
+              "type": "number",
+              "minimum": 0
+            },
+            "percentage_of_total": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "cube_scoring": {
+          "type": "object",
+          "required": [
+            "enemy_destroyed",
+            "bonus_collected"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "enemy_destroyed": {
+              "type": "number",
+              "minimum": 0
+            },
+            "enemy_out_of_view": {
+              "type": "number",
+              "minimum": 0
+            },
+            "bonus_collected": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "completion_conditions": {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "enum": [
+                "any",
+                "all"
+              ]
+            },
+            "time_elapsed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "score_reached": {
+              "type": "number",
+              "minimum": 0
+            },
+            "cubes_destroyed": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "combo_multiplier_base": {
+          "type": "number",
+          "minimum": 0
+        },
+        "combo_multiplier_per_combo": {
+          "type": "number",
+          "minimum": 0
+        },
+        "combo_multiplier_cap": {
+          "type": "number",
+          "minimum": 1
+        },
+        "surrender_penalty_factor": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "difficulty_bonus_factor": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    },
+    "spawn_rules": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {
+        "$ref": "#/$defs/spawnRule"
+      }
+    },
+    "audio_config": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "file_url": {
+          "type": "string",
+          "description": "Public, game-facing audio URL (relative to backend base URL). Replaces the editor-internal _merged_file."
+        },
+        "file_path": {
+          "type": "string",
+          "description": "Resources path for bundled audio (offline/local waves)."
+        },
+        "start_time": {
+          "type": "number",
+          "minimum": 0
+        },
+        "end_time": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Trim end time in seconds; absent = play to end."
+        },
+        "volume": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "loop": {
+          "type": "boolean"
+        },
+        "duration": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Track length in seconds. Validated against constraints.time_limit."
+        }
+      }
+    },
+    "visual_config": {
+      "type": "object",
+      "properties": {
+        "vibe_type": {
+          "type": "string"
+        },
+        "intensity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "primary_color": {
+          "$ref": "#/$defs/hexColor"
+        },
+        "secondary_color": {
+          "$ref": "#/$defs/hexColor"
+        },
+        "animation_speed": {
+          "type": "number",
+          "minimum": 0
+        },
+        "particle_config": {
+          "type": "object"
+        },
+        "screen_effects": {
+          "type": "object"
+        },
+        "fade_in": {
+          "type": "number",
+          "minimum": 0
+        },
+        "fade_out": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "$defs": {
+    "hexColor": {
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "conditionRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Gate on when a spawn rule fires.",
+      "properties": {
+        "probability": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "min_survival_time": {
+          "type": "number",
+          "minimum": 0
+        },
+        "phase_range": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2
+        }
+      }
+    },
+    "movementType": {
+      "enum": [
+        "patrol",
+        "orbit",
+        "teleport",
+        "dash",
+        "wait",
+        "jump",
+        "zigzag",
+        "spiral",
+        "cross",
+        "hide",
+        "despawn"
+      ],
+      "description": "The movement behaviours a client is expected to understand. Adding a value here is a breaking change for clients built against an earlier generation, so it must come with a schema_version bump."
+    },
+    "firePattern": {
+      "enum": [
+        "single",
+        "burst",
+        "spread",
+        "wave",
+        "sequence",
+        "ring",
+        "spiral",
+        "shotgun"
+      ],
+      "description": "The fire patterns a client is expected to understand. Same breaking-change rule as movementType."
+    },
+    "targetingType": {
+      "enum": [
+        "towards_player",
+        "down",
+        "up",
+        "fixed",
+        "random"
+      ]
+    },
+    "spawnPosition": {
+      "type": "object",
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "enum": [
+            "screen_relative",
+            "fixed",
+            "near_player"
+          ]
+        },
+        "screen_x": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "screen_y": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "x": {
+          "type": "number"
+        },
+        "y": {
+          "type": "number"
+        },
+        "player_offset": {
+          "type": "number"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "screen_relative"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "screen_x",
+              "screen_y"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "fixed"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "x",
+              "y"
+            ]
+          }
+        }
+      ]
+    },
+    "bounds": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "x_min": {
+          "type": "number"
+        },
+        "x_max": {
+          "type": "number"
+        },
+        "y_min": {
+          "type": "number"
+        },
+        "y_max": {
+          "type": "number"
+        }
+      }
+    },
+    "fireRules": {
+      "type": "object",
+      "required": [
+        "enabled",
+        "pattern"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "pattern": {
+          "$ref": "#/$defs/firePattern"
+        },
+        "interval": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "interval_variance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "targeting": {
+          "type": "object",
+          "required": [
+            "type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "$ref": "#/$defs/targetingType"
+            },
+            "player_target_chance": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "fixed_angle": {
+              "type": "number"
+            }
+          }
+        },
+        "bullet_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "speed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "speed_variance": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "spread_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "angle": {
+              "type": "number"
+            },
+            "random_offset": {
+              "type": "number"
+            }
+          }
+        },
+        "burst_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "delay": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "wave_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "wave_speed": {
+              "type": "number"
+            },
+            "amplitude": {
+              "type": "number"
+            }
+          }
+        },
+        "ring_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 24
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "spiral_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            },
+            "rotations": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "speed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "sequence_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "max_count": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 20
+            },
+            "delay": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "difficulty_scaling": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "interval_multiplier": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "speed_multiplier": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "count_addition": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "pattern": {
+                "const": "ring"
+              }
+            },
+            "required": [
+              "pattern"
+            ]
+          },
+          "then": {
+            "required": [
+              "ring_config"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "pattern": {
+                "enum": [
+                  "spread",
+                  "shotgun"
+                ]
+              }
+            },
+            "required": [
+              "pattern"
+            ]
+          },
+          "then": {
+            "required": [
+              "spread_config"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "pattern": {
+                "const": "burst"
+              }
+            },
+            "required": [
+              "pattern"
+            ]
+          },
+          "then": {
+            "required": [
+              "burst_config"
+            ]
+          }
+        }
+      ]
+    },
+    "cubeRules": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enemy_chance": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "bonus_distribution": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "green": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "pink": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "yellow": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "red": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        }
+      }
+    },
+    "movementStep": {
+      "type": "object",
+      "required": [
+        "type",
+        "duration"
+      ],
+      "properties": {
+        "type": {
+          "$ref": "#/$defs/movementType"
+        },
+        "duration": {
+          "type": "number",
+          "minimum": 0
+        },
+        "fire_rules": {
+          "$ref": "#/$defs/fireRules"
+        },
+        "cube_rules": {
+          "$ref": "#/$defs/cubeRules"
+        },
+        "patrol_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "bounds": {
+              "$ref": "#/$defs/bounds"
+            },
+            "speed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "direction": {
+              "enum": [
+                "horizontal",
+                "vertical",
+                "both"
+              ]
+            }
+          }
+        },
+        "orbit_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "center": {
+              "enum": [
+                "player",
+                "fixed"
+              ]
+            },
+            "center_position": {
+              "type": "object"
+            },
+            "radius": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "angular_speed": {
+              "type": "number"
+            },
+            "clockwise": {
+              "type": "boolean"
+            },
+            "ellipse_ratio": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 2,
+              "maxItems": 2
+            },
+            "follow_speed": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "zigzag_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "bounds": {
+              "$ref": "#/$defs/bounds"
+            },
+            "speed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "amplitude": {
+              "type": "number"
+            },
+            "frequency": {
+              "type": "number"
+            },
+            "direction": {
+              "enum": [
+                "up",
+                "down",
+                "left",
+                "right"
+              ]
+            }
+          }
+        },
+        "dash_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "direction": {
+              "enum": [
+                "towards_player",
+                "away_from_player",
+                "up",
+                "down",
+                "left",
+                "right"
+              ]
+            },
+            "speed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "distance": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "ease": {
+              "type": "string"
+            }
+          }
+        },
+        "wait_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "duration": {
+              "type": "number",
+              "minimum": 0
+            },
+            "wiggle": {
+              "type": "boolean"
+            },
+            "wiggle_amplitude": {
+              "type": "number",
+              "minimum": 0
+            },
+            "wiggle_frequency": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "teleport_config": {
+          "type": "object",
+          "required": [
+            "positions"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "positions": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "$ref": "#/$defs/spawnPosition"
+              }
+            },
+            "stay_duration": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "fade_duration": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "spiral_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "center": {
+              "enum": [
+                "player",
+                "fixed"
+              ]
+            },
+            "center_position": {
+              "type": "object"
+            },
+            "start_radius": {
+              "type": "number",
+              "minimum": 0
+            },
+            "end_radius": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "angular_speed": {
+              "type": "number"
+            },
+            "clockwise": {
+              "type": "boolean"
+            }
+          }
+        },
+        "cross_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "speed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "pattern": {
+              "enum": [
+                "horizontal_first",
+                "vertical_first",
+                "diagonal"
+              ]
+            },
+            "bounds": {
+              "$ref": "#/$defs/bounds"
+            }
+          }
+        },
+        "jump_config": {
+          "type": "object",
+          "required": [
+            "target"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "target": {
+              "$ref": "#/$defs/spawnPosition"
+            }
+          }
+        },
+        "hide_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fade_duration": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        },
+        "despawn_config": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "fade_duration": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "jump"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "jump_config"
+            ],
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "teleport_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "teleport"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "teleport_config"
+            ],
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "patrol"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "orbit_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "orbit"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "patrol_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "dash"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "wait"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "zigzag"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "spiral"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "cross_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "cross"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "hide_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "hide"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "despawn_config": false
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "despawn"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "properties": {
+              "patrol_config": false,
+              "orbit_config": false,
+              "teleport_config": false,
+              "jump_config": false,
+              "dash_config": false,
+              "wait_config": false,
+              "zigzag_config": false,
+              "spiral_config": false,
+              "cross_config": false,
+              "hide_config": false
+            }
+          }
+        }
+      ]
+    },
+    "spawnRule": {
+      "type": "object",
+      "required": [
+        "entity_type",
+        "count",
+        "spawn_delay",
+        "spawn_position",
+        "movement_rules"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "entity_type": {
+          "enum": [
+            "light"
+          ]
+        },
+        "count": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "spawn_delay": {
+          "type": "number",
+          "minimum": 0
+        },
+        "spawn_interval": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Delay between successive spawns within this rule."
+        },
+        "spawn_position": {
+          "$ref": "#/$defs/spawnPosition"
+        },
+        "conditions": {
+          "$ref": "#/$defs/conditionRule"
+        },
+        "light_size": {
+          "type": "object",
+          "description": "Per-spawn size override for the spawned entity, as a multiplier of its default size."
+        },
+        "movement_rules": {
+          "type": "object",
+          "required": [
+            "sequence"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "loop": {
+              "type": "boolean"
+            },
+            "loop_count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "0 = infinite."
+            },
+            "sequence": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 30,
+              "items": {
+                "$ref": "#/$defs/movementStep"
+              }
+            }
+          }
+        },
+        "fire_rules": {
+          "$ref": "#/$defs/fireRules"
+        },
+        "cube_rules": {
+          "$ref": "#/$defs/cubeRules"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "id": "demo_first_steps",
+  "schema_version": 1,
+  "version": "1.0.0",
+  "name": "First Steps",
+  "description": "One entity, one patrol, nothing shooting back. The smallest document that is still a real wave — start here when reading the schema.",
+  "category": "easy",
+  "published": true,
+  "duration": 30,
+  "constraints": {
+    "time_limit": 30,
+    "max_lights": 1,
+    "max_bullets_on_screen": 20
+  },
+  "progression_config": {
+    "order": 0,
+    "cube_scoring": {
+      "enemy_destroyed": 5,
+      "enemy_out_of_view": 1,
+      "bonus_collected": 10
+    },
+    "time_contribution": {
+      "enabled": true,
+      "points_per_second": 1.0,
+      "percentage_of_total": 0.3
+    },
+    "completion_conditions": {
+      "type": "any",
+      "time_elapsed": 30
+    }
+  },
+  "spawn_rules": [
+    {
+      "entity_type": "light",
+      "count": 1,
+      "spawn_delay": 1.0,
+      "spawn_position": {
+        "type": "screen_relative",
+        "screen_x": 0.5,
+        "screen_y": 0.8
+      },
+      "movement_rules": {
+        "loop": true,
+        "loop_count": 0,
+        "sequence": [
+          {
+            "type": "patrol",
+            "duration": 8.0,
+            "patrol_config": {
+              "bounds": { "x_min": -3.0, "x_max": 3.0 },
+              "speed": 1.5,
+              "direction": "horizontal"
+            }
+          },
+          {
+            "type": "wait",
+            "duration": 2.0,
+            "wait_config": { "duration": 2.0 }
+          }
+        ]
+      }
+    }
+  ],
+  "visual_config": {
+    "vibe_type": "dark_void",
+    "intensity": 0.4,
+    "animation_speed": 0.8,
+    "fade_in": 1.0,
+    "fade_out": 1.0
+  }
+}

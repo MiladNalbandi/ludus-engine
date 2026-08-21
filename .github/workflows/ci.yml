@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # Runs unit tests, the schema conformance tests, the architecture rules and the
+      # enforcer bans. The project this was extracted from never ran a test in CI; that is
+      # not repeated here.
+      - name: Verify
+        run: ./mvnw -B verify
+
+      - name: Publish test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports
+          path: '**/target/surefire-reports/**'
+          retention-days: 7
+          if-no-files-found: ignore
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # gitleaks scans the whole history, not just the diff
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  stack:
+    name: Quickstart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The README promises that a clone plus two commands gives a running engine. This job
+      # is what stops that promise from quietly becoming false.
+      - name: Bring the stack up exactly as the README describes
+        run: |
+          sed 's/^LUDUS_DB_PASSWORD=.*/LUDUS_DB_PASSWORD=ci-not-a-real-password/' \
+            deploy/.env.example > deploy/.env
+          docker compose -f deploy/docker-compose.yml up -d --build
+
+      - name: Wait for the engine to report healthy
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
+              echo "engine is up after ${i}0s"; exit 0
+            fi
+            sleep 10
+          done
+          echo "engine did not become healthy"; exit 1
+
+      - name: The API contract is served
+        run: curl -fsS http://localhost:8080/api-docs | grep -q 'Ludus Engine API'
+
+      - name: Anything not deliberately open is denied
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/anything)
+          test "$status" = "403" || { echo "expected 403, got $status"; exit 1; }
+
+      - name: Engine logs
+        if: failure()
+        run: docker compose -f deploy/docker-compose.yml logs --no-color engine
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f deploy/docker-compose.yml down -v
