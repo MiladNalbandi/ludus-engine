@@ -3,7 +3,7 @@
 # Build in the image so that a clone plus Docker is the only prerequisite. The dependency
 # layer is cached separately from the source, so an ordinary code change does not re-resolve
 # the world.
-FROM eclipse-temurin:21-jdk AS build
+FROM eclipse-temurin:24-jdk AS build
 WORKDIR /src
 
 COPY mvnw ./
@@ -25,7 +25,7 @@ COPY contracts contracts
 COPY engine engine
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -q -DskipTests package
 
-FROM eclipse-temurin:21-jre AS runtime
+FROM eclipse-temurin:24-jre AS runtime
 
 # A non-root user, because a container that does not need root should not have it.
 # curl is here for the healthcheck. A healthcheck that does not actually call the application
