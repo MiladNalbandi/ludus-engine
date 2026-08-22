@@ -11,11 +11,11 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
-- Brand assets under `assets/brand/`: the mark in light, dark, simplified and monochrome
-  variants, horizontal lockups, favicons and an avatar, with usage notes. Two marks ship on
-  purpose — the detailed one has half-pixel gaps at favicon size, so a simplified solid form
-  covers anything below 48 px, and `contact-sheet.png` shows both rasterised at real pixel
-  sizes so the cutoff is visible rather than asserted.
+- Brand assets under `assets/brand/`: an **L** mark with a blue slash forming the leading edge
+  of its foot, in light, dark and monochrome variants, plus horizontal lockups, favicons, an
+  avatar and usage notes. The mark is solid geometry with no fine detail, so a single mark
+  covers every size down to 16 px — `contact-sheet.png` shows it rasterised at real pixel sizes
+  rather than asserting that it holds.
 - The README header now shows the lockup, switching between the light and dark variants with
   the reader's colour scheme.
 

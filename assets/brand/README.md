@@ -1,26 +1,24 @@
 # Ludus brand assets
 
-## The idea
+## The mark
 
-Nine cells on a 3×3 grid. Five filled tiles form an **L**; the empty cells are outlined; one
-amber circle sits on the grid.
+A bold **L**, with a blue parallelogram forming the leading edge of its foot. It is lifted from
+the `LUDUS` wordmark in the project illustration, reduced to the part that survives being small.
 
-It reads two ways on purpose. As a letter, it is the L of Ludus. As a picture, it is what the
-engine actually does — a level built out of placed blocks, with an entity dropped onto it. The
-outlined cells are the empty ones you have not filled in yet.
+It is solid geometry with one accent shape and no fine detail, which is the whole point: it holds
+at 16 px, so there is one mark rather than a display version and a favicon version.
 
 ## Files
 
-**Sources** — edit these, then re-export the PNGs.
+**Sources**
 
 | File | Use |
 |---|---|
-| `logo-mark.svg` | Primary mark. Light backgrounds, 48 px and above |
-| `logo-mark-dark.svg` | Same mark for dark backgrounds — empty cells drawn in light ink |
-| `logo-mark-simple.svg` | Solid L. **Use below 48 px**, and for favicons |
+| `logo-mark.svg` | The mark. Light backgrounds |
+| `logo-mark-dark.svg` | The mark on dark backgrounds — L in white, slash unchanged |
 | `logo-mark-mono.svg` | One colour, inherits `currentColor`. Print, embroidery, anywhere colour is unavailable |
-| `logo-horizontal.svg` | Mark + wordmark, light background |
-| `logo-horizontal-dark.svg` | Mark + wordmark, dark background |
+| `logo-horizontal.svg` | Mark + `LUDUS` + `GAME BACKEND ENGINE`, light background |
+| `logo-horizontal-dark.svg` | Same, dark background |
 
 **Exports**
 
@@ -28,52 +26,49 @@ outlined cells are the empty ones you have not filled in yet.
 |---|---|
 | `logo-horizontal.png` | README and docs on a light ground. Transparent background |
 | `logo-horizontal-dark.png` | Same, dark ground. Transparent background |
-| `logo-horizontal-on-dark.png` | Social cards and slides, where transparency is not wanted. Ink background baked in |
-| `logo-mark-512.png` | The mark at display size, light ground |
+| `logo-horizontal-on-dark.png` | Social cards and slides. Navy background baked in |
+| `logo-mark-512.png` | The mark at display size |
 | `logo-mark-dark-512.png` | The mark at display size, dark ground |
-| `logo-mark-simple-512.png` | The simplified mark at display size |
-| `avatar-460.png` | GitHub organisation / LinkedIn avatar. White background |
+| `avatar-460.png` | GitHub / LinkedIn avatar. White background |
 | `favicon-16.png`, `favicon-32.png`, `favicon-64.png` | Browser tab |
-| `contact-sheet.png` | Everything at once, including the small-size comparison |
-
-Re-export with any SVG renderer. The exports in this directory were produced at
-1200×368 (lockups), 512×512 and 460×460 (marks), and 16/32/64 (favicons).
-
-## Why there are two marks
-
-The detailed mark has 2-unit gaps and 2-unit outlines on a 64-unit grid. At 16 px those are half
-a pixel, so they blur into a smudge. `contact-sheet.png` shows both marks rasterised at real
-pixel sizes side by side — the difference is obvious and it is why the simplified mark exists.
-
-Rule of thumb: **48 px and above, use the detailed mark. Below that, use the simplified one.**
+| `contact-sheet.png` | Everything at once, including the small-size check |
 
 ## Palette
 
 | | | |
 |---|---|---|
-| Indigo | `#5B4FE9` | Tiles, primary brand colour |
-| Amber | `#FF8A3D` | The entity. Accent only — never for large areas |
-| Ink | `#14142B` | Wordmark on light, and the dark background itself |
+| Navy | `#111F3A` | The letterform, and the dark background itself |
+| Blue | `#1CA9F0` | The slash. Accent only — it appears exactly once |
 
-The amber is the only accent, and it appears exactly once in the mark. That is what makes it
-read as a placed object rather than as decoration; using it more widely dissolves the idea.
+## The wordmark is typeset, not drawn
 
-## The wordmark
+`LUDUS` in the lockups is set in a bold geometric sans (`Liberation Sans` → `Arial` →
+`Helvetica`, metric-compatible so it renders consistently), **not** converted to outlines.
 
-Set in a bold geometric sans with `+3` letter-spacing. The SVGs reference
-`Liberation Sans / Arial / Helvetica`, which is metric-compatible and renders consistently
-across platforms — but for print or anywhere the font may be missing, convert the text to
-outlines first.
+That is a deliberate compromise, and worth knowing before you use these in print. The wordmark in
+the source illustration is a specific display face with angular cuts. Reproducing it exactly needs
+either the original vector or a licensed face; hand-drawing an approximation produced letterforms
+that looked like an arcade font next to a clean mark, so the mark is drawn and the wordmark is
+typeset.
 
-If you later license a display face, the wordmark is the thing to reset. The mark should not
-change.
+If you license a display face later, reset the wordmark. **The mark should not change.**
+
+For print, or anywhere the font stack may be missing, convert the text to outlines first.
 
 ## Clear space and don'ts
 
-Keep clear space of at least one grid cell (a quarter of the mark's height) on every side.
+Keep clear space of at least the width of the L's stem on every side.
 
-Don't recolour the tiles, don't rotate the mark, don't add effects, and don't reflow the grid.
-The L only reads because the tiles sit where they do.
+Don't recolour the L, don't move or reangle the slash, don't rotate the mark, don't add effects,
+and don't stretch the lockup. The slash reads as motion because it is the only diagonal in an
+otherwise square mark.
+
+## Not here yet
+
+The full project illustration — the isometric engine with the level above it — is the intended
+README hero and social preview. It is not in this directory yet because it exists only as a raster
+image that has not been added to the repository. Drop it in as `hero.png` and it can be wired into
+the README header above the lockup, and composed into a 1280×640 social card.
 
 ## Licence
 
