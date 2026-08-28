@@ -4,6 +4,18 @@ on:
   push:
     tags: ['v*']
 
+  # A tag push runs this file as it existed at the tagged commit, so a bug in the release job
+  # can only ever be fixed for tags that do not exist yet. That is not much use the first time
+  # one bites. Dispatching runs the file from the default branch and checks the tag out, which
+  # means an already-published tag can be released with a corrected workflow and without being
+  # moved to a different commit.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: The existing tag to release, for example v0.0.1
+        required: true
+        type: string
+
 permissions:
   contents: write
   packages: write
@@ -12,8 +24,20 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve what is being released
+        id: target
+        run: |
+          REF="${{ inputs.tag || github.ref_name }}"
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "version=${REF#v}" >> "$GITHUB_OUTPUT"
+          # Container registries reject uppercase repository names, and github.repository
+          # carries the owner's login exactly as they typed it when they signed up.
+          echo "image=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" \
+            >> "$GITHUB_OUTPUT"
+
       - uses: actions/checkout@v4
         with:
+          ref: ${{ steps.target.outputs.ref }}
           fetch-depth: 0
 
       - uses: actions/setup-java@v4
@@ -28,10 +52,7 @@ jobs:
         run: ./mvnw -B verify
 
       - name: Set the release version
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
-          ./mvnw -B versions:set -DnewVersion="$VERSION" -DgenerateBackupPoms=false
+        run: ./mvnw -B versions:set -DnewVersion="${{ steps.target.outputs.version }}" -DgenerateBackupPoms=false
 
       - name: Package
         run: ./mvnw -B -DskipTests package
@@ -53,13 +74,15 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ env.VERSION }}
-            ghcr.io/${{ github.repository }}:latest
+            ${{ steps.target.outputs.image }}:${{ steps.target.outputs.version }}
+            ${{ steps.target.outputs.image }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
       - name: Publish the release
         uses: softprops/action-gh-release@v2
         with:
+          # Explicit, because a dispatched run's ref is the branch it was dispatched from.
+          tag_name: ${{ steps.target.outputs.ref }}
           generate_release_notes: true
           files: engine/engine-bootstrap/target/ludus-engine.jar
