@@ -70,12 +70,22 @@ side and the database on the other — is the README hero and the source the mar
 
 | | | |
 |---|---|---|
-| `hero.png` | 1254×1254, transparent | The complete artwork, illustration and wordmark together. Article headers, social cards, slides. |
+| `hero.png` | 1254×1254, transparent | The complete artwork, illustration and wordmark together, on no background. |
 | `hero-illustration.png` | 960×567, transparent | The illustration alone, cropped above the wordmark. This is the README header. |
+| `hero-card.png` | 1254×1254, black | The same composition as a finished card: wordmark, strapline, and *author · serve · play*. Social preview, slides, anywhere a self-contained image is wanted. |
 
-The README uses the cropped version and keeps the theme-aware lockup beneath it, because the
+The README uses the cropped illustration and keeps the theme-aware lockup beneath it, because the
 wordmark in `hero.png` is navy and would disappear against a dark background. The illustration
 itself has no flat backdrop, so it sits correctly in either GitHub theme.
+
+`hero-card.png` is the exception to the palette: its background is true black rather than the
+brand navy, and the artwork's glows are painted against that black. Recolouring the background
+would mean repainting every glow, so it is left alone and used as what it is — a card, not a
+mark. Do not place it on a coloured surface.
+
+There is also `docs/assets/engine-overview.png`, which is a figure rather than a brand asset: it
+states what the engine does and does not do yet, so it dates. It belongs to whichever release it
+describes, and should be replaced rather than kept when that stops being true.
 
 ## Licence
 

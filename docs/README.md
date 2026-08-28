@@ -1,5 +1,9 @@
 # Ludus documentation
 
+<p align="center">
+  <img src="assets/engine-overview.png" alt="Ludus at a glance: the project table with its single row, what the foundation already enforces, and what arrives in later releases" width="900">
+</p>
+
 Ludus is a backend engine for 2D games. You author levels, entities and behaviour as **data**;
 your game fetches that data at runtime and builds the level from it. Ship a balance change
 without shipping a build.

@@ -29,7 +29,11 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
   the reader's colour scheme.
 - The project illustration, as `assets/brand/hero.png` and `assets/brand/hero-illustration.png`.
   The README header uses the cropped illustration above the lockup; the wordmark is left to the
-  lockup, which is the variant that survives a dark background.
+  lockup, which is the variant that survives a dark background. `assets/brand/hero-card.png` is
+  the same composition as a finished card, for social previews and slides.
+- `docs/assets/engine-overview.png`, a figure showing what the engine does and does not do yet,
+  on the documentation index, the getting-started guide and the roadmap. `publish-wiki.sh` now
+  rewrites image paths to raw URLs, because the wiki's namespace is flat and carries no assets.
 
 - Documentation set under `docs/`: an index, a getting-started guide, a deployment guide, and
   concept pages for the content model and for the caching / change-detection protocol. Pages
