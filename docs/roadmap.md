@@ -1,8 +1,16 @@
 # Roadmap
 
+<p align="center">
+  <img src="assets/engine-overview.png" alt="Ludus at a glance: the project table with its single row, what the foundation already enforces, and what arrives in later releases" width="900">
+</p>
+
 The live roadmap is **[issue #18](https://github.com/MiladNalbandi/ludus-engine/issues/18)**,
 with one issue per phase. This page explains the shape of it; the issues carry the detail and
 the current state.
+
+The picture above is the current release drawn out: a green tick is in the box today, and the
+two panels on the right are not. It is a snapshot of one version rather than a permanent
+diagram, so it gets replaced when the ticks change.
 
 | | Release | |
 |---|---|---|

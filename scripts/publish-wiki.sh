@@ -34,10 +34,19 @@ PAGES=(
   "docs/operations/deployment.md|Deployment.md"
 )
 
+RAW="https://raw.githubusercontent.com/MiladNalbandi/ludus-engine/main/docs"
+
 rewrite_links() {
   # Point inter-document links at the flattened wiki page names, and send links that leave docs/
   # (CONTRIBUTING, SECURITY, source files) back to the repository on GitHub.
+  #
+  # Images need the same treatment for a different reason: only markdown is copied to the wiki,
+  # and the wiki's namespace is flat, so a relative path to docs/assets resolves to nothing once
+  # the page is published. They are rewritten to raw.githubusercontent URLs, which means the
+  # wiki shows whatever is on main rather than a copy that can drift.
   sed -E \
+    -e "s#(src=\")(\.\./)*assets/#\1$RAW/assets/#g" \
+    -e "s#\]\((\.\./)*assets/#]($RAW/assets/#g" \
     -e 's#\]\((\.\./)*guides/getting-started\.md\)#](Getting-Started)#g' \
     -e 's#\]\((\.\./)*concepts/content-model\.md\)#](Content-Model)#g' \
     -e 's#\]\((\.\./)*concepts/caching\.md\)#](Caching-and-Change-Detection)#g' \

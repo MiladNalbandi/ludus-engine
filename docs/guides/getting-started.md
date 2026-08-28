@@ -1,6 +1,12 @@
 # Getting started
 
-What follows works today, on `v0.0.1`. Anything not yet built is called out as such.
+<p align="center">
+  <img src="../assets/engine-overview.png" alt="Ludus at a glance: the project table with its single row, what the foundation already enforces, and what arrives in later releases" width="900">
+</p>
+
+What follows works today, on `v0.0.1`. Anything not yet built is called out as such. The picture
+above is the same claim in one frame: a green tick is something you can run now, and anything
+marked *coming soon* is not in the box yet.
 
 ## Requirements
 

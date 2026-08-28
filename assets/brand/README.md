@@ -63,12 +63,29 @@ Don't recolour the L, don't move or reangle the slash, don't rotate the mark, do
 and don't stretch the lockup. The slash reads as motion because it is the only diagonal in an
 otherwise square mark.
 
-## Not here yet
+## The illustration
 
-The full project illustration — the isometric engine with the level above it — is the intended
-README hero and social preview. It is not in this directory yet because it exists only as a raster
-image that has not been added to the repository. Drop it in as `hero.png` and it can be wired into
-the README header above the lockup, and composed into a 1280×640 social card.
+The project illustration — the engine opened up, the level assembled above it, the editor on one
+side and the database on the other — is the README hero and the source the mark was lifted from.
+
+| | | |
+|---|---|---|
+| `hero.png` | 1254×1254, transparent | The complete artwork, illustration and wordmark together, on no background. |
+| `hero-illustration.png` | 960×567, transparent | The illustration alone, cropped above the wordmark. This is the README header. |
+| `hero-card.png` | 1254×1254, black | The same composition as a finished card: wordmark, strapline, and *author · serve · play*. Social preview, slides, anywhere a self-contained image is wanted. |
+
+The README uses the cropped illustration and keeps the theme-aware lockup beneath it, because the
+wordmark in `hero.png` is navy and would disappear against a dark background. The illustration
+itself has no flat backdrop, so it sits correctly in either GitHub theme.
+
+`hero-card.png` is the exception to the palette: its background is true black rather than the
+brand navy, and the artwork's glows are painted against that black. Recolouring the background
+would mean repainting every glow, so it is left alone and used as what it is — a card, not a
+mark. Do not place it on a coloured surface.
+
+There is also `docs/assets/engine-overview.png`, which is a figure rather than a brand asset: it
+states what the engine does and does not do yet, so it dates. It belongs to whichever release it
+describes, and should be replaced rather than kept when that stops being true.
 
 ## Licence
 

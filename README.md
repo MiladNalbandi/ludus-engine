@@ -1,4 +1,8 @@
 <p align="center">
+  <img src="assets/brand/hero-illustration.png" alt="" width="560">
+</p>
+
+<p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/brand/logo-horizontal-dark.png">
     <img src="assets/brand/logo-horizontal.png" alt="Ludus" width="380">
