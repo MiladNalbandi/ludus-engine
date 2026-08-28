@@ -63,12 +63,19 @@ Don't recolour the L, don't move or reangle the slash, don't rotate the mark, do
 and don't stretch the lockup. The slash reads as motion because it is the only diagonal in an
 otherwise square mark.
 
-## Not here yet
+## The illustration
 
-The full project illustration — the isometric engine with the level above it — is the intended
-README hero and social preview. It is not in this directory yet because it exists only as a raster
-image that has not been added to the repository. Drop it in as `hero.png` and it can be wired into
-the README header above the lockup, and composed into a 1280×640 social card.
+The project illustration — the engine opened up, the level assembled above it, the editor on one
+side and the database on the other — is the README hero and the source the mark was lifted from.
+
+| | | |
+|---|---|---|
+| `hero.png` | 1254×1254, transparent | The complete artwork, illustration and wordmark together. Article headers, social cards, slides. |
+| `hero-illustration.png` | 960×567, transparent | The illustration alone, cropped above the wordmark. This is the README header. |
+
+The README uses the cropped version and keeps the theme-aware lockup beneath it, because the
+wordmark in `hero.png` is navy and would disappear against a dark background. The illustration
+itself has no flat backdrop, so it sits correctly in either GitHub theme.
 
 ## Licence
 

@@ -18,6 +18,9 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
   rather than asserting that it holds.
 - The README header now shows the lockup, switching between the light and dark variants with
   the reader's colour scheme.
+- The project illustration, as `assets/brand/hero.png` and `assets/brand/hero-illustration.png`.
+  The README header uses the cropped illustration above the lockup; the wordmark is left to the
+  lockup, which is the variant that survives a dark background.
 
 - Documentation set under `docs/`: an index, a getting-started guide, a deployment guide, and
   concept pages for the content model and for the caching / change-detection protocol. Pages
