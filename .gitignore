@@ -1,8 +1,5 @@
 target/
 node_modules/
-.next/
-out/
-dist/
 *.log
 *.class
 *.jar
@@ -14,4 +11,13 @@ dist/
 .idea/
 *.iml
 .vscode/
-data/
+
+# Anchored to the repository root on purpose. Unanchored, `out/` matches at any depth, and this
+# codebase puts outbound ports in packages named `port/out` — so the first outbound port written
+# was ignored, staged nothing, and committed a build that only compiled because the file was
+# still on disk. A web build directory belongs to whichever subproject produces it; when the
+# editor arrives it can ignore its own.
+/out/
+/dist/
+/.next/
+/data/

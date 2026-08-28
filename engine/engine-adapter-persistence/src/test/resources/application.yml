@@ -1,0 +1,24 @@
+# H2 in PostgreSQL mode, with the real migrations applied.
+#
+# The point of running Flyway here rather than letting Hibernate create the schema is that the
+# migration is the artefact that ships. A slice test against a Hibernate-generated schema proves
+# the entity agrees with itself; this one proves the entity agrees with the SQL an operator will
+# actually run. ddl-auto is 'validate' for the same reason it is in production: a column that
+# exists in the entity and not in the migration should fail here, loudly, and not on deploy.
+#
+# H2 is not PostgreSQL and this is not a substitute for exercising the schema against the real
+# thing. It catches the drift that is cheap to catch, on every build, in under a second.
+spring:
+  datasource:
+    url: jdbc:h2:mem:ludus-persistence;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    clean-disabled: false

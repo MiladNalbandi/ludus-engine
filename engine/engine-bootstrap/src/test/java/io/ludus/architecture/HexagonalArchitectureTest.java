@@ -43,7 +43,16 @@ class HexagonalArchitectureTest {
         assertThat(engineClasses.stream().map(c -> c.getPackageName()))
                 .as("all engine layers must be on the analysed classpath")
                 .anyMatch(p -> p.startsWith("io.ludus.domain"))
+                .anyMatch(p -> p.startsWith("io.ludus.application"))
                 .anyMatch(p -> p.startsWith("io.ludus.adapter"));
+
+        // Every rule below is declared allowEmptyShould(true), so a rule about a package with no
+        // classes in it passes without checking anything. That was the honest position while the
+        // application layer was empty. It is not any more, and this assertion is what stops the
+        // suite quietly returning to it if an outbound port is ever moved or renamed away.
+        assertThat(engineClasses.stream().map(c -> c.getPackageName()))
+                .as("outbound ports must exist for the port rule to mean anything")
+                .anyMatch(p -> p.startsWith("io.ludus.application") && p.endsWith("port.out"));
     }
 
     @Test

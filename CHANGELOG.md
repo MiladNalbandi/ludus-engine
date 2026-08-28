@@ -11,6 +11,15 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- The project boundary, and the first migration. `V1__project.sql` creates the `project` table
+  that every later table refers to. A `single`-tenant install provisions one project on first
+  start, under the slug `default`; the check is idempotent, so a restart finds it rather than
+  adding another. Part of `v0.1.0` —
+  [#7](https://github.com/MiladNalbandi/ludus-engine/issues/7).
+- `engine-application` and `engine-adapter-persistence` have code in them for the first time: an
+  outbound port, a use case with no framework types and a plain-JUnit test against a hand-written
+  repository, and a JPA adapter behind it.
+
 - Brand assets under `assets/brand/`: an **L** mark with a blue slash forming the leading edge
   of its foot, in light, dark and monochrome variants, plus horizontal lockups, favicons, an
   avatar and usage notes. The mark is solid geometry with no fine detail, so a single mark
@@ -26,6 +35,10 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
   concept pages for the content model and for the caching / change-detection protocol. Pages
   mark planned behaviour explicitly and link to the issue tracking it, so nothing documented
   here describes something that does not work.
+- Slice tests run the shipped migrations against H2 in PostgreSQL mode with Hibernate's schema
+  validation on, so an entity that has drifted from its migration fails the build rather than the
+  deploy.
+
 - `scripts/publish-wiki.sh` mirrors `docs/` into the GitHub Wiki for anyone who prefers reading
   it there. The repository remains the source of truth; the wiki is a published copy.
 - A roadmap issue per phase, tracked in

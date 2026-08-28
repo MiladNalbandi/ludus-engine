@@ -35,6 +35,22 @@ Every table carries a project identifier from the first migration, even though a
 install only ever has one project. That is what makes hosting several projects later a
 configuration change rather than a rewrite of every query, foreign key and URL.
 
+In `single` mode the engine creates that project on first start, under the slug `default`, and
+logs the identifier it chose. The check runs on every start and is idempotent, so a restart finds
+the project rather than adding one. You are never asked to name it and it does not appear in any
+URL.
+
+Two starts fail rather than continue:
+
+- The value is neither `single` nor `multi`. A typo in this setting is not something to guess at.
+- The mode is `single` and the database already holds a project that is not `default`. That means
+  either the mode was switched or the engine is pointed at the wrong database, and adding a second
+  project to find out which would be the wrong answer to both.
+
+`multi` is accepted and provisions nothing. Nothing routes to it yet — the hosted deployment is
+`v2.0.0`, [#17](https://github.com/MiladNalbandi/ludus-engine/issues/17) — so today it produces an
+engine with no project, which is only useful for confirming that the switch exists.
+
 ## Security
 
 There is nothing to configure here yet — identity arrives in `v0.1.0`, at which point a JWT

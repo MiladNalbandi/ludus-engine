@@ -48,5 +48,12 @@
       <artifactId>spring-boot-starter-test</artifactId>
       <scope>test</scope>
     </dependency>
+    <!-- Slice tests run the shipped migrations against H2 in PostgreSQL mode. Not a substitute
+         for the real database, but it catches entity-versus-migration drift on every build. -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
 </project>

@@ -1,13 +1,23 @@
-# The context test only needs the application to compose and serve. Real schema behaviour is
-# covered against a Postgres container, not here, so this profile deliberately avoids both.
+# H2 in PostgreSQL mode, with the real migrations applied.
+#
+# This profile used to skip Flyway and leave Hibernate with nothing to validate, which was fine
+# while there was no schema. There is one now, and the application provisions a row into it
+# before it will serve, so the context test would be starting an engine against a database that
+# does not have the table it needs. Running the migrations here means the boot sequence the test
+# exercises is the boot sequence an operator gets.
+#
+# H2 is not PostgreSQL. Schema behaviour that depends on the real thing belongs in a test against
+# the real thing; this profile is here so that composing and starting the application is checked
+# on every build in a second.
 spring:
   datasource:
-    url: jdbc:h2:mem:ludus;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    url: jdbc:h2:mem:ludus;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
   jpa:
     hibernate:
-      ddl-auto: none
+      ddl-auto: validate
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
