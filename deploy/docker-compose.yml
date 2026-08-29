@@ -32,6 +32,18 @@ services:
       LUDUS_DB_USER: ${LUDUS_DB_USER:-ludus}
       LUDUS_DB_PASSWORD: ${LUDUS_DB_PASSWORD}
       LUDUS_LOG_LEVEL: ${LUDUS_LOG_LEVEL:-INFO}
+      LUDUS_TENANCY_MODE: ${LUDUS_TENANCY_MODE:-single}
+      # Required, with no default anywhere. Compose refuses here rather than letting the
+      # container start and exit, because a message from compose names the file to edit and a
+      # container that died needs someone to go and read its logs first.
+      LUDUS_JWT_SECRET: "${LUDUS_JWT_SECRET:?set LUDUS_JWT_SECRET in deploy/.env, generated with `openssl rand -base64 48`}"
+      LUDUS_JWT_ISSUER: ${LUDUS_JWT_ISSUER:-ludus}
+      LUDUS_JWT_ACCESS_TTL: ${LUDUS_JWT_ACCESS_TTL:-15m}
+      LUDUS_JWT_REFRESH_TTL: ${LUDUS_JWT_REFRESH_TTL:-30d}
+      # Optional. Only used to create the first administrator of an empty project; once one
+      # exists these do nothing, so an install past its first start can leave them unset.
+      LUDUS_ADMIN_EMAIL: ${LUDUS_ADMIN_EMAIL:-}
+      LUDUS_ADMIN_PASSWORD: ${LUDUS_ADMIN_PASSWORD:-}
     ports:
       # Bound to loopback by default. Put a reverse proxy in front before exposing this;
       # /actuator/prometheus is reachable by anything that can reach the port.

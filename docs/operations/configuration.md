@@ -53,10 +53,48 @@ engine with no project, which is only useful for confirming that the switch exis
 
 ## Security
 
-There is nothing to configure here yet — identity arrives in `v0.1.0`, at which point a JWT
-signing secret becomes **required** and the engine will refuse to start in production without
-one. There will be no default value, because a default signing secret in a public repository
-becomes an exploit within a week of anyone using it.
+| Variable | Default | |
+|---|---|---|
+| `LUDUS_JWT_SECRET` | *(none)* | **Required.** The signing key for access tokens |
+| `LUDUS_JWT_ISSUER` | `ludus` | Written into tokens and required when verifying them |
+| `LUDUS_JWT_ACCESS_TTL` | `15m` | How long an access token lasts |
+| `LUDUS_JWT_REFRESH_TTL` | `30d` | How long a refresh token lasts |
+| `LUDUS_ADMIN_EMAIL` | *(none)* | The first administrator |
+| `LUDUS_ADMIN_PASSWORD` | *(none)* | The first administrator's password |
+
+There is no default signing secret and there will not be one. A default published in a public
+repository is a working forgery tool for every install that kept it, and telling operators to
+change it has never been sufficient. The engine refuses to start without one:
+
+```
+LUDUS_JWT_SECRET is not set.
+
+There is no default, deliberately: a signing secret published in a public repository lets
+anyone forge a token for every install that kept it. Generate one and keep it out of version
+control:
+
+    openssl rand -base64 48
+```
+
+Anything shorter than 32 bytes is refused too, because HS256 needs a 256-bit key.
+
+**The two lifetimes are a trade, not a pair of arbitrary numbers.** An access token is verified
+by checking a signature and nothing else, which is what makes it fast — and also means it cannot
+be revoked. `LUDUS_JWT_ACCESS_TTL` is therefore also the answer to *how long a stolen session
+keeps working after someone signs out*. A refresh token is stored, so revoking it is immediate,
+which is why it is allowed to last a month. Redeeming one revokes it and issues another, so a
+stolen refresh token and the real one cannot both keep working.
+
+**The administrator is seeded only into a project with no users.** Once a second account exists,
+this configuration stops acting entirely: changing the password here will not reset a real
+administrator's credentials, and removing the account will not see it quietly recreated on the
+next deploy. Leaving both blank is allowed and merely logged — an install whose administrator
+was created on a previous run does not need the password on hand at every restart.
+
+**API keys are issued through the API, not configured.** `POST /api/v1/admin/api-keys` mints one
+and returns it once; only a digest is stored, so it cannot be shown again by anyone, including
+whoever runs the database. A key is always read-only, because a key ends up in a config file, a
+git repository and a shipped game binary, and anything it can do should be assumed public.
 
 ## Endpoints and their exposure
 
@@ -66,7 +104,14 @@ becomes an exploit within a week of anyone using it.
 | `/actuator/info` | yes | Version metadata |
 | `/actuator/prometheus` | yes | Metrics |
 | `/api-docs`, `/docs` | yes | The API contract, not data |
-| everything else | **denied** | Deny-by-default until identity lands |
+| `/api/v1/auth/token` | yes | Signing in cannot require being signed in |
+| `/api/v1/auth/refresh` | yes | The refresh token is itself the credential |
+| `/api/v1/admin/**` | no | Administrators only |
+| everything else | no | Any valid credential; deny-by-default for anything unnamed |
+
+An anonymous request to a protected path gets `401`, and a request with a valid credential that
+lacks the role gets `403`. The two are worth telling apart: one sends you to look at your token,
+the other at your role.
 
 **`/actuator/prometheus` is open to anything that can reach the port.** It is meant for a
 scraper inside your deployment's network, and it exposes operational detail — request rates,

@@ -21,3 +21,16 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+ludus:
+  security:
+    jwt:
+      # A fixed, obviously-fake secret for tests. It is long enough for HS256 and short enough
+      # to read. It is here rather than generated per run so that a token in a failing test's
+      # output can be decoded by hand while working out what went wrong.
+      secret: test-signing-secret-not-for-any-real-deployment-0123456789
+      access-token-ttl: 15m
+      refresh-token-ttl: 30d
+    admin:
+      email: admin@example.test
+      password: correct-horse-battery-staple

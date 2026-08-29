@@ -4,7 +4,7 @@
   <img src="../assets/engine-overview.png" alt="Ludus at a glance: the project table with its single row, what the foundation already enforces, and what arrives in later releases" width="900">
 </p>
 
-What follows works today, on `v0.0.1`. Anything not yet built is called out as such. The picture
+What follows works today, on `v0.1.0`. Anything not yet built is called out as such. The picture
 above is the same claim in one frame: a green tick is something you can run now, and anything
 marked *coming soon* is not in the box yet.
 
@@ -44,11 +44,74 @@ curl -s localhost:8080/actuator/health
 | Health | <http://localhost:8080/actuator/health> |
 | Metrics | <http://localhost:8080/actuator/prometheus> |
 
-Everything else returns `403`, and that is deliberate — see [what you can't do yet](#what-you-cant-do-yet).
+Everything else needs a credential:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/api/v1/anything
-# 403
+# 401
+```
+
+## Sign in
+
+Set `LUDUS_JWT_SECRET` and the two administrator variables in `deploy/.env` before the first
+start; the engine refuses to start without a signing secret, and without an administrator nobody
+can sign in.
+
+```bash
+openssl rand -base64 48   # put this in LUDUS_JWT_SECRET
+```
+
+Then exchange the password for a pair of tokens:
+
+```bash
+curl -s localhost:8080/api/v1/auth/token \
+  -H 'Content-Type: application/json' \
+  -d '{"email":"you@example.com","password":"..."}'
+```
+
+```json
+{
+  "accessToken": "<a signed JWT>",
+  "tokenType": "Bearer",
+  "accessTokenExpiresAt": "2026-08-28T09:15:00Z",
+  "refreshToken": "<an opaque random string>",
+  "refreshTokenExpiresAt": "2026-09-27T09:00:00Z"
+}
+```
+
+The two are different kinds of thing, which the placeholders say better than a sample would. The
+access token is a signed JWT: anything holding the signing key can read the project and role out
+of it and check it without asking the database. The refresh token is 256 random bits with no
+structure at all — the engine keeps only a digest of it, so it is meaningless to anyone who has
+the database and useful only to whoever was handed it.
+
+The access token lasts fifteen minutes and cannot be revoked; the refresh token lasts thirty days
+and can. Use the access token, and when it expires, exchange the refresh token at
+`/api/v1/auth/refresh` for a new pair — which also revokes the one you presented.
+
+```bash
+curl -s localhost:8080/api/v1/me -H "Authorization: Bearer $ACCESS_TOKEN"
+# {"kind":"USER","subject":"...","project":"...","role":"ADMIN"}
+```
+
+## A key for your game client
+
+Game clients get an API key rather than a password. It is read-only, scoped to the project, shown
+once, and revocable.
+
+```bash
+curl -s localhost:8080/api/v1/admin/api-keys \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"android-client"}'
+```
+
+The `key` field in that response is the only copy. Only a digest is stored, so nobody — including
+whoever runs the database — can show it to you again. Clients send it as a header:
+
+```bash
+curl -s localhost:8080/api/v1/me -H "X-API-Key: ludus_..."
+# {"kind":"API_KEY","subject":"...","project":"...","role":"VIEWER"}
 ```
 
 ## Build and test from source
@@ -69,11 +132,11 @@ To run one module or one test:
 
 ## What you can't do yet
 
-The engine has no content API and no authentication. It deliberately **denies every request**
-except the operational endpoints and the API documentation, on the grounds that an endpoint added
-before authentication exists should be unreachable rather than accidentally public.
+There is still **no content API**. You can sign in, mint a key and see who you are — and then
+there is nothing yet to read or write, because authoring and serving content is the next release.
+That ordering is deliberate: authenticating one endpoint is much cheaper than retrofitting
+authentication across a finished API.
 
-- Authentication and API keys arrive in `v0.1.0` — [#7](https://github.com/MiladNalbandi/ludus-engine/issues/7)
 - Authoring and serving content arrives in `v0.2.0` — [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8)
 - The visual editor arrives in `v0.3.0` — [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9)
 

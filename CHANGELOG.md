@@ -11,6 +11,23 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Identity** — `v0.1.0`, [#7](https://github.com/MiladNalbandi/ludus-engine/issues/7). Users,
+  roles, signing in, and API keys for game clients.
+  - `POST /api/v1/auth/token` exchanges an email address and password for an access token and a
+    refresh token. `POST /api/v1/auth/refresh` exchanges the refresh token for a new pair and
+    revokes the one presented, so a stolen token and the real one cannot both keep working.
+    `GET /api/v1/me` reports the identity behind whatever credential was sent.
+  - Three roles — `VIEWER`, `EDITOR`, `ADMIN` — checked in one filter chain rather than per
+    controller, with a table-driven test stating the whole policy in one file.
+  - API keys for game clients, under `POST /api/v1/admin/api-keys`. Shown once, stored as a
+    digest, scoped to a project, always read-only, and revoked by stamping rather than deleting.
+  - Passwords are stored with BCrypt; machine-generated secrets with SHA-256, which is
+    deterministic so a presented credential is one indexed lookup rather than a scan.
+  - Every authentication failure returns the same 401 with the same body. Telling an unknown
+    address apart from a wrong password turns a login form into a list of who has an account.
+  - The first administrator is seeded from `LUDUS_ADMIN_EMAIL` / `LUDUS_ADMIN_PASSWORD`, only
+    into a project that has no users. It never resets an existing administrator's password.
+
 - The project boundary, and the first migration. `V1__project.sql` creates the `project` table
   that every later table refers to. A `single`-tenant install provisions one project on first
   start, under the slug `default`; the check is idempotent, so a restart finds it rather than
@@ -41,12 +58,25 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
   here describes something that does not work.
 - Slice tests run the shipped migrations against H2 in PostgreSQL mode with Hibernate's schema
   validation on, so an entity that has drifted from its migration fails the build rather than the
-  deploy.
+  deploy. The identity tests run with two projects present throughout, because a repository that
+  ignores its project argument passes every single-project test ever written.
 
 - `scripts/publish-wiki.sh` mirrors `docs/` into the GitHub Wiki for anyone who prefers reading
   it there. The repository remains the source of truth; the wiki is a published copy.
 - A roadmap issue per phase, tracked in
   [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18).
+
+### Changed
+
+- **`LUDUS_JWT_SECRET` is required and has no default.** The engine refuses to start without
+  one, and refuses anything shorter than 32 bytes. A signing secret published in a public
+  repository is a working forgery tool for every install that kept it.
+- **An unauthenticated request now returns `401` rather than `403`.** It said `403` while
+  nobody could ever be allowed, which was the whole truth at the time. A caller who is signed in
+  and merely lacks the role still gets `403`, and the two send whoever is debugging to different
+  places.
+- The single deny-all filter chain is replaced by the three ordered chains its own comment
+  described: operational endpoints, documentation, and the API.
 
 ### Fixed
 

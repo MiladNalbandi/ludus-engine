@@ -21,9 +21,9 @@
   <a href="https://github.com/miladnalbandi/ludus-engine/issues/18"><img alt="Roadmap" src="https://img.shields.io/badge/roadmap-%2318-5B4FE9"></a>
 </p>
 
-> **Status: early.** `v0.0.1` is the foundation — the build, the architecture guardrails, the
-> content contract and a running (empty) service. The content API arrives in `v0.2.0`. The
-> roadmap below is honest about what does and does not exist yet.
+> **Status: early.** `v0.1.0` adds identity to the foundation — sign in, roles, API keys for
+> game clients, and the project boundary. There is still **no content API**; that arrives in
+> `v0.2.0`. The roadmap below is honest about what does and does not exist yet.
 
 ## What it is, and what it is not
 
@@ -41,6 +41,8 @@ Your engine does that. Ludus tells it what to build.
 git clone https://github.com/miladnalbandi/ludus-engine.git
 cd ludus-engine
 cp deploy/.env.example deploy/.env
+# Set LUDUS_JWT_SECRET (openssl rand -base64 48) and the two LUDUS_ADMIN_* values.
+# The engine refuses to start without a signing secret, deliberately.
 docker compose -f deploy/docker-compose.yml up
 ```
 
@@ -100,14 +102,16 @@ Tracked in [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18), with 
 | | Release | |
 |---|---|---|
 | ✅ | `v0.0.1` | Foundation: build, architecture guardrails, content contract, running service |
-| 🚧 | `v0.1.0` | Identity: JWT, roles, API keys for game clients |
-| 📋 | `v0.2.0` | Content API: author, validate, publish and serve waves and levels, with ETag caching |
+| ✅ | `v0.1.0` | Identity: JWT, roles, API keys, the project boundary |
+| 🚧 | `v0.2.0` | Content API: author, validate, publish and serve waves and levels, with ETag caching |
 | 📋 | `v0.3.0` | The web editor: timeline, live preview, audio, level sequencer |
 | 📋 | `v0.4.0` | Live-ops: players, items, XP, currency, inventory, leaderboards |
 | 📋 | `v1.0.0` | Frozen HTTP contract, docs, semantic-versioning commitment |
-| 📋 | `v1.1`–`v1.3` | Plugins: entity, behaviour and content types become data. Tilemaps and blocks |
-| 📋 | `v1.4.0` | Notification centre: templates, player segments, scheduling, push |
-| 📋 | `v1.5.0` | Unity SDK (separate repository, Apache-2.0) |
+| 📋 | `v1.1.0` | Plugin substrate: entity, behaviour and content types become data |
+| 📋 | `v1.2.0` | Schema-driven editor, pluggable preview |
+| 📋 | `v1.3.0` | Maps and blocks: the tilemap content type |
+| 📋 | `v1.4.0` | Notification centre: templates, player segments, scheduling |
+| 📋 | `v1.5.0` | Game client SDK (separate repository, Apache-2.0) |
 | 📋 | `v2.0.0` | Multi-tenancy and hosted deployment |
 
 ## Game client SDK
