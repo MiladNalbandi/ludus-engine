@@ -62,7 +62,13 @@ jobs:
       # is what stops that promise from quietly becoming false.
       - name: Bring the stack up exactly as the README describes
         run: |
-          sed 's/^LUDUS_DB_PASSWORD=.*/LUDUS_DB_PASSWORD=ci-not-a-real-password/' \
+          # The same three values the getting-started guide tells a reader to set, generated
+          # the same way. The signing secret has no default and the engine refuses to start
+          # without one, so a quickstart that did not set it would only ever prove that.
+          sed -e 's/^LUDUS_DB_PASSWORD=.*/LUDUS_DB_PASSWORD=ci-not-a-real-password/' \
+              -e "s|^LUDUS_JWT_SECRET=.*|LUDUS_JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')|" \
+              -e 's/^LUDUS_ADMIN_EMAIL=.*/LUDUS_ADMIN_EMAIL=ci@example.test/' \
+              -e 's/^LUDUS_ADMIN_PASSWORD=.*/LUDUS_ADMIN_PASSWORD=ci-not-a-real-password/' \
             deploy/.env.example > deploy/.env
           docker compose -f deploy/docker-compose.yml up -d --build
 
@@ -79,10 +85,30 @@ jobs:
       - name: The API contract is served
         run: curl -fsS http://localhost:8080/api-docs | grep -q 'Ludus Engine API'
 
-      - name: Anything not deliberately open is denied
+      - name: Anything not deliberately open needs a credential
         run: |
           status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/anything)
-          test "$status" = "403" || { echo "expected 403, got $status"; exit 1; }
+          test "$status" = "401" || { echo "expected 401, got $status"; exit 1; }
+
+      # Signing in is the one flow a reader is promised will work after two commands, and it is
+      # the only one of these steps that touches the database, the migrations, the seeded
+      # administrator and the filter chains all at once.
+      - name: An administrator can sign in and is recognised
+        run: |
+          token=$(curl -fsS http://localhost:8080/api/v1/auth/token \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
+            | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+          test -n "$token" || { echo "no access token in the response"; exit 1; }
+          curl -fsS http://localhost:8080/api/v1/me -H "Authorization: Bearer $token" \
+            | grep -q '"role":"ADMIN"' || { echo "/api/v1/me did not report an admin"; exit 1; }
+
+      - name: A wrong password is refused
+        run: |
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/auth/token \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.test","password":"wrong"}')
+          test "$status" = "401" || { echo "expected 401, got $status"; exit 1; }
 
       - name: Engine logs
         if: failure()
