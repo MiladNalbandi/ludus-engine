@@ -56,11 +56,20 @@ class ApplicationContextTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
+    /**
+     * Still deny-by-default, but the refusal is now 401 rather than 403.
+     *
+     * <p>It said 403 while there was no such thing as authenticating: nobody could ever be
+     * allowed, so "forbidden" was the whole truth. Now that a credential exists, the honest answer
+     * to an anonymous request is that one is required. A caller who is signed in and merely lacks
+     * the role gets 403, and the two are worth telling apart — they send whoever is debugging to
+     * different places.
+     */
     @Test
-    void everything_that_is_not_deliberately_open_is_denied() {
+    void everything_that_is_not_deliberately_open_needs_a_credential() {
         ResponseEntity<String> response =
                 rest.getForEntity("http://localhost:" + port + "/api/v1/anything", String.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 }

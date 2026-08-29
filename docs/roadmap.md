@@ -15,8 +15,8 @@ diagram, so it gets replaced when the ticks change.
 | | Release | |
 |---|---|---|
 | ✅ | `v0.0.1` | Foundation: build, architecture guardrails, content contract, running service |
-| 🚧 | `v0.1.0` | Identity: JWT, roles, API keys, the project boundary |
-| 📋 | `v0.2.0` | Content API: author, validate, publish and serve, with ETag caching |
+| ✅ | `v0.1.0` | Identity: JWT, roles, API keys, the project boundary |
+| 🚧 | `v0.2.0` | Content API: author, validate, publish and serve, with ETag caching |
 | 📋 | `v0.3.0` | The editor: timeline, live preview, audio, level sequencer |
 | 📋 | `v0.4.0` | Live-ops: players, items, XP, currency, inventory, leaderboards |
 | 📋 | `v1.0.0` | Frozen HTTP contract, documentation, semantic-versioning commitment |

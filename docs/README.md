@@ -11,11 +11,10 @@ without shipping a build.
 It is not a game engine. It does not render, simulate physics, or run your game loop. Your
 engine does that — Ludus tells it what to build.
 
-> **Status: v0.0.1.** Be aware of what does and does not exist yet. This release is the
-> foundation: the build, the architecture guardrails, the content contract and a running
-> service. **There is no content API yet** — that arrives in v0.2.0. Pages below mark planned
-> behaviour explicitly and link to the issue tracking it. Nothing here describes something that
-> does not work.
+> **Status: v0.1.0.** Be aware of what does and does not exist yet. The foundation and identity
+> are built: you can sign in, hold a role, and mint an API key for a game client. **There is no
+> content API yet** — that arrives in v0.2.0. Pages below mark planned behaviour explicitly and
+> link to the issue tracking it. Nothing here describes something that does not work.
 
 ## Start here
 

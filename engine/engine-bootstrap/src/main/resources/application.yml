@@ -3,10 +3,11 @@ spring:
     name: ludus-engine
   autoconfigure:
     exclude:
-      # Boot would otherwise create an in-memory user and log a generated password on every
-      # start. Nothing authenticates against it — the baseline chain has no basic or form login
-      # — so all it does is imply the engine has a login it does not yet have. Drops out on its
-      # own once a real UserDetailsService is registered.
+      # Still excluded. Authentication is done by two filters that verify a token or an API key
+      # against the database; nothing here registers a UserDetailsService, so Boot's default
+      # would still apply — an in-memory user with a random password logged on every start,
+      # which nothing can authenticate against and which reads as a credential someone might
+      # try to use. It goes when there is a real UserDetailsService to replace it.
       - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
   threads:
     virtual:
@@ -63,6 +64,23 @@ ludus:
     # install wants. 'multi' arrives in the SaaS phase; the project boundary exists in the
     # schema from the first migration so that switch is configuration, not a rewrite.
     mode: ${LUDUS_TENANCY_MODE:single}
+  security:
+    jwt:
+      # Deliberately no default. A signing secret published in a public repository lets anyone
+      # forge a token for every install that kept it, so the engine refuses to start without
+      # one rather than starting insecurely. Generate: openssl rand -base64 48
+      secret: ${LUDUS_JWT_SECRET:}
+      issuer: ${LUDUS_JWT_ISSUER:ludus}
+      # Short, because an access token cannot be revoked: this is also how long a stolen
+      # session survives after someone signs out.
+      access-token-ttl: ${LUDUS_JWT_ACCESS_TTL:15m}
+      # Long, because this one can be revoked, which is the whole reason it exists.
+      refresh-token-ttl: ${LUDUS_JWT_REFRESH_TTL:30d}
+    admin:
+      # The first administrator, created only into a project that has no users. Also no
+      # default: an install with a known administrator password is compromised on first boot.
+      email: ${LUDUS_ADMIN_EMAIL:}
+      password: ${LUDUS_ADMIN_PASSWORD:}
 
 logging:
   level:
