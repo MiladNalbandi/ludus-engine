@@ -99,8 +99,14 @@ public class SecurityConfiguration {
                                         // Signing in cannot require being signed in.
                                         .requestMatchers("/api/v1/auth/token", "/api/v1/auth/refresh")
                                         .permitAll()
-                                        // Issuing and revoking credentials is an administrator's
-                                        // job. A leaked API key must not be able to mint another.
+                                        // Authoring content is an editor's job, and the whole
+                                        // reason the EDITOR role exists. Administrators reach it
+                                        // too, because Role is ordered and ADMIN includes EDITOR.
+                                        .requestMatchers("/api/v1/admin/waves/**")
+                                        .hasAnyRole("EDITOR", "ADMIN")
+                                        // Issuing and revoking credentials is not. This matcher
+                                        // is listed after the one above and would otherwise
+                                        // shadow it -- the narrower rule has to come first.
                                         .requestMatchers("/api/v1/admin/**")
                                         .hasRole("ADMIN")
                                         .anyRequest()

@@ -11,6 +11,48 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Wave authoring** — the first half of `v0.2.0`,
+  [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). Documents can be created,
+  validated, published and read back under `/api/v1/admin/waves`, by an `EDITOR` or above.
+  - Documents are stored **verbatim** in a text column, with a generated `jsonb` column derived
+    from it for indexing. Neither the write path nor the read path parses and re-serialises,
+    because that moves the bytes — and the ETag is a hash of them, so every client would
+    re-download the catalogue after a save that changed nothing.
+  - Validation is against the published schema, in enforce mode, with errors reported at JSON
+    Pointer paths so an editor can attach each one to the field that caused it. All violations are
+    returned at once, not the first.
+  - Saving never publishes. A new wave is a draft; publication is a separate call.
+  - `progression_config.order` is derived from the document and never accepted as a request field.
+    A collision is a `422` at `/progression_config/order`, backed by a unique index so two
+    concurrent writes cannot both claim it.
+  - `schema_version` is stamped when a document omits it. That is the one path in the engine
+    allowed to change a document's bytes, and it has its own port and its own test.
+- `ContentHashes` computes both the document ETag and the catalogue hash. The public routes that
+  will serve them arrive in the second half of `v0.2.0`; the function exists now so the two signals
+  cannot be implemented separately and disagree.
+- `StatelessAuthenticationTest` asserts the invariant that makes disabling CSRF safe — no
+  `UserDetailsService`, no session cookie, no Basic challenge. The four CodeQL alerts on the
+  identity code are dismissed citing it.
+
+### Changed
+
+- `/api/v1/admin/waves/**` requires `EDITOR`; the rest of `/api/v1/admin/**` still requires
+  `ADMIN`. Authoring content is what the editor role is for, and a leaked API key must still not be
+  able to mint another key.
+- Flyway now reads `classpath:db/migration` plus `classpath:db/vendor/{vendor}`. The generated
+  `jsonb` column is PostgreSQL-only and lives in the vendor location, so the shared schema stays
+  one schema. The vendor directory is a sibling of `db/migration` rather than nested inside it,
+  because Flyway scans a location recursively and would otherwise hand PostgreSQL-only SQL to H2.
+- `engine-application`'s enforcer now bans Jackson and networknt, matching `engine-domain` and the
+  ArchUnit rule that already forbade importing them.
+
+## [0.1.0] - 2026-08-30
+
+Identity. Sign in, roles, and API keys for game clients, on top of the project boundary every
+table has carried since the first migration. Still no content API.
+
+### Added
+
 - **Identity** — `v0.1.0`, [#7](https://github.com/MiladNalbandi/ludus-engine/issues/7). Users,
   roles, signing in, and API keys for game clients.
   - `POST /api/v1/auth/token` exchanges an email address and password for an access token and a

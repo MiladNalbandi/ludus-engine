@@ -138,7 +138,18 @@ class AuthorisationMatrixTest {
                 Arguments.of("admin", "/api/v1/me", HttpStatus.OK),
                 Arguments.of("admin", "/api/v1/admin/api-keys", HttpStatus.OK),
                 Arguments.of("api-key", "/api/v1/me", HttpStatus.OK),
-                Arguments.of("api-key", "/api/v1/admin/api-keys", HttpStatus.FORBIDDEN));
+                Arguments.of("api-key", "/api/v1/admin/api-keys", HttpStatus.FORBIDDEN),
+
+                // Authoring content is what the EDITOR role exists for, and it lives under the
+                // same /admin prefix as key management. Two matchers, and the narrower one has to
+                // be listed first or it is shadowed -- which is precisely the mistake these rows
+                // exist to catch.
+                Arguments.of("anonymous", "/api/v1/admin/waves", HttpStatus.UNAUTHORIZED),
+                Arguments.of("viewer", "/api/v1/admin/waves", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/admin/waves", HttpStatus.OK),
+                Arguments.of("admin", "/api/v1/admin/waves", HttpStatus.OK),
+                // A key ends up in a shipped game binary. It must never be able to author.
+                Arguments.of("api-key", "/api/v1/admin/waves", HttpStatus.FORBIDDEN));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")

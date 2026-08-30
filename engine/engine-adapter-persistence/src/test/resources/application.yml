@@ -20,5 +20,8 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration,classpath:db/vendor/{vendor}
+    # db/vendor/h2 does not exist and never will; a missing vendor location is
+    # normal rather than an error.
+    fail-on-missing-locations: false
     clean-disabled: false

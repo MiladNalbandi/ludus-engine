@@ -103,6 +103,18 @@ jobs:
           curl -fsS http://localhost:8080/api/v1/me -H "Authorization: Bearer $token" \
             | grep -q '"role":"ADMIN"' || { echo "/api/v1/me did not report an admin"; exit 1; }
 
+      # The generated jsonb column is PostgreSQL-only, so H2 never creates it and no unit test can
+      # say anything true about it. This is the only place a claim about it is worth making.
+      - name: The generated jsonb column is derived from the stored bytes
+        run: |
+          docker compose -f deploy/docker-compose.yml exec -T postgres \
+            psql -U ludus -d ludus -tAc \
+            "select column_name, is_generated from information_schema.columns
+              where table_name = 'wave' and column_name in ('config_json','config')
+              order by column_name;" | tee /tmp/cols.txt
+          grep -q '^config|ALWAYS$'   /tmp/cols.txt || { echo "config is not generated"; exit 1; }
+          grep -q '^config_json|NEVER$' /tmp/cols.txt || { echo "config_json is generated"; exit 1; }
+
       - name: A wrong password is refused
         run: |
           status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/auth/token \
