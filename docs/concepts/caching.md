@@ -39,12 +39,16 @@ client re-downloads everything.
 
 The engine therefore stores the received bytes verbatim in a text column, with a *generated*
 `jsonb` column alongside for indexing, and derives every indexed field by **reading** the document
-rather than by re-serialising it. There is exactly one exception — stamping `schema_version` when a
+rather than by re-serialising it. That is `config_json` and `config` in `V4__wave.sql`; the
+generated column is PostgreSQL-specific and lives in `db/vendor/postgresql` so that the shared
+schema stays one schema rather than two hand-maintained dialects. There is exactly one exception — stamping `schema_version` when a
 document omits it — and it is a surgical edit to the parsed tree, documented as the one
 non-byte-preserving path.
 
-A round-trip test guards this permanently: save a document, read it back raw, assert the bytes are
-identical; re-save an identical body, assert the ETag did not move.
+`WaveRoundTripByteStabilityTest` guards this permanently: save a document written with awkward but
+legal formatting — odd whitespace, keys out of order, an explicit `1.0` — read it back, and assert
+the bytes are identical; re-save an identical body and assert the hash did not move. Confirmed by
+adding a deserialise-and-re-serialise step to the write path and watching it fail.
 
 ## What a well-behaved client does
 

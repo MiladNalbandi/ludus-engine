@@ -24,7 +24,7 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
-    locations: classpath:db/migration
+    locations: classpath:db/migration,classpath:db/vendor/{vendor}
     baseline-on-migrate: false
     fail-on-missing-locations: false
 

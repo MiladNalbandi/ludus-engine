@@ -1,8 +1,10 @@
 # The content model
 
-> The schema described here **exists today** and is validated on every build. The HTTP API that
-> serves it arrives in `v0.2.0` — [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8).
-> Endpoint shapes below are the planned design, not something you can call yet.
+> The schema and the **authoring** API described here exist today. Documents can be created,
+> validated, published and read back byte-identical under `/api/v1/admin/waves`. The **public**
+> routes a game client reads from — and the ETag and `/app/status` protocol in
+> [caching](caching.md) — are the second half of `v0.2.0`,
+> [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8), and are not callable yet.
 
 ## Content is documents, not columns
 
@@ -44,15 +46,19 @@ alternative is that saving a half-finished level ships it to everyone currently 
 The publication flag lives on a column, not only inside the document. The column is authoritative;
 the document mirrors it so that a document read in isolation still says whether it was live.
 
+Saving never publishes. `POST /api/v1/admin/waves` creates a draft; publication is a separate call,
+because the alternative is that saving a half-finished level ships it to everyone currently playing.
+
 ## Derived fields are derived, not submitted
 
 Ordering is read from inside the document (`progression_config.order`) rather than accepted as a
 request field, and a collision with another document's order is a validation error pointing at
 that exact path.
 
-There is also a database uniqueness constraint on it. The application checks first so the error
-message is useful; the constraint exists so that two concurrent writes cannot both succeed. Belt
-and braces, because the friendly check alone is a race.
+There is also a database uniqueness constraint on it — `uq_wave_order`. The application checks first
+so the error is a `422` pointing at `/progression_config/order`; the constraint exists so that two
+concurrent writes cannot both succeed in claiming order 3. Belt and braces, because the friendly
+check alone is a race.
 
 ## Schema versioning, and the rule clients rely on
 

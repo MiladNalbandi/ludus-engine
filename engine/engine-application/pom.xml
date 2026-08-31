@@ -51,6 +51,12 @@
                     <exclude>org.springframework*:*</exclude>
                     <exclude>jakarta.persistence:*</exclude>
                     <exclude>org.hibernate*:*</exclude>
+                    <!-- The application handles JSON documents and may not have a JSON library.
+                         ArchUnit already forbids importing these; without them listed here the
+                         compile-time guardrail was weaker than the test-time one, which is
+                         backwards. engine-domain has banned both since the first commit. -->
+                    <exclude>com.fasterxml.jackson*:*</exclude>
+                    <exclude>com.networknt:*</exclude>
                     <exclude>io.ludus:engine-adapter-persistence</exclude>
                     <exclude>io.ludus:engine-adapter-web</exclude>
                     <exclude>io.ludus:engine-adapter-security</exclude>
