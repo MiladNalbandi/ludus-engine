@@ -75,6 +75,8 @@ class StatelessAuthenticationTest {
                         "/api-docs",
                         "/api/v1/me",
                         "/api/v1/auth/token",
+                        "/api/v1/public/status",
+                        "/api/v1/public/waves",
                         "/api/v1/anything");
 
         assertThat(paths)

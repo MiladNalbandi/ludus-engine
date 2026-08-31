@@ -45,6 +45,13 @@ public class WaveRepositoryAdapter implements WaveRepository {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Optional<Wave> findPublished(ProjectId projectId, Slug id) {
+        return waves.findByProjectIdAndWaveIdAndPublishedTrue(projectId.value(), id.value())
+                .map(WaveEntity::toDomain);
+    }
+
+    @Override
     @Transactional
     public Wave save(Wave wave) {
         return waves.save(WaveEntity.from(wave)).toDomain();

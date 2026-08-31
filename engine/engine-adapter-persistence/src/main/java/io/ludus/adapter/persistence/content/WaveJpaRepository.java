@@ -17,6 +17,8 @@ interface WaveJpaRepository extends JpaRepository<WaveEntity, WaveKey> {
 
     List<WaveEntity> findByProjectIdAndPublishedTrueOrderByWaveOrderAsc(UUID projectId);
 
+    Optional<WaveEntity> findByProjectIdAndWaveIdAndPublishedTrue(UUID projectId, String waveId);
+
     /**
      * Orders held by other waves. The exclusion is done here rather than by filtering afterwards
      * so it stays correct however many waves a project has.

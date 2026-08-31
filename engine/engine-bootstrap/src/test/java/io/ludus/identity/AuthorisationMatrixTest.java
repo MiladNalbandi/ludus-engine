@@ -149,7 +149,16 @@ class AuthorisationMatrixTest {
                 Arguments.of("editor", "/api/v1/admin/waves", HttpStatus.OK),
                 Arguments.of("admin", "/api/v1/admin/waves", HttpStatus.OK),
                 // A key ends up in a shipped game binary. It must never be able to author.
-                Arguments.of("api-key", "/api/v1/admin/waves", HttpStatus.FORBIDDEN));
+                Arguments.of("api-key", "/api/v1/admin/waves", HttpStatus.FORBIDDEN),
+
+                // Published content is what every copy of the game downloads. It is public by
+                // definition, so anonymous reaches it -- and that is the only thing anonymous
+                // reaches. These rows are what stops the permitAll matcher widening by accident.
+                Arguments.of("anonymous", "/api/v1/public/status", HttpStatus.OK),
+                Arguments.of("anonymous", "/api/v1/public/waves", HttpStatus.OK),
+                Arguments.of("api-key", "/api/v1/public/waves", HttpStatus.OK),
+                Arguments.of("viewer", "/api/v1/public/waves", HttpStatus.OK),
+                Arguments.of("admin", "/api/v1/public/waves", HttpStatus.OK));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")

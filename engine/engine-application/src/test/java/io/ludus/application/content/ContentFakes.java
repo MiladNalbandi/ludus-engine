@@ -50,6 +50,11 @@ final class ContentFakes {
         }
 
         @Override
+        public Optional<Wave> findPublished(ProjectId projectId, Slug id) {
+            return find(projectId, id).filter(Wave::published);
+        }
+
+        @Override
         public Wave save(Wave wave) {
             byKey.put(key(wave.projectId(), wave.id()), wave);
             return wave;

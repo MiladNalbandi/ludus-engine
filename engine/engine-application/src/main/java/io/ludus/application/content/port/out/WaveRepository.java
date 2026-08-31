@@ -16,8 +16,17 @@ public interface WaveRepository {
     /** Every wave in the project, drafts included. The authoring view. */
     List<Wave> list(ProjectId projectId);
 
-    /** Only what has been published. What a game client is eventually served. */
+    /** Only what has been published. What a game client is served. */
     List<Wave> listPublished(ProjectId projectId);
+
+    /**
+     * One published wave, or empty.
+     *
+     * <p>Separate from {@link #find} rather than a filter applied afterwards, so that "which rows
+     * may a client see" is answered by the query rather than by whoever remembers to check. A
+     * caller holding this method cannot accidentally serve a draft.
+     */
+    Optional<Wave> findPublished(ProjectId projectId, Slug id);
 
     Wave save(Wave wave);
 
