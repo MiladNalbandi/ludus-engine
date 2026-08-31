@@ -1,9 +1,12 @@
 # Caching and change detection
 
-> The protocol described here is implemented in `v0.2.0` —
-> [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). It is documented now because it
-> is a contract clients depend on, and the client SDK
-> ([#16](https://github.com/MiladNalbandi/ludus-engine/issues/16)) is designed against it.
+> The protocol described here **exists today**. The routes are under `/api/v1/public`, and the
+> client SDK ([#16](https://github.com/MiladNalbandi/ludus-engine/issues/16)) is designed against
+> it.
+>
+> The poll was written here as `GET /app/status` before it was built and is now
+> `GET /api/v1/public/status`, so that the whole public surface shares one prefix. No client had
+> been written against the old path — this was the last moment that rename was free.
 
 A game client fetches content over the network and caches it. Getting this wrong is expensive in
 a way that is easy to miss: it does not break anything, it just makes every player re-download
@@ -13,8 +16,9 @@ the catalogue on every launch. On mobile that is a real bandwidth bill and real 
 
 There are two ways a client learns that content changed:
 
-1. **A poll.** `GET /app/status` returns a content hash covering all published content. Cheap to
-   call, served `Cache-Control: no-store` so it is never itself cached.
+1. **A poll.** `GET /api/v1/public/status` returns a content hash covering all published content.
+   Cheap to call — it reads ids and timestamps and never loads a document — and served
+   `Cache-Control: no-store` so it is never itself cached.
 2. **HTTP validation.** Every public content response carries an `ETag`. A client re-requests with
    `If-None-Match` and gets `304 Not Modified` when nothing changed.
 
@@ -52,16 +56,23 @@ adding a deserialise-and-re-serialise step to the write path and watching it fai
 
 ## What a well-behaved client does
 
-1. On launch, `GET /app/status`. Compare the content hash to the cached one.
+1. On launch, `GET /api/v1/public/status`. Compare the content hash to the cached one.
 2. Unchanged → play from cache. No further requests.
-3. Changed → fetch the list, then fetch changed documents with `If-None-Match` from the cache.
+3. Changed → `GET /api/v1/public/waves`, then fetch changed documents from
+   `/api/v1/public/waves/{id}/raw` with `If-None-Match` from the cache.
 4. Store the raw bytes and the ETag together. The ETag is only useful alongside the bytes it
    validates.
 
 The `If-None-Match` handling on the server tolerates what real clients and proxies actually send:
 weak validators (`W/"…"`), quoted and unquoted forms, comma-separated lists, and `*`. This is
 unglamorous and it is exactly the sort of thing that silently disables caching for one platform's
-HTTP stack when it is not handled.
+HTTP stack when it is not handled. It lives in `EntityTags` with twenty-five table rows, one per
+form seen in the wild, and comparison is deliberately weak — `W/"x"` matches `"x"`, because strong
+comparison exists for byte ranges and nothing here serves ranges.
+
+That the two signals cannot disagree is asserted directly: a test fetches the poll and the list and
+requires the hash and the ETag to be the same string. Computing the list ETag beside the poll rather
+than from the same function fails it.
 
 ## Offline
 

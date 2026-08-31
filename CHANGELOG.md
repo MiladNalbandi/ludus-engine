@@ -11,6 +11,36 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Public content routes**, under `/api/v1/public` — the second half of `v0.2.0`,
+  [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). A game client can now fetch what an
+  editor published.
+  - `GET /api/v1/public/status` returns the content hash for everything published, served
+    `Cache-Control: no-store`. It reads ids and timestamps only and never loads a document, because
+    it is called on every launch.
+  - `GET /api/v1/public/waves`, `/waves/{id}` and `/waves/{id}/raw`, each carrying an `ETag` and
+    answering `304` to a matching `If-None-Match`. The raw route returns the stored bytes exactly.
+  - **The status hash and the list ETag are the same value**, asserted as string equality. Computed
+    separately they can disagree, and a client caught between them — told "changed" by one signal,
+    handed a `304` validated against the other — is very hard to debug from either side.
+  - No credential required. Published content is what every copy of the game downloads; requiring
+    a secret that ships inside the binary would be one in name only. API keys remain for saying
+    which client is calling, for project selection under multi-tenancy, and for rate limiting.
+  - A draft is a `404`, never a `403`, as is another project's wave and one that never existed.
+- `EntityTags` parses `If-None-Match` the way real clients and proxies write it: weak validators,
+  quoted and unquoted, comma-separated lists, and `*`. Comparison is weak, because strong
+  comparison exists for byte ranges and nothing here serves ranges. Twenty-five table rows, one per
+  form seen in the wild — getting this wrong does not fail anything, it silently turns caching off
+  for one platform.
+- `WaveRepository.findPublished` — a published-only single lookup, so "which rows may a client see"
+  is answered by the query rather than by whoever remembers to filter.
+
+### Fixed
+
+- Three status blurbs said there was no content API after authoring had shipped, and
+  `OpenApiConfiguration`'s javadoc claimed the OpenAPI document was committed under `docs/api` and
+  diffed in CI — a mechanism that does not exist. Documentation asserting something untrue is the
+  same failure as a green check that means nothing.
+
 - **Wave authoring** — the first half of `v0.2.0`,
   [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). Documents can be created,
   validated, published and read back under `/api/v1/admin/waves`, by an `EDITOR` or above.

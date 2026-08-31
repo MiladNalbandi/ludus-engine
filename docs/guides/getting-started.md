@@ -114,6 +114,40 @@ curl -s localhost:8080/api/v1/me -H "X-API-Key: ludus_..."
 # {"kind":"API_KEY","subject":"...","project":"...","role":"VIEWER"}
 ```
 
+## What a game client does
+
+Published content needs no credential — it is what every copy of the game downloads, so requiring a
+secret that ships inside the binary would be one in name only.
+
+```bash
+curl -s localhost:8080/api/v1/public/status
+# {"contentHash":"sha256:..."}
+```
+
+Compare that with the hash you cached. Unchanged means play from cache and make no further
+requests. Changed means fetch the list, then the documents you need:
+
+```bash
+curl -si localhost:8080/api/v1/public/waves | grep -i '^etag'
+# ETag: "sha256:..."
+
+curl -s localhost:8080/api/v1/public/waves/demo_first_steps/raw
+# the document, byte-for-byte as it was authored
+```
+
+Send the ETag back and you get nothing, which is the point:
+
+```bash
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/api/v1/public/waves \
+  -H 'If-None-Match: "sha256:..."'
+# 304
+```
+
+Store the raw bytes and the ETag together — an ETag is only useful beside the bytes it validates.
+The content hash from `/status` and the ETag of `/waves` are the same value for the same data, on
+purpose: two signals computed separately can disagree, and a client caught between them is very
+hard to debug.
+
 ## Build and test from source
 
 ```bash
@@ -132,11 +166,9 @@ To run one module or one test:
 
 ## What you can't do yet
 
-You can author content — create a wave, validate it, publish it — but **a game client cannot fetch
-it yet**. There are no public routes, no `ETag`, and no status poll, so nothing outside the
-authoring API can read a document. That is the rest of `v0.2.0`.
-
-- The public routes and the caching protocol arrive in `v0.2.0` — [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8)
+Waves are the only content type, and there is no editor — you author by sending documents to the
+API. Audio upload, wave-levels and bulk operations are the remainder of
+[#8](https://github.com/MiladNalbandi/ludus-engine/issues/8).
 - The visual editor arrives in `v0.3.0` — [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9)
 
 What *does* exist and is worth looking at now: the [content contract](../concepts/content-model.md)

@@ -21,10 +21,9 @@
   <a href="https://github.com/miladnalbandi/ludus-engine/issues/18"><img alt="Roadmap" src="https://img.shields.io/badge/roadmap-%2318-5B4FE9"></a>
 </p>
 
-> **Status: early.** Content can be authored: a wave document is validated against the published
-> schema, stored byte-for-byte, and published. What is **not** built is the public surface a game
-> client reads from — that is the rest of `v0.2.0`. The roadmap below is honest about what does
-> and does not exist yet.
+> **Status: early, and it works end to end.** Author a wave, publish it, and a game client fetches
+> it over cacheable HTTP with no credential. Waves are the only content type and there is no editor
+> yet. The roadmap below is honest about what does and does not exist yet.
 
 ## What it is, and what it is not
 

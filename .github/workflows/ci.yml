@@ -115,6 +115,41 @@ jobs:
           grep -q '^config|ALWAYS$'   /tmp/cols.txt || { echo "config is not generated"; exit 1; }
           grep -q '^config_json|NEVER$' /tmp/cols.txt || { echo "config_json is generated"; exit 1; }
 
+      # The client's whole story against the real database: author, publish, fetch with no
+      # credential, then re-fetch with the ETag and get nothing back. Every unit test around this
+      # runs on H2 and against a mocked clock; this is the only place it happens for real.
+      - name: A game client can fetch published content and cache it
+        run: |
+          token=$(curl -fsS http://localhost:8080/api/v1/auth/token \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
+            | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+
+          curl -fsS http://localhost:8080/api/v1/admin/waves \
+            -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
+            --data-binary @samples/waves/demo_first_steps.json > /dev/null
+          curl -fsS -X POST http://localhost:8080/api/v1/admin/waves/demo_first_steps/publish \
+            -H "Authorization: Bearer $token" > /dev/null
+
+          # No credential from here on.
+          etag=$(curl -fsSi http://localhost:8080/api/v1/public/waves \
+                 | tr -d '\r' | sed -n 's/^[Ee][Tt]ag: //p')
+          test -n "$etag" || { echo "no ETag on the wave list"; exit 1; }
+
+          hash=$(curl -fsS http://localhost:8080/api/v1/public/status \
+                 | sed -n 's/.*"contentHash":"\([^"]*\)".*/\1/p')
+          test "$etag" = "\"$hash\"" || {
+            echo "the status hash and the list ETag disagree: $hash vs $etag"; exit 1; }
+
+          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/public/waves \
+                   -H "If-None-Match: $etag")
+          test "$status" = "304" || { echo "expected 304, got $status"; exit 1; }
+
+          # And the document comes back exactly as it was authored.
+          curl -fsS http://localhost:8080/api/v1/public/waves/demo_first_steps/raw \
+            | diff - samples/waves/demo_first_steps.json \
+            || { echo "the served document is not the authored bytes"; exit 1; }
+
       - name: A wrong password is refused
         run: |
           status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/auth/token \

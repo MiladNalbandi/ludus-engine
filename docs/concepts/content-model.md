@@ -1,10 +1,7 @@
 # The content model
 
-> The schema and the **authoring** API described here exist today. Documents can be created,
-> validated, published and read back byte-identical under `/api/v1/admin/waves`. The **public**
-> routes a game client reads from — and the ETag and `/app/status` protocol in
-> [caching](caching.md) — are the second half of `v0.2.0`,
-> [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8), and are not callable yet.
+> Everything described here exists today. Documents are authored under `/api/v1/admin/waves` and
+> served to clients under `/api/v1/public`, with the ETag protocol in [caching](caching.md).
 
 ## Content is documents, not columns
 

@@ -42,6 +42,16 @@ public class WaveCatalogue {
         return waves.find(projectId, id);
     }
 
+    /**
+     * One published wave, for the public routes.
+     *
+     * <p>Empty for a draft as well as for something that never existed, and the caller turns both
+     * into the same {@code 404}. A {@code 403} would confirm the thing exists, which is the leak.
+     */
+    public Optional<Wave> findPublished(ProjectId projectId, Slug id) {
+        return waves.findPublished(projectId, id);
+    }
+
     /** The hash behind both the poll and the list ETag. See {@link ContentHashes}. */
     public String publishedContentHash(ProjectId projectId) {
         return ContentHashes.ofCatalogue(waves.publishedCatalogue(projectId));

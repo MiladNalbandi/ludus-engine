@@ -99,6 +99,15 @@ public class SecurityConfiguration {
                                         // Signing in cannot require being signed in.
                                         .requestMatchers("/api/v1/auth/token", "/api/v1/auth/refresh")
                                         .permitAll()
+                                        // Published content is what every copy of the game
+                                        // downloads; it is public by definition. Requiring a
+                                        // credential would mean shipping one inside a binary
+                                        // anyone can unpack. Note this stays in this chain rather
+                                        // than getting its own: both credential filters still run,
+                                        // so a caller who does present a key is still identified,
+                                        // and none is required.
+                                        .requestMatchers("/api/v1/public/**")
+                                        .permitAll()
                                         // Authoring content is an editor's job, and the whole
                                         // reason the EDITOR role exists. Administrators reach it
                                         // too, because Role is ordered and ADMIN includes EDITOR.
