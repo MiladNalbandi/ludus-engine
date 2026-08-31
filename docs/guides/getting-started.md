@@ -4,7 +4,7 @@
   <img src="../assets/engine-overview.png" alt="Ludus at a glance: the project table with its single row, what the foundation already enforces, and what arrives in later releases" width="900">
 </p>
 
-What follows works today, on `v0.1.0`. Anything not yet built is called out as such. The picture
+What follows works today, on `main`. Anything not yet built is called out as such. The picture
 above is the same claim in one frame: a green tick is something you can run now, and anything
 marked *coming soon* is not in the box yet.
 
@@ -132,12 +132,11 @@ To run one module or one test:
 
 ## What you can't do yet
 
-There is still **no content API**. You can sign in, mint a key and see who you are — and then
-there is nothing yet to read or write, because authoring and serving content is the next release.
-That ordering is deliberate: authenticating one endpoint is much cheaper than retrofitting
-authentication across a finished API.
+You can author content — create a wave, validate it, publish it — but **a game client cannot fetch
+it yet**. There are no public routes, no `ETag`, and no status poll, so nothing outside the
+authoring API can read a document. That is the rest of `v0.2.0`.
 
-- Authoring and serving content arrives in `v0.2.0` — [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8)
+- The public routes and the caching protocol arrive in `v0.2.0` — [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8)
 - The visual editor arrives in `v0.3.0` — [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9)
 
 What *does* exist and is worth looking at now: the [content contract](../concepts/content-model.md)

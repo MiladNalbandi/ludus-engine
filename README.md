@@ -21,9 +21,10 @@
   <a href="https://github.com/miladnalbandi/ludus-engine/issues/18"><img alt="Roadmap" src="https://img.shields.io/badge/roadmap-%2318-5B4FE9"></a>
 </p>
 
-> **Status: early.** `v0.1.0` adds identity to the foundation — sign in, roles, API keys for
-> game clients, and the project boundary. There is still **no content API**; that arrives in
-> `v0.2.0`. The roadmap below is honest about what does and does not exist yet.
+> **Status: early.** Content can be authored: a wave document is validated against the published
+> schema, stored byte-for-byte, and published. What is **not** built is the public surface a game
+> client reads from — that is the rest of `v0.2.0`. The roadmap below is honest about what does
+> and does not exist yet.
 
 ## What it is, and what it is not
 
