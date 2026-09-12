@@ -199,7 +199,21 @@ class AuthorisationMatrixTest {
                 // Minting a player session needs an API key, unlike the rest of /public. A GET is
                 // used here because this matrix only issues GETs; it proves the matcher is reached
                 // rather than shadowed by the permitAll below it.
-                Arguments.of("anonymous", "/api/v1/anything-unnamed", HttpStatus.UNAUTHORIZED));
+                Arguments.of("anonymous", "/api/v1/anything-unnamed", HttpStatus.UNAUTHORIZED),
+
+                // A player's wallet, read by themselves only. Every credential here is refused.
+                Arguments.of("api-key", "/api/v1/player/me/wallet", HttpStatus.FORBIDDEN),
+                Arguments.of("admin", "/api/v1/player/me/wallet", HttpStatus.FORBIDDEN),
+
+                // Awarding currency and editing the XP curve are an editor's job, and deliberately
+                // not reachable by a credential that ships inside the game.
+                Arguments.of("anonymous", "/api/v1/admin/players", HttpStatus.UNAUTHORIZED),
+                Arguments.of("api-key", "/api/v1/admin/players", HttpStatus.FORBIDDEN),
+                Arguments.of("viewer", "/api/v1/admin/players", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/admin/players", HttpStatus.OK),
+                Arguments.of("admin", "/api/v1/admin/players", HttpStatus.OK),
+                Arguments.of("api-key", "/api/v1/admin/xp-curve", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/admin/xp-curve", HttpStatus.OK));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")

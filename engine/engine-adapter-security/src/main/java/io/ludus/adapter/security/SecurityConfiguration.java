@@ -132,7 +132,13 @@ public class SecurityConfiguration {
                                                 "/api/v1/admin/audio/**",
                                                 "/api/v1/admin/wave-levels/**",
                                                 "/api/v1/admin/app-config/**",
-                                                "/api/v1/admin/app-config")
+                                                "/api/v1/admin/app-config",
+                                                // Awarding currency and XP, and editing the curve.
+                                                // An editor's job, and deliberately not something
+                                                // a credential that ships in the game can do.
+                                                "/api/v1/admin/players/**",
+                                                "/api/v1/admin/players",
+                                                "/api/v1/admin/xp-curve")
                                         .hasAnyRole("EDITOR", "ADMIN")
                                         // Issuing and revoking credentials is not. This matcher
                                         // is listed after the one above and would otherwise

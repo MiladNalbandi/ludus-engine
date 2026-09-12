@@ -163,6 +163,11 @@ class PlayerSessionsTest {
         public long count(ProjectId projectId) {
             return saved.values().stream().filter(p -> p.projectId().equals(projectId)).count();
         }
+
+        @Override
+        public boolean delete(ProjectId projectId, PlayerId id) {
+            return find(projectId, id).isPresent() && saved.remove(id) != null;
+        }
     }
 
     private static final class Tokens implements PlayerTokenIssuer {

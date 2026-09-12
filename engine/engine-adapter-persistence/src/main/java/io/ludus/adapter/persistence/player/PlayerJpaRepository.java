@@ -18,6 +18,8 @@ interface PlayerJpaRepository extends JpaRepository<PlayerEntity, UUID> {
 
     long countByProjectId(UUID projectId);
 
+    long deleteByIdAndProjectId(UUID id, UUID projectId);
+
     List<PlayerEntity> findByProjectIdOrderByLastSeenAtDescIdDesc(UUID projectId, Limit limit);
 
     /**

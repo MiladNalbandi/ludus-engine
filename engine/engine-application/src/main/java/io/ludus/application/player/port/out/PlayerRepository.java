@@ -29,6 +29,16 @@ public interface PlayerRepository {
 
     long count(ProjectId projectId);
 
+    /**
+     * Removes a player, and with them everything about them.
+     *
+     * <p>Balances, XP and — when they arrive — inventory and scores go too, by foreign key rather
+     * than by statements issued here. That is what makes "delete this player" a complete answer to
+     * somebody asking to be forgotten: a cascade written as code is one a new table can be added
+     * around without anybody noticing the gap.
+     */
+    boolean delete(ProjectId projectId, PlayerId id);
+
     /** Where the previous page stopped. Both fields, because timestamps are not unique. */
     record PlayerPageCursor(java.time.Instant lastSeenAt, PlayerId id) {}
 }

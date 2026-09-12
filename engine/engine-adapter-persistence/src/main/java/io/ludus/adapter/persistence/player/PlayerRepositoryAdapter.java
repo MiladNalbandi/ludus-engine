@@ -57,4 +57,10 @@ public class PlayerRepositoryAdapter implements PlayerRepository {
     public long count(ProjectId projectId) {
         return players.countByProjectId(projectId.value());
     }
+
+    @Override
+    @Transactional
+    public boolean delete(ProjectId projectId, PlayerId id) {
+        return players.deleteByIdAndProjectId(id.value(), projectId.value()) > 0;
+    }
 }
