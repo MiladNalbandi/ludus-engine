@@ -1,0 +1,645 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Ludus Engine API",
+    "description" : "Backend engine for 2D games. Content is authored in the editor and served to game clients over the public routes, which are cacheable and validated by ETag.",
+    "license" : {
+      "name" : "AGPL-3.0-or-later",
+      "url" : "https://www.gnu.org/licenses/agpl-3.0.txt"
+    },
+    "version" : "${project.version}"
+  },
+  "paths" : {
+    "/api/v1/admin/waves/{id}" : {
+      "get" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Fetch a wave's document, draft or not",
+        "description" : "Returns the stored bytes exactly as they were received.",
+        "operationId" : "document",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Replace a wave's document",
+        "description" : "The id in the URL and the id in the document must agree.",
+        "operationId" : "replace",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Delete a wave",
+        "operationId" : "delete",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/auth/token" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Exchange an email address and password for tokens",
+        "description" : "Every failure returns the same 401 with the same body. The difference between an unknown address and a wrong password is not something to tell whoever is asking.",
+        "operationId" : "token",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TokenRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Exchange a refresh token for a new pair",
+        "description" : "The presented token is revoked as part of the exchange, so a stolen token and the real one cannot both keep working.",
+        "operationId" : "refresh",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves" : {
+      "get" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "List every wave, drafts included",
+        "operationId" : "list",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Summary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Create a wave from a document",
+        "description" : "The document's own id is used. Saving never publishes: a new wave is a draft and invisible to clients until it is published.",
+        "operationId" : "create",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/{id}/unpublish" : {
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Withdraw a wave. Clients stop seeing it entirely, as a 404.",
+        "operationId" : "unpublish",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/{id}/publish" : {
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Publish a wave, making it visible to clients",
+        "operationId" : "publish",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/api-keys" : {
+      "get" : {
+        "tags" : [ "API keys" ],
+        "summary" : "List keys, including revoked ones",
+        "operationId" : "list_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Summary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "API keys" ],
+        "summary" : "Mint a key. The response is the only time it is shown.",
+        "operationId" : "create_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CreatedResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/waves" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "Every published wave, in progression order",
+        "description" : "Summaries only. Fetch a document from the raw route when you need it.",
+        "operationId" : "waves",
+        "parameters" : [ {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Summary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/waves/{id}" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "One published wave's indexed fields",
+        "operationId" : "wave",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/waves/{id}/raw" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "One published wave's document",
+        "description" : "Byte-for-byte what was stored. Cache these bytes with the ETag.",
+        "operationId" : "raw",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/status" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "The content hash for everything published",
+        "description" : "Compare it with the one you cached. Unchanged means play from cache and make no further requests. This value is identical to the ETag of the wave list for the same data.",
+        "operationId" : "status",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StatusResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me" : {
+      "get" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "The identity behind the credential you presented",
+        "operationId" : "me",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CurrentCaller"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/next-order" : {
+      "get" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "An order that would not collide",
+        "description" : "Advisory. The order lives in the document and the author owns it; this only answers what is free right now.",
+        "operationId" : "nextOrder",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "integer",
+                  "format" : "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/api-keys/{id}" : {
+      "delete" : {
+        "tags" : [ "API keys" ],
+        "summary" : "Revoke a key",
+        "description" : "The row is kept and stamped, not deleted: when a key stopped working is a question people ask after an incident.",
+        "operationId" : "revoke",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "Summary" : {
+        "type" : "object",
+        "description" : "A wave's indexed fields. The document itself is fetched separately.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "order" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "schemaVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "published" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "TokenRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "example" : "you@example.com",
+            "minLength" : 1
+          },
+          "password" : {
+            "type" : "string",
+            "format" : "password",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "email", "password" ]
+      },
+      "TokenResponse" : {
+        "type" : "object",
+        "description" : "A pair of tokens. The refresh token is shown once and is not recoverable.",
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "tokenType" : {
+            "type" : "string"
+          },
+          "accessTokenExpiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          },
+          "refreshTokenExpiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "RefreshRequest" : {
+        "type" : "object",
+        "properties" : {
+          "refreshToken" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "refreshToken" ]
+      },
+      "CreateRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "So a human can tell keys apart",
+            "example" : "android-client",
+            "maxLength" : 120,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "CreatedResponse" : {
+        "type" : "object",
+        "description" : "The only response that ever contains the key itself. It is stored as a digest, so it cannot be shown again by anyone, including whoever runs the database.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "key" : {
+            "type" : "string"
+          }
+        }
+      },
+      "StatusResponse" : {
+        "type" : "object",
+        "properties" : {
+          "contentHash" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CurrentCaller" : {
+        "type" : "object",
+        "properties" : {
+          "kind" : {
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "project" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        }
+      }
+    }
+  }
+}
