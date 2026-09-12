@@ -157,6 +157,40 @@ jobs:
             | diff - samples/waves/demo_first_steps.json \
             || { echo "the served document is not the authored bytes"; exit 1; }
 
+      - name: An uploaded clip outlives the container that received it
+        run: |
+          token=$(curl -fsS http://localhost:8080/api/v1/auth/token \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
+            | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+
+          head -c 3000000 /dev/urandom > /tmp/clip.ogg
+
+          id=$(curl -fsS http://localhost:8080/api/v1/admin/audio \
+            -H "Authorization: Bearer $token" \
+            -F 'file=@/tmp/clip.ogg;type=audio/ogg' \
+            | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+          test -n "$id" || { echo "no clip id came back from the upload"; exit 1; }
+
+          # The whole reason the bytes are on a volume rather than in the container. A bind
+          # mount that silently wrote into the container's own filesystem would pass every
+          # test up to this line and lose every clip on the next deploy.
+          docker compose -f deploy/docker-compose.yml restart engine
+          for i in $(seq 1 60); do
+            curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"' && break
+            sleep 5
+          done
+          curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"' \
+            || { echo "the engine did not come back after a restart"; exit 1; }
+
+          # No credential: published audio is public, and the bytes must be the bytes.
+          curl -fsS "http://localhost:8080/api/v1/public/audio/$id" | diff - /tmp/clip.ogg \
+            || { echo "the served clip is not the uploaded bytes"; exit 1; }
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' \
+                 "http://localhost:8080/api/v1/public/audio/00000000-0000-0000-0000-000000000000")
+          test "$code" = "404" || { echo "expected 404 for an unknown clip, got $code"; exit 1; }
+
       - name: A wrong password is refused
         run: |
           status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/auth/token \
