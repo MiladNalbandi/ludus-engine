@@ -9,8 +9,8 @@ final class AudioDtos {
 
     private AudioDtos() {}
 
-    @Schema(description = "An audio clip's metadata. The bytes are fetched from the stream route.")
-    record Summary(
+    @Schema(name = "AudioClipSummary", description = "An audio clip's metadata. The bytes are fetched from the stream route.")
+        record Summary(
             String id,
             String filename,
             String contentType,

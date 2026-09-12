@@ -12,6 +12,10 @@ import io.ludus.domain.content.Wave;
 import io.ludus.domain.project.ProjectId;
 import io.ludus.domain.shared.Slug;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.ArrayList;
 import java.util.List;
@@ -111,6 +115,17 @@ class PublicContentController {
 
     @GetMapping("/waves/{id}")
     @Operation(operationId = "getPublishedWave", summary = "One published wave's indexed fields")
+    // ResponseEntity<?> tells springdoc nothing, so without this the contract described the body
+    // as a bare object -- which is exactly as useful to a generated client as no description.
+    @ApiResponse(
+            responseCode = "200",
+            description = "The wave's indexed fields",
+            content = @Content(schema = @Schema(implementation = WaveDtos.Summary.class)))
+    @ApiResponse(responseCode = "304", description = "Your cached copy is current", content = @Content)
+    @ApiResponse(
+            responseCode = "404",
+            description = "No such published wave. A draft answers this way too",
+            content = @Content)
     ResponseEntity<?> wave(
             @PathVariable String id,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
@@ -171,6 +186,15 @@ class PublicContentController {
             description =
                     "Published waves only, in play order. 404 when the project has no active"
                             + " level.")
+    @ApiResponse(
+            responseCode = "200",
+            description = "The active level and its published waves",
+            content = @Content(schema = @Schema(implementation = WaveLevelDtos.Playable.class)))
+    @ApiResponse(responseCode = "304", description = "Your cached copy is current", content = @Content)
+    @ApiResponse(
+            responseCode = "404",
+            description = "This project has no active level",
+            content = @Content)
     ResponseEntity<?> activeLevel(
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
 
@@ -307,7 +331,9 @@ class PublicContentController {
         return ResponseEntity.notFound().build();
     }
 
+    @Schema(name = "ContentStatus")
     record StatusResponse(String contentHash) {}
 
+    @Schema(name = "WaveBatchRequest")
     record BatchRequest(List<String> ids) {}
 }

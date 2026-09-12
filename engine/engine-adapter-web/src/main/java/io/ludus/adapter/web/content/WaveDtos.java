@@ -15,8 +15,8 @@ final class WaveDtos {
      * <p>The list endpoint returns these rather than embedding every document, because an editor
      * listing forty waves wants forty names and no megabytes. The document is fetched on its own.
      */
-    @Schema(description = "A wave's indexed fields. The document itself is fetched separately.")
-    record Summary(
+    @Schema(name = "WaveSummary", description = "A wave's indexed fields. The document itself is fetched separately.")
+        record Summary(
             String id,
             String name,
             int order,

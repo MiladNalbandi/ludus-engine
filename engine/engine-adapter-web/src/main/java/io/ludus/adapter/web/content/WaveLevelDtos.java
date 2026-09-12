@@ -13,8 +13,8 @@ final class WaveLevelDtos {
     private WaveLevelDtos() {}
 
     /** What an author sends. The id is assigned by the engine; the order is the list order. */
-    @Schema(description = "A level's name and the waves it sequences, in play order.")
-    record Request(String name, String description, List<String> waves) {}
+    @Schema(name = "WaveLevelRequest", description = "A level's name and the waves it sequences, in play order.")
+        record Request(String name, String description, List<String> waves) {}
 
     /**
      * A level as an editor sees it.
@@ -23,8 +23,8 @@ final class WaveLevelDtos {
      * published ones. An editor who cannot see which entries players will not receive finds that
      * out from a player.
      */
-    @Schema(description = "A level, its waves, and which of them players can actually reach.")
-    record Summary(
+    @Schema(name = "WaveLevelSummary", description = "A level, its waves, and which of them players can actually reach.")
+        record Summary(
             String id,
             String name,
             String description,
@@ -51,8 +51,8 @@ final class WaveLevelDtos {
         }
     }
 
-    @Schema(description = "One wave's place in a level, and whether players will receive it.")
-    record Member(String waveId, boolean published) {}
+    @Schema(name = "WaveLevelMember", description = "One wave's place in a level, and whether players will receive it.")
+        record Member(String waveId, boolean published) {}
 
     /**
      * The active level as a game client sees it: published waves only, already in order.
@@ -60,8 +60,8 @@ final class WaveLevelDtos {
      * <p>Summaries rather than documents. A client fetches the documents it does not already have
      * from the raw route, which is where the per-document ETags are.
      */
-    @Schema(description = "The level currently being played, and its published waves in order.")
-    record Playable(String id, String name, List<WaveDtos.Summary> waves) {
+    @Schema(name = "PlayableWaveLevel", description = "The level currently being played, and its published waves in order.")
+        record Playable(String id, String name, List<WaveDtos.Summary> waves) {
 
         static Playable of(WaveLevels.PlayableLevel playable) {
             return new Playable(
