@@ -59,6 +59,46 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  editor:
+    name: Editor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: editor/package-lock.json
+
+      - name: Install exactly what the lockfile says
+        working-directory: editor
+        run: npm ci
+
+      # Before anything else: if the wave schema moved and the generated types did not, the rest
+      # of this job would be checking the editor against a contract the engine no longer has.
+      - name: The generated wave types match the schema
+        working-directory: editor
+        run: npm run verify:types
+
+      - name: Types
+        working-directory: editor
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: editor
+        run: npm run lint
+
+      - name: Tests
+        working-directory: editor
+        run: npm test
+
+      - name: Build
+        working-directory: editor
+        env:
+          LUDUS_ENGINE_URL: http://localhost:8080
+        run: npm run build
+
   stack:
     name: Quickstart
     runs-on: ubuntu-latest
@@ -190,6 +230,40 @@ jobs:
           code=$(curl -s -o /dev/null -w '%{http_code}' \
                  "http://localhost:8080/api/v1/public/audio/00000000-0000-0000-0000-000000000000")
           test "$code" = "404" || { echo "expected 404 for an unknown clip, got $code"; exit 1; }
+
+      - name: The editor comes up and serves its login page
+        run: |
+          for i in $(seq 1 40); do
+            curl -fsS http://localhost:3000/login >/dev/null 2>&1 && break
+            sleep 5
+          done
+          body=$(curl -fsS http://localhost:3000/login) || {
+            echo "the editor did not serve its login page"
+            docker compose -f deploy/docker-compose.yml logs editor | tail -40
+            exit 1
+          }
+          echo "$body" | grep -q "Sign in" || {
+            echo "the editor served something, but not the login page"; exit 1; }
+
+          # The refresh cookie must be httpOnly. The whole reason the access token is held in
+          # memory is that this cookie is the thing a script cannot read, and a flag that silently
+          # stopped being set would leave the session stealable with nothing failing anywhere.
+          cookie=$(curl -fsS -i -X POST http://localhost:3000/api/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
+            | tr -d '\r' | grep -i '^set-cookie:' || true)
+          test -n "$cookie" || { echo "no session cookie was set on login"; exit 1; }
+          echo "$cookie" | grep -qi 'HttpOnly' || {
+            echo "the refresh cookie is not HttpOnly: $cookie"; exit 1; }
+          echo "$cookie" | grep -qi 'SameSite=Lax' || {
+            echo "the refresh cookie is not SameSite=Lax: $cookie"; exit 1; }
+
+          # And the access token must come back in the body, not in a readable cookie.
+          curl -fsS -X POST http://localhost:3000/api/login \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
+            | grep -q '"accessToken"' || {
+              echo "login did not return an access token in the body"; exit 1; }
 
       - name: A wrong password is refused
         run: |

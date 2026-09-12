@@ -21,6 +21,7 @@ engine does that — Ludus tells it what to build.
 | | |
 |---|---|
 | [Getting started](guides/getting-started.md) | Run the engine locally and confirm it works |
+| [The editor](guides/editor.md) | The visual editor, and why the browser never talks to the engine directly |
 | [Deployment](operations/deployment.md) | Running it somewhere real |
 | [Configuration](operations/configuration.md) | Every environment variable, and which ones have security consequences |
 
