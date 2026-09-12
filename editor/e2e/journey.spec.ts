@@ -111,7 +111,7 @@ test.describe('the editor, against a real stack', () => {
     await expect(page.getByRole('heading', { name: 'End to end' })).toBeVisible();
 
     // --- build: add a movement ------------------------------------------------
-    await expect(page.getByRole('button', { name: 'patrol · 4s' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'patrol, 4 seconds' })).toBeVisible();
     await page.getByRole('button', { name: '+ wait' }).click();
 
     // --- preview: the canvas draws, and the scrubber moves the playhead -------
@@ -125,7 +125,7 @@ test.describe('the editor, against a real stack', () => {
 
     // The added movement survived the round trip through the engine.
     await page.reload();
-    await expect(page.getByRole('button', { name: /^wait/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^wait, \d/ })).toBeVisible();
 
     // --- publish, from the catalogue ------------------------------------------
     await page.getByRole('link', { name: 'Catalogue' }).click();
