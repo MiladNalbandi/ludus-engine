@@ -161,6 +161,13 @@ class AuthorisationMatrixTest {
                 Arguments.of("admin", "/api/v1/admin/wave-levels", HttpStatus.OK),
                 Arguments.of("api-key", "/api/v1/admin/wave-levels", HttpStatus.FORBIDDEN),
 
+                // Application configuration is edited by the same people who edit content.
+                Arguments.of("anonymous", "/api/v1/admin/app-config", HttpStatus.UNAUTHORIZED),
+                Arguments.of("viewer", "/api/v1/admin/app-config", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/admin/app-config", HttpStatus.OK),
+                Arguments.of("admin", "/api/v1/admin/app-config", HttpStatus.OK),
+                Arguments.of("api-key", "/api/v1/admin/app-config", HttpStatus.FORBIDDEN),
+
                 // Published content is what every copy of the game downloads. It is public by
                 // definition, so anonymous reaches it -- and that is the only thing anonymous
                 // reaches. These rows are what stops the permitAll matcher widening by accident.
@@ -172,7 +179,10 @@ class AuthorisationMatrixTest {
                 // The active level, with no level chosen: a 404 rather than a 401, which is how
                 // this row proves the route was reached rather than refused.
                 Arguments.of("anonymous", "/api/v1/public/wave-levels/active", HttpStatus.NOT_FOUND),
-                Arguments.of("api-key", "/api/v1/public/wave-levels/active", HttpStatus.NOT_FOUND));
+                Arguments.of("api-key", "/api/v1/public/wave-levels/active", HttpStatus.NOT_FOUND),
+                // Configuration always answers, even unconfigured: an empty object, never a 404.
+                Arguments.of("anonymous", "/api/v1/public/app-config", HttpStatus.OK),
+                Arguments.of("api-key", "/api/v1/public/app-config", HttpStatus.OK));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")

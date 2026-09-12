@@ -53,8 +53,10 @@ class WaveAuthoringController {
             description =
                     "The document's own id is used. Saving never publishes: a new wave is a draft"
                             + " and invisible to clients until it is published.")
-    ResponseEntity<WaveDtos.Summary> create(@RequestBody String document) {
-        Wave saved = authorWave.author(activeProject.id(), Optional.empty(), new ContentBody(document));
+    ResponseEntity<WaveDtos.Summary> create(@io.swagger.v3.oas.annotations.parameters.RequestBody(required = true)
+                    @RequestBody(required = false)
+                    String document) {
+        Wave saved = authorWave.author(activeProject.id(), Optional.empty(), ReceivedDocument.of(document));
         return ResponseEntity.status(HttpStatus.CREATED).body(WaveDtos.Summary.of(saved));
     }
 
@@ -62,10 +64,12 @@ class WaveAuthoringController {
     @Operation(operationId = "replaceWave",
             summary = "Replace a wave's document",
             description = "The id in the URL and the id in the document must agree.")
-    WaveDtos.Summary replace(@PathVariable String id, @RequestBody String document) {
+    WaveDtos.Summary replace(@PathVariable String id, @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true)
+                    @RequestBody(required = false)
+                    String document) {
         return WaveDtos.Summary.of(
                 authorWave.author(
-                        activeProject.id(), Optional.of(new Slug(id)), new ContentBody(document)));
+                        activeProject.id(), Optional.of(new Slug(id)), ReceivedDocument.of(document)));
     }
 
     @GetMapping

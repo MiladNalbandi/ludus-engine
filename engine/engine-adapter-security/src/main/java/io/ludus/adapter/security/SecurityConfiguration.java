@@ -114,7 +114,9 @@ public class SecurityConfiguration {
                                         .requestMatchers(
                                                 "/api/v1/admin/waves/**",
                                                 "/api/v1/admin/audio/**",
-                                                "/api/v1/admin/wave-levels/**")
+                                                "/api/v1/admin/wave-levels/**",
+                                                "/api/v1/admin/app-config/**",
+                                                "/api/v1/admin/app-config")
                                         .hasAnyRole("EDITOR", "ADMIN")
                                         // Issuing and revoking credentials is not. This matcher
                                         // is listed after the one above and would otherwise
