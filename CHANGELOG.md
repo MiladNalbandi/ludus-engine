@@ -11,6 +11,22 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **The end-to-end journey, in a real browser** — completing `v0.3.0`,
+  [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9). `editor/e2e/journey.spec.ts` signs
+  in, opens a wave, adds a movement, scrubs the preview, saves, publishes, fetches the result from
+  the public API and revalidates it with its `ETag` for a `304`.
+  - It runs inside CI's Quickstart job, because that is the only place the editor container, the
+    engine, PostgreSQL and the audio volume are all up together. Standing that stack up a second
+    time would cost minutes for nothing.
+  - It asserts the session properties **from the outside**: the refresh cookie is `httpOnly` and
+    `SameSite=Lax`, and neither `localStorage`, `sessionStorage` nor `document.cookie` holds a
+    token. Those are claims the unit tests make about their own code; this checks what a browser
+    actually ended up with.
+  - It also covers the one thing a unit test cannot reach: that a draft is a `404` to a client while
+    its editor can see it listed.
+  - The first JavaScript end-to-end test in this codebase's lineage. The predecessor had no test
+    infrastructure in any of its frontend applications.
+
 - **Audio mixing, in the engine and never through a shell** — `v0.3.0`,
   [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9).
   `POST /api/v1/admin/audio/mix` combines clips into a new one, behind an `AudioMixer` port.
