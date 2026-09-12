@@ -3,12 +3,14 @@ package io.ludus.config;
 
 import io.ludus.application.content.port.out.UnitOfWork;
 import io.ludus.application.player.ItemCatalogue;
+import io.ludus.application.player.Leaderboards;
 import io.ludus.application.player.PlayerEconomy;
 import io.ludus.application.player.PlayerSessions;
 import io.ludus.application.player.port.out.PlayerRepository;
 import io.ludus.application.player.port.out.PlayerTokenIssuer;
 import io.ludus.application.player.port.out.InventoryRepository;
 import io.ludus.application.player.port.out.ItemRepository;
+import io.ludus.application.player.port.out.LeaderboardRepository;
 import io.ludus.application.player.port.out.ProgressRepository;
 import io.ludus.application.player.port.out.SchemaValidator;
 import io.ludus.application.player.port.out.WalletRepository;
@@ -51,5 +53,11 @@ public class PlayerConfiguration {
             UnitOfWork unitOfWork,
             Clock clock) {
         return new ItemCatalogue(items, inventory, players, schemas, unitOfWork, clock);
+    }
+
+    @Bean
+    public Leaderboards leaderboards(
+            LeaderboardRepository boards, PlayerRepository players, Clock clock) {
+        return new Leaderboards(boards, players, clock);
     }
 }

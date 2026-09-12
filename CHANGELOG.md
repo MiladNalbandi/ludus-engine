@@ -11,6 +11,31 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Leaderboards**, completing `v0.4.0`'s player state,
+  [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10).
+  - **Paging is keyset, and what "stable" means is stated precisely** rather than implied to be
+    more. A row whose score does not change is returned **exactly once** across a walk, never
+    skipped and never repeated, however many other scores are written meanwhile. A row whose score
+    *does* change moves, and may be seen twice or not at all — that is what a live ranking is, not a
+    defect. An offset-paged board guarantees neither.
+  - **The tie-break is the whole mechanism.** Scores tie constantly — everybody who finished the
+    tutorial has the same one — so ordering by score alone is not a total order, and a cursor over a
+    non-total order sits in the middle of a tie and restarts there on every page. Removing
+    `player_id` from the comparison fails the test that pins it.
+  - A board's direction belongs to the **board**, not to a query. A high score and a lap time sort
+    opposite ways, and asking each caller to say which means two callers eventually disagreeing
+    about a player's rank.
+  - The better score is kept, decided in the `where` clause so the read and the write are one
+    operation. Taking the latest would drop a player's best the moment they played a worse round.
+  - `rank` is computed for the page being served, never stored: a stored rank is wrong for everybody
+    below the next score that changes, and the next score changes constantly.
+  - **A player may submit their own score**, unlike currency, which only an editor may grant. Not an
+    inconsistency: a forged score is cheating, and a client-fed leaderboard can always be cheated —
+    the engine cannot tell a real lap time from an invented one. Requiring a server credential would
+    stop the games that have no server and inconvenience nobody else. *A leaderboard fed by clients
+    is a leaderboard of what clients claimed*, and the documentation says so rather than implying
+    otherwise.
+
 - **Items and inventory**, part of `v0.4.0`,
   [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10).
   - **An item is reshaped away from one game's vocabulary**, which #10 asks for: an identifier, a
