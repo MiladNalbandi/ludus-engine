@@ -148,6 +148,8 @@ git repository and a shipped game binary, and anything it can do should be assum
 | `/api/v1/auth/token` | yes | Signing in cannot require being signed in |
 | `/api/v1/auth/refresh` | yes | The refresh token is itself the credential |
 | `/api/v1/public/**` | yes | Published content and audio: what every copy of the game downloads |
+| `POST /api/v1/public/players/session` | no | An API key. Minting a credential is not reading content |
+| `/api/v1/player/**` | no | A player session token, and only for that player's own state |
 | `/api/v1/admin/waves/**`, `/api/v1/admin/audio/**`, `/api/v1/admin/wave-levels/**`, `/api/v1/admin/app-config` | no | Editors and above |
 | `/api/v1/admin/**` | no | Administrators only |
 | everything else | no | Any valid credential; deny-by-default for anything unnamed |
@@ -158,6 +160,13 @@ key there would stop nobody while suggesting a boundary that is not real. The ro
 same filter chain as everything else rather than getting their own, so a caller that *does* send a
 key is still identified; none is required. That is what keeps client identification, project
 selection and rate limiting available later without reopening the question.
+
+**A player session token is not an API key, and neither is an access token.** A key says which
+project and which build is calling; it is `VIEWER`-only because it ships inside a binary anybody can
+unpack. It buys a player session token, which lasts an hour and can write exactly one player's
+state. All three are signed or stored separately and none is accepted where another is expected —
+the two JWT kinds carry a `typ` claim that each verifier requires, so a player cannot be read as an
+administrator with no role.
 
 An anonymous request to a protected path gets `401`, and a request with a valid credential that
 lacks the role gets `403`. The two are worth telling apart: one sends you to look at your token,

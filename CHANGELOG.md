@@ -11,6 +11,40 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Players, and the credential live-ops actually needs** — the foundation of `v0.4.0`,
+  [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10).
+  - **The issue asks that "a game client can read and write player state with an API key". It
+    cannot, and this is where that is resolved rather than quietly implemented.** An API key is
+    `VIEWER`-only by explicit design, because it ships inside a binary anybody can unpack — so
+    letting one write player state would let anyone who unpacked the game write *any* player's
+    balance, inventory and scores. That is not a stricter reading of the requirement; it is the
+    requirement being impossible as stated.
+  - So the key keeps the job it is good at — which project, which build, and revocable — and it
+    buys a **player session token**: an hour long, scoped to exactly one player, and the only
+    credential that can write that player's state. A leaked key then lets an attacker play as a
+    player of their own, which is unavoidable for anything shipped to a client, and lets them touch
+    nobody else's.
+  - **Every player route is `/me`**, and that is the security design rather than a naming style. A
+    route shaped `/players/{id}` authorised by "is a player" is one where any player can act as any
+    other, guarded only by a check somebody has to remember in each handler. With no id in the path
+    there is nothing to forget.
+  - **The two token kinds are not interchangeable**, and now structurally so. Both are signed with
+    the same secret, so a `typ` claim is stamped and required on each side. Previously a player
+    token failed admin verification only because it had no `role` claim and `Role.fromString(null)`
+    throws — accidental safety that stops being safe the first time somebody gives the role a
+    sensible default.
+  - **The chain's deny-by-default now requires a real role, not merely authentication.** With
+    `authenticated()`, a player session token would have reached every API route nobody had thought
+    to name. Authenticated is not the same question as authorised, and that fallback is where the
+    two diverge.
+  - A player is created on first sight, idempotently by a unique index on
+    `(project_id, external_id)`: a client retrying through a network blip resolves the player it
+    already has rather than stranding the first one's progress.
+  - The engine holds no account — no email address, no password, no date of birth. It stores the
+    identifier the game already has and treats it as opaque. The game vouches for it, which means a
+    game with no server of its own gets device-level trust; that is stated rather than implied to be
+    more.
+
 - **The end-to-end journey, in a real browser** — completing `v0.3.0`,
   [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9). `editor/e2e/journey.spec.ts` signs
   in, opens a wave, adds a movement, scrubs the preview, saves, publishes, fetches the result from

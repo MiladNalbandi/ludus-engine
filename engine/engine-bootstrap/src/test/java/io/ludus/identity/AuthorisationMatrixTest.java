@@ -182,7 +182,24 @@ class AuthorisationMatrixTest {
                 Arguments.of("api-key", "/api/v1/public/wave-levels/active", HttpStatus.NOT_FOUND),
                 // Configuration always answers, even unconfigured: an empty object, never a 404.
                 Arguments.of("anonymous", "/api/v1/public/app-config", HttpStatus.OK),
-                Arguments.of("api-key", "/api/v1/public/app-config", HttpStatus.OK));
+                Arguments.of("api-key", "/api/v1/public/app-config", HttpStatus.OK),
+
+                // A player's own state needs a player session token. None of the credentials in
+                // this matrix is one, so every row here is a refusal -- which is the point: an
+                // API key that could reach these routes would let anyone who unpacked the game
+                // write any player's state.
+                Arguments.of("anonymous", "/api/v1/player/me", HttpStatus.UNAUTHORIZED),
+                Arguments.of("api-key", "/api/v1/player/me", HttpStatus.FORBIDDEN),
+                Arguments.of("viewer", "/api/v1/player/me", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/player/me", HttpStatus.FORBIDDEN),
+                // Not even an administrator. There is no route by which one acts as a player, and
+                // an admin token reaching /player/me would be one.
+                Arguments.of("admin", "/api/v1/player/me", HttpStatus.FORBIDDEN),
+
+                // Minting a player session needs an API key, unlike the rest of /public. A GET is
+                // used here because this matrix only issues GETs; it proves the matcher is reached
+                // rather than shadowed by the permitAll below it.
+                Arguments.of("anonymous", "/api/v1/anything-unnamed", HttpStatus.UNAUTHORIZED));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")

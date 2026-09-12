@@ -251,6 +251,36 @@
         }
       }
     },
+    "/api/v1/public/players/session" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Exchange the game's player identifier for a session token",
+        "description" : "Creates the player on first sight, and is idempotent: retrying after a network failure resolves the same player rather than making a second one. Requires an API key. The token it returns is the only credential that can write this player's state, and only this player's.",
+        "operationId" : "startPlayerSession",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerSessionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerSession"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/token" : {
       "post" : {
         "tags" : [ "Authentication" ],
@@ -691,6 +721,54 @@
         }
       }
     },
+    "/api/v1/player/me" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "The player this token acts as",
+        "description" : "There is no route for another player's profile, deliberately.",
+        "operationId" : "getPlayerSelf",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerProfile"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Players" ],
+        "summary" : "Set or clear this player's display name",
+        "description" : "Blank clears it. Names are not unique; two players may share one.",
+        "operationId" : "renamePlayerSelf",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerRenameRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerProfile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/public/waves" : {
       "get" : {
         "tags" : [ "Public content" ],
@@ -1103,6 +1181,37 @@
           }
         }
       },
+      "PlayerSessionRequest" : {
+        "type" : "object",
+        "description" : "The game's own identifier for this player.",
+        "properties" : {
+          "externalId" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlayerSession" : {
+        "type" : "object",
+        "description" : "A player session token and who it acts as.",
+        "properties" : {
+          "playerId" : {
+            "type" : "string"
+          },
+          "externalId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "TokenRequest" : {
         "type" : "object",
         "properties" : {
@@ -1258,6 +1367,38 @@
           },
           "key" : {
             "type" : "string"
+          }
+        }
+      },
+      "PlayerRenameRequest" : {
+        "type" : "object",
+        "description" : "A display name the player chose. Blank clears it.",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlayerProfile" : {
+        "type" : "object",
+        "description" : "A player's identity and when they were last seen.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "externalId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lastSeenAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },
