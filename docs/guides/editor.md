@@ -82,12 +82,58 @@ npm run lint && npm run typecheck
 `LUDUS_ENGINE_URL` has no default on purpose. An editor pointed at the wrong engine writes content
 into the wrong database.
 
+## Editing a wave
+
+Click a wave in the catalogue. Its movement sequence appears as a timeline, one row per spawn rule,
+with block widths proportional to duration — so an author sees that the orbit lasts four times as
+long as the dash without reading two numbers.
+
+**A zero-duration `jump` has no block.** It relocates the entity instantly, so it occupies no time;
+drawn as a block it would be a sliver nobody can click. It is folded into the following movement as
+that movement's starting position, marked with a `↷`, and unfolded again when the document is saved.
+A *trailing* zero-duration jump is kept as a block, because there is nothing after it to fold into.
+That asymmetry is deliberate: the alternative silently deletes an instruction the author wrote.
+
+Opening a wave and saving it without changing anything produces the same document. There is a test
+for that, because the alternative is that everyone who opens a wave to look at it rewrites it — and
+the ETag is a hash of the bytes, so every client would re-download the catalogue for nothing.
+
+## The preview is a schematic
+
+It shows where each entity goes and when. It is **not** a reproduction of the game: the roadmap
+rules out a general-purpose 2D simulation, because a preview that faithfully simulates any game's
+movement is a game engine, and building one against unknown content means guessing. Anything that
+depends on the real game's feel has to be checked in the real game.
+
+It is a pure function of time, which is what makes scrubbing trustworthy: arriving at 4.2 seconds by
+dragging the playhead gives exactly the picture that playing to 4.2 seconds gives. A simulator that
+advanced internal state per frame would not, and an author checking their work against it would be
+checking against something the game never shows.
+
+A movement type with no registered simulator is **named** in the preview rather than drawn — a
+stationary dot looks like a working entity standing still.
+
+## Registries, not switches
+
+Both the movement behaviours and their editing panels are looked up in a map:
+
+```ts
+simulatorRegistry.register('patrol', PatrolSimulator);
+behaviorEditorRegistry.register('patrol', PatrolEditor);
+```
+
+The predecessor dispatched roughly 3,400 lines of hand-written forms through `switch (action.type)`.
+A registry is the shape `v1.1.0` needs — entity, behaviour and content types becoming data — so a
+plugin registers a panel and nothing else changes. Registering twice throws, because two behaviours
+claiming one type means whichever loaded last silently wins.
+
+`teleport` and `jump` fall through to a raw JSON editor on purpose: both configure spawn positions,
+which needs a position picker that does not exist yet, and a half-built one that wrote the wrong
+shape would be worse than a JSON field.
+
 ## Not here yet
 
-The timeline, the canvas preview and the audio mixing are the rest of `v0.3.0`
-([#9](https://github.com/MiladNalbandi/ludus-engine/issues/9)). This release is the foundation they
-sit on — the session, the generated types, and the container — plus a catalogue view that proves the
-whole chain works end to end: sign in, list waves and levels, publish, and activate a level.
-
-The Playwright smoke test the issue asks for is not written yet either. It needs a running stack, so
-it belongs with the first piece of real editing UI rather than ahead of it.
+Audio mixing, and the Playwright smoke test. The mixing decision `v0.3.0` calls for — never through
+a shell — is not built, and no audio mixing happens in the editor at all today. The Playwright test
+covers logging in, building, previewing, publishing and fetching from the public API; it needs a
+running stack, so it lands with CI rather than as a local-only check.
