@@ -50,7 +50,10 @@ public class NetworkntDocumentValidator implements DocumentValidator {
 
     @PostConstruct
     void loadSchema() {
-        try (InputStream in = getClass().getResourceAsStream(SCHEMA_RESOURCE)) {
+        // The class literal, not getClass(). getClass() resolves against the runtime class, so a
+        // subclass -- or a proxy, which this being a Spring bean makes plausible -- would look the
+        // schema up through a different classloader and find nothing, or something else.
+        try (InputStream in = NetworkntDocumentValidator.class.getResourceAsStream(SCHEMA_RESOURCE)) {
             if (in == null) {
                 throw new IllegalStateException(
                         SCHEMA_RESOURCE
