@@ -302,6 +302,62 @@ jobs:
           path: editor/playwright-report/
           retention-days: 7
 
+      # The import CLI, against the running engine. An acceptance criterion of v1.0.0, and the
+      # only way to know the script still works: it talks to the bulk endpoint, which is the one
+      # place a malformed document is refused all-or-nothing rather than half-applied.
+      - name: The import CLI round-trips the demo content
+        run: |
+          # The demo waves are already imported by an earlier step, so re-importing them would be
+          # a replace rather than a create. Renamed copies make this a real import.
+          mkdir -p /tmp/import
+          for f in samples/waves/*.json; do
+            id="cli_$(basename "$f" .json)"
+            sed -e "s/\"$(basename "$f" .json)\"/\"$id\"/" \
+                -e "s/\"order\": *[0-9]*/\"order\": $((RANDOM % 500 + 7000))/" \
+                "$f" > "/tmp/import/$id.json"
+          done
+
+          node scripts/import-waves.mjs \
+            --url http://localhost:8080 \
+            --email ci@example.test --password ci-not-a-real-password \
+            /tmp/import/*.json
+
+          # And the engine has them, as drafts: the importer must not publish anything.
+          token=$(curl -fsS http://localhost:8080/api/v1/auth/token \
+            -H 'Content-Type: application/json' \
+            -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
+            | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+
+          for f in /tmp/import/*.json; do
+            id=$(basename "$f" .json)
+            curl -fsS "http://localhost:8080/api/v1/admin/waves/$id" \
+              -H "Authorization: Bearer $token" > /tmp/roundtrip.json \
+              || { echo "the importer did not create $id"; exit 1; }
+
+            # Byte-for-byte. The importer sends the file's bytes and the engine stores what it
+            # receives, so anything else means something on the path re-serialised the document.
+            diff "$f" /tmp/roundtrip.json || {
+              echo "$id came back different from what was imported"; exit 1; }
+
+            curl -fsS "http://localhost:8080/api/v1/public/waves/$id/raw" >/dev/null 2>&1 && {
+              echo "$id was published by the importer; it must leave everything as a draft"
+              exit 1
+            }
+          done
+
+          # A bad document must reject the whole batch and write nothing.
+          echo '{"id":"cli_broken","name":"no schema version or anything else"}' > /tmp/import-bad.json
+          if node scripts/import-waves.mjs \
+               --url http://localhost:8080 \
+               --email ci@example.test --password ci-not-a-real-password \
+               /tmp/import/cli_demo_first_steps.json /tmp/import-bad.json; then
+            echo "the importer accepted an invalid document"; exit 1
+          fi
+          curl -fsS "http://localhost:8080/api/v1/admin/waves/cli_broken" \
+            -H "Authorization: Bearer $token" >/dev/null 2>&1 && {
+            echo "a refused import still wrote something"; exit 1; }
+          echo "the import CLI round-trips, and refuses all-or-nothing"
+
       - name: A wrong password is refused
         run: |
           status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/auth/token \

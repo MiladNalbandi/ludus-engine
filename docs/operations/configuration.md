@@ -60,6 +60,8 @@ engine with no project, which is only useful for confirming that the switch exis
 | `LUDUS_AUDIO_MIXER_MODE` | `none` | `ffmpeg` enables mixing. Needs the `ludus-engine-ffmpeg` image |
 | `LUDUS_AUDIO_MIXER_TIMEOUT` | `60s` | A hard stop on one mix |
 | `LUDUS_AUDIO_MIXER_MAX_TRACKS` | `8` | Tracks per mix |
+| `LUDUS_AUDIO_MIXER_BINARY` | `/usr/bin/ffmpeg` | An absolute path. Not a name resolved against `PATH` |
+| `LUDUS_AUDIO_MIXER_MAX_OUTPUT_BYTES` | `67108864` | A cap on what one mix may produce |
 | `LUDUS_SPRITE_DIRECTORY` | *(none)* | Where item art is written. Required once sprites are used |
 
 **Clip bytes are not in the database.** Metadata is; the bytes are files on a disk you mount. A

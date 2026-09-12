@@ -103,11 +103,11 @@ Tracked in [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18), with 
 |---|---|---|
 | ✅ | `v0.0.1` | Foundation: build, architecture guardrails, content contract, running service |
 | ✅ | `v0.1.0` | Identity: JWT, roles, API keys, the project boundary |
-| 🚧 | `v0.2.0` | Content API: author, validate, publish and serve waves and levels, with ETag caching |
-| 📋 | `v0.3.0` | The web editor: timeline, live preview, audio, level sequencer |
-| 📋 | `v0.4.0` | Live-ops: players, items, XP, currency, inventory, leaderboards |
-| 📋 | `v1.0.0` | Frozen HTTP contract, docs, semantic-versioning commitment |
-| 📋 | `v1.1.0` | Plugin substrate: entity, behaviour and content types become data |
+| ✅ | `v0.2.0` | Content API: author, validate, publish and serve waves and levels, with ETag caching |
+| ✅ | `v0.3.0` | The web editor: timeline, live preview, audio, level sequencer |
+| ✅ | `v0.4.0` | Live-ops: players, items, XP, currency, inventory, leaderboards |
+| ✅ | `v1.0.0` | **Frozen HTTP contract**, docs, semantic-versioning commitment |
+| 🚧 | `v1.1.0` | Plugin substrate: entity, behaviour and content types become data |
 | 📋 | `v1.2.0` | Schema-driven editor, pluggable preview |
 | 📋 | `v1.3.0` | Maps and blocks: the tilemap content type |
 | 📋 | `v1.4.0` | Notification centre: templates, player segments, scheduling |
@@ -118,6 +118,14 @@ Tracked in [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18), with 
 
 Not built yet — it lands with `v1.5.0` in a separate repository so that Unity can install it
 by git URL and version it independently. It will be **Apache-2.0**, not AGPL: see Licensing.
+
+## The API contract
+
+The HTTP contract is committed at [`docs/api/openapi.json`](docs/api/openapi.json) and is **frozen
+from `1.0.0`**: a breaking change costs a major version, and `FrozenContractTest` fails the build if
+one lands without it. See [upgrading](docs/operations/upgrading.md) for what counts as breaking.
+
+Swagger UI is at `/docs` on a running engine, and the raw document at `/api-docs`.
 
 ## Documentation
 
