@@ -11,6 +11,33 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Wave levels**, part of `v0.2.0`, [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8).
+  Waves are sequenced into levels under `/api/v1/admin/wave-levels`, and a game client fetches the
+  one being played from `/api/v1/public/wave-levels/active`.
+  - **Three rules are enforced by the schema rather than by code**, and all three were application
+    logic that went wrong at least once in the codebase this was extracted from. A project has at
+    most one active level. A level's waves belong to the same project as the level. Deleting a wave
+    removes it from every level that used it.
+  - "Active" is **a table keyed by project**, not a boolean column per level. The roadmap proposed a
+    partial unique index, which is PostgreSQL-only and would have had to live in
+    `db/vendor/postgresql` — fine for the generated `jsonb` column, which nothing reads, and not
+    fine for the one invariant the feature exists to guarantee. The slice tests run against H2, so a
+    constraint that is absent there is a constraint those tests cannot prove. A primary key on
+    `project_id` says the same thing in SQL every database has.
+  - Membership rows are written by the adapter rather than by Hibernate. Managed as an ordered
+    collection, reordering a level issued in-place updates that collided with the
+    `(level, wave)` key halfway through — swapping two waves threw a constraint violation. The
+    alternatives were to weaken the schema or to choose the statements; the second keeps both
+    constraints.
+  - **A client gets the published members; an editor is told which ones those are.** A level is
+    assembled while its waves are still being written, so unpublished members are absent from the
+    public route — and every authoring response marks each member's publication state, because an
+    editor who cannot see which entries players are not receiving finds out from a player.
+  - No active level is a `404`, not an empty level. A client must be able to tell "nothing chosen"
+    from "chosen and empty".
+  - The active level's `ETag` covers the level and its members, so renaming it, resequencing it or
+    editing any wave inside it all move it.
+
 - **Audio**, part of `v0.2.0`, [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). Clips
   are uploaded by an editor under `/api/v1/admin/audio` and streamed to anyone from
   `/api/v1/public/audio/{id}`.
@@ -64,6 +91,15 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
   for one platform.
 - `WaveRepository.findPublished` — a published-only single lookup, so "which rows may a client see"
   is answered by the query rather than by whoever remembers to filter.
+
+### Changed
+
+- **Every OpenAPI operation now has an explicit `operationId`.** springdoc derives them from method
+  names and disambiguates collisions by discovery order, so three unrelated operations were named
+  `list_1`, `list_2`, `list_3` — and adding one controller renumbered them. The snapshot diff for
+  wave levels is what surfaced it: four operations the change did not touch were renamed in the
+  published contract. Generated clients break on that, and a contract that reshuffles itself is not
+  one `v1.0.0` can promise to freeze.
 
 ### Fixed
 

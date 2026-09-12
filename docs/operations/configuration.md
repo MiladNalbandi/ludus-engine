@@ -132,7 +132,7 @@ git repository and a shipped game binary, and anything it can do should be assum
 | `/api/v1/auth/token` | yes | Signing in cannot require being signed in |
 | `/api/v1/auth/refresh` | yes | The refresh token is itself the credential |
 | `/api/v1/public/**` | yes | Published content and audio: what every copy of the game downloads |
-| `/api/v1/admin/waves/**`, `/api/v1/admin/audio/**` | no | Editors and above |
+| `/api/v1/admin/waves/**`, `/api/v1/admin/audio/**`, `/api/v1/admin/wave-levels/**` | no | Editors and above |
 | `/api/v1/admin/**` | no | Administrators only |
 | everything else | no | Any valid credential; deny-by-default for anything unnamed |
 

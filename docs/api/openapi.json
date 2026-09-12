@@ -15,7 +15,7 @@
         "tags" : [ "Wave authoring" ],
         "summary" : "Fetch a wave's document, draft or not",
         "description" : "Returns the stored bytes exactly as they were received.",
-        "operationId" : "document",
+        "operationId" : "getWaveDocument",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -41,7 +41,7 @@
         "tags" : [ "Wave authoring" ],
         "summary" : "Replace a wave's document",
         "description" : "The id in the URL and the id in the document must agree.",
-        "operationId" : "replace",
+        "operationId" : "replaceWave",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -76,7 +76,89 @@
       "delete" : {
         "tags" : [ "Wave authoring" ],
         "summary" : "Delete a wave",
-        "operationId" : "delete",
+        "operationId" : "deleteWave",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/wave-levels/{id}" : {
+      "get" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "One level",
+        "operationId" : "getWaveLevel",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Rename or resequence a level",
+        "description" : "The wave list is replaced wholesale, in the order given.",
+        "operationId" : "updateWaveLevel",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Request"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Delete a level",
+        "description" : "The waves themselves are untouched; only their membership of this level goes. Deleting the active level leaves the project with none active.",
+        "operationId" : "deleteWaveLevel",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -97,7 +179,7 @@
         "tags" : [ "Authentication" ],
         "summary" : "Exchange an email address and password for tokens",
         "description" : "Every failure returns the same 401 with the same body. The difference between an unknown address and a wrong password is not something to tell whoever is asking.",
-        "operationId" : "token",
+        "operationId" : "signIn",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -127,7 +209,7 @@
         "tags" : [ "Authentication" ],
         "summary" : "Exchange a refresh token for a new pair",
         "description" : "The presented token is revoked as part of the exchange, so a stolen token and the real one cannot both keep working.",
-        "operationId" : "refresh",
+        "operationId" : "refreshSession",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -156,7 +238,7 @@
       "get" : {
         "tags" : [ "Wave authoring" ],
         "summary" : "List every wave, drafts included",
-        "operationId" : "list",
+        "operationId" : "listWaves",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -177,7 +259,7 @@
         "tags" : [ "Wave authoring" ],
         "summary" : "Create a wave from a document",
         "description" : "The document's own id is used. Saving never publishes: a new wave is a draft and invisible to clients until it is published.",
-        "operationId" : "create",
+        "operationId" : "createWave",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -206,7 +288,7 @@
       "post" : {
         "tags" : [ "Wave authoring" ],
         "summary" : "Withdraw a wave. Clients stop seeing it entirely, as a 404.",
-        "operationId" : "unpublish",
+        "operationId" : "unpublishWave",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -233,7 +315,85 @@
       "post" : {
         "tags" : [ "Wave authoring" ],
         "summary" : "Publish a wave, making it visible to clients",
-        "operationId" : "publish",
+        "operationId" : "publishWave",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/wave-levels" : {
+      "get" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Every level in the project",
+        "operationId" : "listWaveLevels",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Summary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Create a level",
+        "description" : "The waves are listed in play order. Creating a level never activates it; activation is a separate call.",
+        "operationId" : "createWaveLevel",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/Request"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/wave-levels/{id}/activate" : {
+      "post" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Make this the level players receive",
+        "description" : "Replaces whatever was active. A project has at most one active level, which the database guarantees rather than this endpoint.",
+        "operationId" : "activateWaveLevel",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -260,7 +420,7 @@
       "get" : {
         "tags" : [ "Audio" ],
         "summary" : "List audio clips. Metadata only; no file is opened.",
-        "operationId" : "list_1",
+        "operationId" : "listAudioClips",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -281,7 +441,7 @@
         "tags" : [ "Audio" ],
         "summary" : "Upload an audio clip",
         "description" : "Streamed to storage; the recorded size is what was actually written, not a length the client declared.",
-        "operationId" : "upload",
+        "operationId" : "uploadAudioClip",
         "requestBody" : {
           "content" : {
             "multipart/form-data" : {
@@ -316,7 +476,7 @@
       "get" : {
         "tags" : [ "API keys" ],
         "summary" : "List keys, including revoked ones",
-        "operationId" : "list_2",
+        "operationId" : "listApiKeys",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -336,7 +496,7 @@
       "post" : {
         "tags" : [ "API keys" ],
         "summary" : "Mint a key. The response is the only time it is shown.",
-        "operationId" : "create_1",
+        "operationId" : "createApiKey",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -366,7 +526,7 @@
         "tags" : [ "Public content" ],
         "summary" : "Every published wave, in progression order",
         "description" : "Summaries only. Fetch a document from the raw route when you need it.",
-        "operationId" : "waves",
+        "operationId" : "listPublishedWaves",
         "parameters" : [ {
           "name" : "If-None-Match",
           "in" : "header",
@@ -396,7 +556,7 @@
       "get" : {
         "tags" : [ "Public content" ],
         "summary" : "One published wave's indexed fields",
-        "operationId" : "wave",
+        "operationId" : "getPublishedWave",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -431,7 +591,7 @@
         "tags" : [ "Public content" ],
         "summary" : "One published wave's document",
         "description" : "Byte-for-byte what was stored. Cache these bytes with the ETag.",
-        "operationId" : "raw",
+        "operationId" : "getPublishedWaveDocument",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -461,12 +621,40 @@
         }
       }
     },
+    "/api/v1/public/wave-levels/active" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "The level currently being played",
+        "description" : "Published waves only, in play order. 404 when the project has no active level.",
+        "operationId" : "getActiveWaveLevel",
+        "parameters" : [ {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/public/status" : {
       "get" : {
         "tags" : [ "Public content" ],
         "summary" : "The content hash for everything published",
         "description" : "Compare it with the one you cached. Unchanged means play from cache and make no further requests. This value is identical to the ETag of the wave list for the same data.",
-        "operationId" : "status",
+        "operationId" : "contentStatus",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -486,7 +674,7 @@
         "tags" : [ "Public content" ],
         "summary" : "Stream an audio clip",
         "description" : "Cached immutably: a clip never changes under its id, so a client that has it never asks again.",
-        "operationId" : "stream",
+        "operationId" : "streamAudioClip",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -513,7 +701,7 @@
       "get" : {
         "tags" : [ "Authentication" ],
         "summary" : "The identity behind the credential you presented",
-        "operationId" : "me",
+        "operationId" : "currentCaller",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -533,7 +721,7 @@
         "tags" : [ "Wave authoring" ],
         "summary" : "An order that would not collide",
         "description" : "Advisory. The order lives in the document and the author owns it; this only answers what is free right now.",
-        "operationId" : "nextOrder",
+        "operationId" : "nextWaveOrder",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -553,7 +741,7 @@
       "delete" : {
         "tags" : [ "Audio" ],
         "summary" : "Delete a clip and its bytes",
-        "operationId" : "delete_1",
+        "operationId" : "deleteAudioClip",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -574,7 +762,7 @@
         "tags" : [ "API keys" ],
         "summary" : "Revoke a key",
         "description" : "The row is kept and stamped, not deleted: when a key stopped working is a question people ask after an incident.",
-        "operationId" : "revoke",
+        "operationId" : "revokeApiKey",
         "parameters" : [ {
           "name" : "id",
           "in" : "path",
@@ -629,6 +817,24 @@
           "updatedAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "Request" : {
+        "type" : "object",
+        "description" : "A level's name and the waves it sequences, in play order.",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "waves" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
           }
         }
       },

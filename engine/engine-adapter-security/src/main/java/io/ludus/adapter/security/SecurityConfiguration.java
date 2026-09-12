@@ -112,7 +112,9 @@ public class SecurityConfiguration {
                                         // reason the EDITOR role exists. Administrators reach it
                                         // too, because Role is ordered and ADMIN includes EDITOR.
                                         .requestMatchers(
-                                                "/api/v1/admin/waves/**", "/api/v1/admin/audio/**")
+                                                "/api/v1/admin/waves/**",
+                                                "/api/v1/admin/audio/**",
+                                                "/api/v1/admin/wave-levels/**")
                                         .hasAnyRole("EDITOR", "ADMIN")
                                         // Issuing and revoking credentials is not. This matcher
                                         // is listed after the one above and would otherwise

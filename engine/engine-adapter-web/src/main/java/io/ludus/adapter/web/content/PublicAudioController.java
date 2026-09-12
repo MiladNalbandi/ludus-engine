@@ -46,7 +46,7 @@ class PublicAudioController {
     }
 
     @GetMapping("/{id}")
-    @Operation(
+    @Operation(operationId = "streamAudioClip",
             summary = "Stream an audio clip",
             description =
                     "Cached immutably: a clip never changes under its id, so a client that has it"

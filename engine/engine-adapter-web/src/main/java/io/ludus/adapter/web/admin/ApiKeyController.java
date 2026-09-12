@@ -40,7 +40,7 @@ class ApiKeyController {
     }
 
     @PostMapping
-    @Operation(summary = "Mint a key. The response is the only time it is shown.")
+    @Operation(operationId = "createApiKey", summary = "Mint a key. The response is the only time it is shown.")
     ResponseEntity<ApiKeyDtos.CreatedResponse> create(
             @Valid @RequestBody ApiKeyDtos.CreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -50,13 +50,13 @@ class ApiKeyController {
     }
 
     @GetMapping
-    @Operation(summary = "List keys, including revoked ones")
+    @Operation(operationId = "listApiKeys", summary = "List keys, including revoked ones")
     List<ApiKeyDtos.Summary> list() {
         return apiKeys.list(activeProject.id()).stream().map(ApiKeyDtos.Summary::of).toList();
     }
 
     @DeleteMapping("/{id}")
-    @Operation(
+    @Operation(operationId = "revokeApiKey",
             summary = "Revoke a key",
             description =
                     "The row is kept and stamped, not deleted: when a key stopped working is a"
