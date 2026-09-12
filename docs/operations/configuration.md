@@ -57,6 +57,9 @@ engine with no project, which is only useful for confirming that the switch exis
 |---|---|---|
 | `LUDUS_AUDIO_DIRECTORY` | *(none)* | Where clip bytes are written. Required once audio is used |
 | `LUDUS_AUDIO_MAX_FILE_SIZE` | `64MB` | Refused above this, per file and per request |
+| `LUDUS_AUDIO_MIXER_MODE` | `none` | `ffmpeg` enables mixing. Needs the `ludus-engine-ffmpeg` image |
+| `LUDUS_AUDIO_MIXER_TIMEOUT` | `60s` | A hard stop on one mix |
+| `LUDUS_AUDIO_MIXER_MAX_TRACKS` | `8` | Tracks per mix |
 
 **Clip bytes are not in the database.** Metadata is; the bytes are files on a disk you mount. A
 database row holding a 40 MB track is read into memory to be served, which is the thing the whole
@@ -70,6 +73,19 @@ the database went on listing them.
 The directory is checked for existence and writability at startup, and the engine refuses to
 start if it fails. Discovering that at boot is better than discovering it from the first editor
 who tries to upload a track.
+
+**Mixing is off, and needs a different image.** Combining clips into one needs FFmpeg, which the
+standard image deliberately does not carry: it is a large dependency with its own vulnerability
+history, and a self-hosted install should not have to acquire a media toolchain to get a working
+engine. `POST /api/v1/admin/audio/mix` answers `503` with a message naming the image and the
+variable. Uploading and serving work either way.
+
+Where it is enabled, the subprocess is run with an **argv list and no shell**. The codebase Ludus
+was extracted from built an FFmpeg command as a string and passed it to a shell with interpolated
+filenames, which gave any authenticated editor user command execution on the container. Here no
+client string ever becomes an argument — inputs are written to a per-job temporary directory under
+names derived from their index — there is a hard timeout, an output size cap, and the tool's own
+output is logged rather than returned, because it names paths inside the container.
 
 **Nothing is streamed into memory at either end**, and that is enforced by a test rather than a
 convention: `AudioStreamingIT` pushes a clip larger than the entire heap through storage and back

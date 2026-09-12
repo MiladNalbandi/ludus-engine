@@ -77,6 +77,20 @@ ludus:
     # backups larger and restores slower. Must be a volume that survives a restart; compose
     # provides one. The engine refuses to start if it is unset or unwritable.
     directory: ${LUDUS_AUDIO_DIRECTORY:}
+    mixer:
+      # 'none' by default, and the standard image carries no FFmpeg to switch it to. Mixing needs
+      # the ludus-engine-ffmpeg image: a self-hoster is never asked to install a media toolchain
+      # to get a working engine.
+      mode: ${LUDUS_AUDIO_MIXER_MODE:none}
+      # An absolute path, not a name resolved against PATH. "Whatever ffmpeg means in this
+      # environment" is not something to hand a subprocess.
+      binary: ${LUDUS_AUDIO_MIXER_BINARY:/usr/bin/ffmpeg}
+      # A hard stop. FFmpeg can be made to run for a very long time on a small input, and a request
+      # that never returns is a denial of service with extra steps.
+      timeout: ${LUDUS_AUDIO_MIXER_TIMEOUT:60s}
+      # A filter graph can produce far more than it consumes, onto a disk shared with the clips.
+      max-output-bytes: ${LUDUS_AUDIO_MIXER_MAX_OUTPUT_BYTES:67108864}
+      max-tracks: ${LUDUS_AUDIO_MIXER_MAX_TRACKS:8}
   security:
     jwt:
       # Deliberately no default. A signing secret published in a public repository lets anyone

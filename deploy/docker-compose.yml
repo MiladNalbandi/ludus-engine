@@ -48,6 +48,11 @@ services:
       # uploaded clip while the rows describing them survive, so it is a real backup target.
       LUDUS_AUDIO_DIRECTORY: /var/lib/ludus/audio
       LUDUS_AUDIO_MAX_FILE_SIZE: ${LUDUS_AUDIO_MAX_FILE_SIZE:-64MB}
+      # Mixing is off unless this is 'ffmpeg' AND the image actually carries FFmpeg, which the
+      # standard one does not. See deploy/Dockerfile.engine-ffmpeg.
+      LUDUS_AUDIO_MIXER_MODE: ${LUDUS_AUDIO_MIXER_MODE:-none}
+      LUDUS_AUDIO_MIXER_TIMEOUT: ${LUDUS_AUDIO_MIXER_TIMEOUT:-60s}
+      LUDUS_AUDIO_MIXER_MAX_TRACKS: ${LUDUS_AUDIO_MIXER_MAX_TRACKS:-8}
     volumes:
       - ludus-audio:/var/lib/ludus/audio
     ports:

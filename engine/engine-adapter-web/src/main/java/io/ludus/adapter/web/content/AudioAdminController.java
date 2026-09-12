@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -90,5 +91,42 @@ class AudioAdminController {
         String leaf = submitted.replace('\\', '/');
         leaf = leaf.substring(leaf.lastIndexOf('/') + 1);
         return leaf.isBlank() ? "untitled" : leaf;
+    }
+
+    /**
+     * Mixes several clips into a new one.
+     *
+     * <p>Refused with a `503` when this install has no mixer, which most do not: FFmpeg is a large
+     * dependency and the standard image deliberately does not carry it. The refusal names the image
+     * and the variable to change rather than saying "not available".
+     */
+    @PostMapping(path = "/mix", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            operationId = "mixAudioClips",
+            summary = "Mix several clips into one",
+            description =
+                    "The result is an ordinary clip afterwards: served, listed and deleted like any"
+                            + " upload. Returns 503 when this engine has no mixer configured.")
+    ResponseEntity<AudioDtos.Summary> mix(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true)
+                    @RequestBody(required = false)
+                    AudioDtos.MixRequest request) {
+
+        if (request == null || request.filename() == null || request.filename().isBlank()) {
+            throw new io.ludus.application.content.ContentRejected(
+                    java.util.List.of(
+                            new io.ludus.application.content.ContentViolation(
+                                    "/filename", "the mixed clip needs a name")));
+        }
+
+        java.util.List<AudioLibrary.MixTrack> tracks =
+                request.tracks() == null
+                        ? java.util.List.of()
+                        : request.tracks().stream().map(AudioDtos.MixTrack::toDomain).toList();
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(
+                        AudioDtos.Summary.of(
+                                audio.mix(activeProject.id(), request.filename(), tracks)));
     }
 }

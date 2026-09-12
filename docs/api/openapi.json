@@ -612,6 +612,36 @@
         }
       }
     },
+    "/api/v1/admin/audio/mix" : {
+      "post" : {
+        "tags" : [ "Audio" ],
+        "summary" : "Mix several clips into one",
+        "description" : "The result is an ordinary clip afterwards: served, listed and deleted like any upload. Returns 503 when this engine has no mixer configured.",
+        "operationId" : "mixAudioClips",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AudioMixRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AudioClipSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/api-keys" : {
       "get" : {
         "tags" : [ "API keys" ],
@@ -1162,6 +1192,34 @@
           "createdAt" : {
             "type" : "string",
             "format" : "date-time"
+          }
+        }
+      },
+      "AudioMixRequest" : {
+        "type" : "object",
+        "description" : "The clips to combine, and how loud each should be.",
+        "properties" : {
+          "filename" : {
+            "type" : "string"
+          },
+          "tracks" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AudioMixTrack"
+            }
+          }
+        }
+      },
+      "AudioMixTrack" : {
+        "type" : "object",
+        "description" : "One clip in a mix. Gain is in decibels; 0 leaves it alone.",
+        "properties" : {
+          "clipId" : {
+            "type" : "string"
+          },
+          "gainDb" : {
+            "type" : "number",
+            "format" : "double"
           }
         }
       },
