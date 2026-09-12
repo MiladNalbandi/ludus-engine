@@ -62,7 +62,12 @@ public class FilesystemAudioStore implements AudioStore {
                     "audio directory " + directory + " could not be created", cannotCreate);
         }
         if (!Files.isWritable(directory)) {
-            throw new IllegalStateException("audio directory " + directory + " is not writable");
+            throw new IllegalStateException(
+                    """
+                    The audio directory %s exists but is not writable by this process (uid %s).
+
+                    Under Docker this usually means the volume was created before the directory                     existed in the image: an empty named volume inherits the mount point's owner,                     and a path Docker has to create itself is owned by root. Either rebuild the                     image (deploy/Dockerfile.engine creates the directory owned by the runtime                     user) or chown the existing volume. See docs/operations/configuration.md."""
+                            .formatted(directory, System.getProperty("user.name", "unknown")));
         }
     }
 
