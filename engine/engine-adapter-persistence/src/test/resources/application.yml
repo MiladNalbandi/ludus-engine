@@ -27,5 +27,7 @@ spring:
     clean-disabled: false
 
 ludus:
+  sprite:
+    directory: ${java.io.tmpdir}/ludus-sprite-test
   audio:
     directory: ${java.io.tmpdir}/ludus-audio-test

@@ -948,6 +948,62 @@
         }
       }
     },
+    "/api/v1/admin/sprites" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "Every uploaded sprite",
+        "operationId" : "listSprites",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SpriteSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Items" ],
+        "summary" : "Upload item art",
+        "description" : "PNG, JPEG, WebP and GIF. SVG is refused deliberately: it can carry script, and it would run on this engine's origin.",
+        "operationId" : "uploadSprite",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpriteSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/players/{id}/wallet/grant" : {
       "post" : {
         "tags" : [ "Players" ],
@@ -1405,6 +1461,34 @@
         }
       }
     },
+    "/api/v1/public/sprites/{id}" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "Fetch item art",
+        "description" : "Cached immutably: a sprite never changes under its id.",
+        "operationId" : "streamSprite",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StreamingResponseBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/public/audio/{id}" : {
       "get" : {
         "tags" : [ "Public content" ],
@@ -1783,6 +1867,27 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/sprites/{id}" : {
+      "delete" : {
+        "tags" : [ "Items" ],
+        "summary" : "Delete a sprite",
+        "description" : "Items referring to it are not changed. spriteRef is an opaque reference the game resolves -- it may be a URL or an atlas key -- so the engine has no list of what points at what.",
+        "operationId" : "deleteSprite",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
           }
         }
       }
@@ -2215,6 +2320,29 @@
           "deleted" : {
             "type" : "integer",
             "format" : "int32"
+          }
+        }
+      },
+      "SpriteSummary" : {
+        "type" : "object",
+        "description" : "An uploaded image. The bytes come from the public route.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "contentType" : {
+            "type" : "string"
+          },
+          "sizeBytes" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       },

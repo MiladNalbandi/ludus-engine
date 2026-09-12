@@ -11,6 +11,25 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Item art**, completing `v0.4.0`,
+  [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10). Uploaded by an editor at
+  `/api/v1/admin/sprites`, served to anyone from `/api/v1/public/sprites/{id}`.
+  - **SVG is refused, deliberately.** It is XML that may contain `<script>`, and a browser
+    rendering one served from this origin runs it there — so accepting it would turn item art into
+    stored cross-site scripting against the editor and anything else on the same host. Stripping
+    script from SVG reliably is a sanitiser's whole job, and shipping one is a bigger commitment
+    than declining the format. The refusal says why, because SVG is the obvious thing to want for
+    game art and an author refused without a reason will assume it is a bug.
+  - Served with `X-Content-Type-Options: nosniff`, streamed rather than buffered, and cached
+    immutably — a sprite never changes under its id.
+  - **`spriteRef` is still an opaque reference, and is not a foreign key.** A project serving its
+    art from a CDN puts a URL there and uploads nothing; a foreign key would make Ludus the only
+    possible source. Deleting a sprite therefore does not touch items that mention it, because the
+    engine has no list of what points at what and inventing one would mean pretending it owns a
+    relationship it deliberately does not.
+  - The filesystem work is now shared with audio rather than copied: the atomic write, the startup
+    writability check and the refusal to let a client-supplied name reach a path were learned once.
+
 - **Leaderboards**, completing `v0.4.0`'s player state,
   [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10).
   - **Paging is keyset, and what "stable" means is stated precisely** rather than implied to be

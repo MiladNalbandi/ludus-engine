@@ -91,6 +91,10 @@ ludus:
       # A filter graph can produce far more than it consumes, onto a disk shared with the clips.
       max-output-bytes: ${LUDUS_AUDIO_MIXER_MAX_OUTPUT_BYTES:67108864}
       max-tracks: ${LUDUS_AUDIO_MIXER_MAX_TRACKS:8}
+  sprite:
+    # Item art, on its own volume. Same shape as the audio directory and the same rules: it must
+    # survive a container restart, and the engine refuses to start if it is unset or unwritable.
+    directory: ${LUDUS_SPRITE_DIRECTORY:}
   security:
     jwt:
       # Deliberately no default. A signing secret published in a public repository lets anyone

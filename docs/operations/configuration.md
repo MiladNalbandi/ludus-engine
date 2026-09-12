@@ -60,6 +60,7 @@ engine with no project, which is only useful for confirming that the switch exis
 | `LUDUS_AUDIO_MIXER_MODE` | `none` | `ffmpeg` enables mixing. Needs the `ludus-engine-ffmpeg` image |
 | `LUDUS_AUDIO_MIXER_TIMEOUT` | `60s` | A hard stop on one mix |
 | `LUDUS_AUDIO_MIXER_MAX_TRACKS` | `8` | Tracks per mix |
+| `LUDUS_SPRITE_DIRECTORY` | *(none)* | Where item art is written. Required once sprites are used |
 
 **Clip bytes are not in the database.** Metadata is; the bytes are files on a disk you mount. A
 database row holding a 40 MB track is read into memory to be served, which is the thing the whole
@@ -147,7 +148,7 @@ git repository and a shipped game binary, and anything it can do should be assum
 | `/api-docs`, `/docs` | yes | The API contract, not data |
 | `/api/v1/auth/token` | yes | Signing in cannot require being signed in |
 | `/api/v1/auth/refresh` | yes | The refresh token is itself the credential |
-| `/api/v1/public/**` | yes | Published content and audio: what every copy of the game downloads |
+| `/api/v1/public/**` | yes | Published content, audio and item art: what every copy of the game downloads |
 | `POST /api/v1/public/players/session` | no | An API key. Minting a credential is not reading content |
 | `/api/v1/player/**` | no | A player session token, and only for that player's own state |
 | `/api/v1/admin/waves/**`, `/api/v1/admin/audio/**`, `/api/v1/admin/wave-levels/**`, `/api/v1/admin/app-config` | no | Editors and above |
