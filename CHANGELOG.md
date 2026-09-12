@@ -11,6 +11,39 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Items and inventory**, part of `v0.4.0`,
+  [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10).
+  - **An item is reshaped away from one game's vocabulary**, which #10 asks for: an identifier, a
+    display name, an optional sprite reference, a type drawn from the project's own vocabulary, and
+    a free-form attributes document the engine does not read. The model this comes from had an item
+    type that assumed particular effects, so a second game needed a fork.
+  - **The attributes are validated against a schema the project owns.** Without one the field is a
+    junk drawer every client has to defend against; with one, a project declares its own shape and
+    the engine enforces it while knowing nothing about damage. A project that has declared no schema
+    validates nothing, because a game that has not decided what its items look like should not be
+    stopped from creating one.
+  - **A project-supplied schema is untrusted input**, and that is the difficulty. Remote `$ref`
+    targets are **refused** — a schema containing `{"$ref": "https://attacker.example/s.json"}`
+    would have the engine fetch a URL of the author's choosing from inside the deployment's network,
+    which is server-side request forgery reachable by anyone who can edit a schema. There is a size
+    cap, because the schema runs against every item on every save and persists in a table. And the
+    test caught that networknt accepts a JSON **array** as a schema: it compiles to one that
+    validates nothing, so every item would pass and the project would believe it had validation.
+  - Violations inside the attributes are reported at `/attributes` plus the pointer within the
+    document, because the caller sent a whole item — a violation at `/damage` names a field the
+    request does not have at the top level, and an editor mapping it onto a form would highlight
+    nothing.
+  - **Inventory grants are all or nothing.** A player who received the sword and not the shield has
+    been given something the game never offered, and the inventory looks perfectly consistent.
+    Taking more than a player has is refused, so "consume three arrows" cannot leave them at minus
+    one — by the table's check, like a balance.
+  - Setting a schema does **not** re-validate existing items: tightening one would otherwise make
+    half a catalogue unsaveable with nothing saying which half, and a migration is the honest way to
+    handle that.
+  - The schema lives at `/api/v1/admin/item-schema`, not `/items/schema`, which would have shadowed
+    an item legitimately called `schema` — Spring prefers a literal segment over a path variable, so
+    that item would simply have been unreachable and nothing would have said so.
+
 - **Currency and XP progression**, part of `v0.4.0`,
   [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10).
   - **A player may spend and may not be granted, and that asymmetry is the trust model.** A forged

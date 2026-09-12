@@ -222,6 +222,136 @@
         }
       }
     },
+    "/api/v1/admin/items/{id}" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "One item",
+        "operationId" : "getItem",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ItemView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Items" ],
+        "summary" : "Create or replace an item",
+        "description" : "Attributes are validated against this project's own item schema, if it has declared one. Violations are reported at /attributes plus the pointer inside the document.",
+        "operationId" : "saveItem",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ItemRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ItemView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Items" ],
+        "summary" : "Delete an item",
+        "description" : "It is removed from every player's inventory too, by foreign key.",
+        "operationId" : "deleteItem",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/item-schema" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "The project's item-attribute schema",
+        "description" : "An empty object when the project has not declared one, which validates nothing.",
+        "operationId" : "getItemSchema",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Items" ],
+        "summary" : "Replace the project's item-attribute schema",
+        "description" : "Refused now rather than on first use if it is unusable. Remote $ref targets are rejected: the engine will not fetch a URL chosen by whoever wrote the schema. Existing items are not re-validated.",
+        "operationId" : "replaceItemSchema",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/app-config" : {
       "get" : {
         "tags" : [ "Application configuration" ],
@@ -740,6 +870,44 @@
         }
       }
     },
+    "/api/v1/admin/players/{id}/inventory/grant" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Give or take several items at once",
+        "description" : "All or nothing: one rejected line rolls back the whole grant. A player who received the sword and not the shield has been given something the game never offered.",
+        "operationId" : "grantPlayerItems",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InventoryGrantRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerInventory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/audio" : {
       "get" : {
         "tags" : [ "Audio" ],
@@ -1179,6 +1347,26 @@
         }
       }
     },
+    "/api/v1/player/me/inventory" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "What this player holds",
+        "description" : "Read-only. Granting items needs a credential that does not ship in the game.",
+        "operationId" : "getPlayerInventory",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerInventory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me" : {
       "get" : {
         "tags" : [ "Authentication" ],
@@ -1302,6 +1490,55 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PlayerWallet"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/inventory" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "What a player holds",
+        "operationId" : "getPlayerInventoryAsAdmin",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerInventory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/items" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "Every item this project defines",
+        "operationId" : "listItems",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ItemView"
+                  }
                 }
               }
             }
@@ -1472,6 +1709,53 @@
             "items" : {
               "$ref" : "#/components/schemas/WaveLevelMember"
             }
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ItemRequest" : {
+        "type" : "object",
+        "description" : "An item to create or replace.",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "itemType" : {
+            "type" : "string"
+          },
+          "spriteRef" : {
+            "type" : "string"
+          },
+          "attributes" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ItemView" : {
+        "type" : "object",
+        "description" : "An item the project defines. Attributes are the project's own shape.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "itemType" : {
+            "type" : "string"
+          },
+          "spriteRef" : {
+            "type" : "string"
+          },
+          "attributes" : {
+            "type" : "string"
           },
           "createdAt" : {
             "type" : "string",
@@ -1669,6 +1953,60 @@
           },
           "stage" : {
             "$ref" : "#/components/schemas/XpStageView"
+          }
+        }
+      },
+      "InventoryGrantRequest" : {
+        "type" : "object",
+        "description" : "Several items to grant together, or not at all.",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ItemGrantRequest"
+            }
+          }
+        }
+      },
+      "ItemGrantRequest" : {
+        "type" : "object",
+        "description" : "An item and how many; negative takes them away.",
+        "properties" : {
+          "itemId" : {
+            "type" : "string"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "InventoryEntryView" : {
+        "type" : "object",
+        "description" : "How many of one item a player holds.",
+        "properties" : {
+          "itemId" : {
+            "type" : "string"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PlayerInventory" : {
+        "type" : "object",
+        "description" : "Everything a player holds.",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/InventoryEntryView"
+            }
           }
         }
       },

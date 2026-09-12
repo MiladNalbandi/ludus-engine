@@ -3,6 +3,7 @@ package io.ludus.adapter.web.player;
 
 import io.ludus.application.content.ContentRejected;
 import io.ludus.application.content.ContentViolation;
+import io.ludus.application.player.ItemCatalogue;
 import io.ludus.application.player.PlayerEconomy;
 import io.ludus.application.player.PlayerSessions;
 import io.ludus.application.player.port.out.PlayerRepository;
@@ -44,16 +45,19 @@ class PlayerAdminController {
 
     private final PlayerSessions sessions;
     private final PlayerEconomy economy;
+    private final ItemCatalogue items;
     private final PlayerRepository players;
     private final ActiveProject activeProject;
 
     PlayerAdminController(
             PlayerSessions sessions,
             PlayerEconomy economy,
+            ItemCatalogue items,
             PlayerRepository players,
             ActiveProject activeProject) {
         this.sessions = sessions;
         this.economy = economy;
+        this.items = items;
         this.players = players;
         this.activeProject = activeProject;
     }
@@ -173,6 +177,60 @@ class PlayerAdminController {
                         playerId,
                         grants,
                         request == null || request.xp() == null ? 0 : request.xp()));
+    }
+
+    @GetMapping(path = "/{id}/inventory", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(operationId = "getPlayerInventoryAsAdmin", summary = "What a player holds")
+    ResponseEntity<ItemDtos.Inventory> inventory(@PathVariable String id) {
+        return parse(id)
+                .map(
+                        playerId ->
+                                ResponseEntity.ok(
+                                        new ItemDtos.Inventory(
+                                                items.inventoryOf(activeProject.id(), playerId).stream()
+                                                        .map(ItemDtos.EntryView::of)
+                                                        .toList())))
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    /**
+     * Gives a player several items, all or nothing.
+     *
+     * <p>A negative quantity takes them away, and is refused when the player does not have that
+     * many — so "consume three arrows" cannot leave them at minus one.
+     */
+    @PostMapping(path = "/{id}/inventory/grant", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            operationId = "grantPlayerItems",
+            summary = "Give or take several items at once",
+            description =
+                    "All or nothing: one rejected line rolls back the whole grant. A player who"
+                            + " received the sword and not the shield has been given something the"
+                            + " game never offered.")
+    ItemDtos.Inventory grantItems(
+            @PathVariable String id,
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true)
+                    @RequestBody(required = false)
+                    ItemDtos.GrantsRequest request) {
+
+        PlayerId playerId = parse(id).orElseThrow(PlayerAdminController::notAPlayer);
+        List<ItemCatalogue.ItemGrant> grants = new ArrayList<>();
+        if (request != null && request.items() != null) {
+            for (ItemDtos.GrantRequest line : request.items()) {
+                String itemId = line == null ? null : line.itemId();
+                grants.add(
+                        new ItemCatalogue.ItemGrant(
+                                io.ludus.domain.shared.Slug.isValid(itemId)
+                                        ? new io.ludus.domain.shared.Slug(itemId)
+                                        : null,
+                                line == null || line.quantity() == null ? 0 : line.quantity()));
+            }
+        }
+
+        return new ItemDtos.Inventory(
+                items.grantAll(activeProject.id(), playerId, grants).stream()
+                        .map(ItemDtos.EntryView::of)
+                        .toList());
     }
 
     private static ContentRejected notAPlayer() {

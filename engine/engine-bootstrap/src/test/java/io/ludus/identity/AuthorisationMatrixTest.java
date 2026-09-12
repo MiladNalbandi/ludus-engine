@@ -213,7 +213,16 @@ class AuthorisationMatrixTest {
                 Arguments.of("editor", "/api/v1/admin/players", HttpStatus.OK),
                 Arguments.of("admin", "/api/v1/admin/players", HttpStatus.OK),
                 Arguments.of("api-key", "/api/v1/admin/xp-curve", HttpStatus.FORBIDDEN),
-                Arguments.of("editor", "/api/v1/admin/xp-curve", HttpStatus.OK));
+                Arguments.of("editor", "/api/v1/admin/xp-curve", HttpStatus.OK),
+
+                // Items are content, so an editor defines them. A key cannot, because a key that
+                // could define items could define one worth a million coins.
+                Arguments.of("anonymous", "/api/v1/admin/items", HttpStatus.UNAUTHORIZED),
+                Arguments.of("api-key", "/api/v1/admin/items", HttpStatus.FORBIDDEN),
+                Arguments.of("viewer", "/api/v1/admin/items", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/admin/items", HttpStatus.OK),
+                Arguments.of("admin", "/api/v1/admin/items", HttpStatus.OK),
+                Arguments.of("api-key", "/api/v1/player/me/inventory", HttpStatus.FORBIDDEN));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")
