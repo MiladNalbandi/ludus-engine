@@ -334,9 +334,12 @@ jobs:
               -H "Authorization: Bearer $token" > /tmp/roundtrip.json \
               || { echo "the importer did not create $id"; exit 1; }
 
-            # Byte-for-byte. The importer sends the file's bytes and the engine stores what it
-            # receives, so anything else means something on the path re-serialised the document.
-            diff "$f" /tmp/roundtrip.json || {
+            # Byte-for-byte, against the trimmed file: the importer sends the document, and a
+            # file's trailing newline is formatting rather than part of it. Anything else means
+            # something on the path re-serialised the document, which would move every ETag.
+            printf '%s' "$(cat "$f")" > /tmp/sent.json
+            printf '%s' "$(cat /tmp/roundtrip.json)" > /tmp/back.json
+            diff /tmp/sent.json /tmp/back.json || {
               echo "$id came back different from what was imported"; exit 1; }
 
             curl -fsS "http://localhost:8080/api/v1/public/waves/$id/raw" >/dev/null 2>&1 && {

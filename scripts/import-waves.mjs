@@ -103,7 +103,11 @@ async function readDocuments(files) {
     }
     // The parsed value is discarded deliberately: the engine stores the bytes it receives, and
     // re-serialising here would change them -- and with them every client's cached ETag.
-    documents.push({ file, text });
+    //
+    // Trimmed, because what is being sent is the document and not the file. A file's trailing
+    // newline is formatting; the bulk endpoint trims it anyway when splitting the array, so
+    // sending it would mean what came back never quite matched what went in.
+    documents.push({ file, text: text.trim() });
   }
   return documents;
 }
