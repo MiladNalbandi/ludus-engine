@@ -11,6 +11,40 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Bulk and batch operations**, completing `v0.2.0`,
+  [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8).
+  - `POST /api/v1/admin/waves/bulk` imports many documents and
+    `POST /api/v1/admin/waves/batch-delete` removes many, **all or nothing**. A partially applied
+    import leaves an author with two problems the response cannot answer: which documents landed,
+    and whether retrying duplicates them.
+  - Atomicity is a `UnitOfWork` outbound port rather than `@Transactional`. The application layer
+    declares no framework dependencies — the enforcer fails the build on a Spring import — and the
+    annotation would in any case be *silently ignored* on an application object Spring does not
+    proxy, producing a batch that looks atomic and is not. Verified by breaking it: replacing the
+    `TransactionTemplate` with a bare call leaves the rest of the suite green and fails three tests.
+  - Every document goes through the same `AuthorWave` as a single save — same stamping, same schema
+    validation, same derived order, same collision check. A bulk endpoint that validated differently
+    would be the way invalid content got in.
+  - Violations carry the index of the document that caused them:
+    `/3/progression_config/order`, not `/progression_config/order`. Thirty documents in, "the order
+    collides" names nothing an author can open.
+  - An id that is not there is a violation, not a silent skip. "Delete these six" is a statement
+    about a known set, and a caller who sent a typo has a different catalogue than they think.
+  - `POST /api/v1/public/waves/batch` fetches several published documents in one request, for a
+    client's first launch. **The documents are embedded as stored bytes**, assembled by hand:
+    handing Jackson a map of strings would escape each one into a string literal, and mapping them
+    to objects would re-serialise them — either way a client revalidating with the `ETag` from
+    `/raw` would be told its cache is stale forever. Not cacheable itself, which is the right trade
+    for the one fetch a fresh install makes.
+  - Unknown and unpublished ids are absent from a batch response rather than reported. A batch that
+    distinguished "not published" from "never existed" would hand back exactly what publication
+    withholds.
+  - `JsonArrays` finds element boundaries without interpreting them, with 22 table rows: a comma
+    inside a string, a brace inside a string, an escaped quote, an escaped backslash before a
+    quote, nested arrays, a trailing comma, an unterminated string. The failure mode is silent — a
+    truncated document reaches the validator, which rejects it with a schema error naming a field,
+    and the author goes looking at a document that is perfectly fine.
+
 - **Application configuration**, part of `v0.2.0`,
   [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). The settings a game reads at launch,
   edited at `/api/v1/admin/app-config` and served from `/api/v1/public/app-config`.

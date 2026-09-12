@@ -23,6 +23,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -46,6 +48,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/public")
 @Tag(name = "Public content")
 class PublicContentController {
+
+    /** The same ceiling as a bulk import, for the same reason: one request is not a workload. */
+    private static final int MAX_BATCH = 50;
 
     private final WaveCatalogue catalogue;
     private final WaveLevels levels;
@@ -188,6 +193,67 @@ class PublicContentController {
     }
 
     /**
+     * Several documents in one request, for a client's first launch.
+     *
+     * <p>A {@code POST} for a read, because a list of forty ids does not belong in a URL. It is
+     * therefore not cacheable, and that is the right trade for what it is for: the one fetch a
+     * fresh install makes. Revalidation afterwards uses the individual routes, which carry ETags.
+     *
+     * <p><b>The documents are embedded as stored bytes, assembled by hand.</b> Handing Jackson a
+     * map of {@code String} would escape each document into a JSON string literal, and mapping them
+     * to objects would re-serialise them — either way the bytes move, and a client that then
+     * revalidates with the ETag from {@code /raw} would be told its cache is stale forever. So the
+     * response is concatenated. Wave ids are slugs, matching {@code ^[a-z0-9_]+$}, so no key here
+     * can need escaping; anything that is not a slug never reaches this point.
+     *
+     * <p>Unknown ids are absent from the response rather than reported. A draft is a {@code 404} on
+     * its own route, and a batch that distinguished "not published" from "never existed" would
+     * hand back exactly the information publication is meant to withhold.
+     */
+    @PostMapping(
+            path = "/waves/batch",
+            consumes = MediaType.APPLICATION_JSON_VALUE,
+            produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            operationId = "batchGetPublishedWaves",
+            summary = "Several published documents at once",
+            description =
+                    "For a first launch, when a client has nothing cached. Unknown or unpublished"
+                            + " ids are simply absent. Not cacheable; revalidate with the single"
+                            + " document routes.")
+    ResponseEntity<String> batch(@RequestBody(required = false) BatchRequest request) {
+        List<String> ids = request == null || request.ids() == null ? List.of() : request.ids();
+        if (ids.isEmpty() || ids.size() > MAX_BATCH) {
+            return ResponseEntity.unprocessableEntity()
+                    .body(
+                            "{\"error\":\"send between 1 and "
+                                    + MAX_BATCH
+                                    + " ids\"}");
+        }
+
+        ProjectId project = activeProject.id();
+        StringBuilder body = new StringBuilder("{");
+        boolean first = true;
+        for (String id : new java.util.LinkedHashSet<>(ids)) {
+            if (!Slug.isValid(id)) {
+                continue;
+            }
+            Optional<Wave> found = catalogue.findPublished(project, new Slug(id));
+            if (found.isEmpty()) {
+                continue;
+            }
+            if (!first) {
+                body.append(',');
+            }
+            first = false;
+            body.append('"').append(id).append("\":").append(found.get().body().json());
+        }
+        return ResponseEntity.ok()
+                .cacheControl(CacheControl.noStore())
+                .body(body.append('}').toString());
+    }
+
+    /**
      * The settings a client reads at launch.
      *
      * <p>Always an answer, never a {@code 404}: a project that has never been configured returns an
@@ -242,4 +308,6 @@ class PublicContentController {
     }
 
     record StatusResponse(String contentHash) {}
+
+    record BatchRequest(List<String> ids) {}
 }
