@@ -38,7 +38,14 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY --from=build /src/engine/engine-bootstrap/target/ludus-engine.jar app.jar
-RUN chown -R ludus:ludus /app
+
+# The audio directory must exist in the image, owned by the user that will write to it, even
+# though compose mounts a volume over it. Docker seeds an empty named volume from whatever is
+# at the mount point in the image -- contents, ownership and mode -- and when the path does not
+# exist it creates it root-owned instead. The engine then runs as uid 1001, cannot write, and
+# refuses to start. Deleting this line looks safe and is not.
+RUN mkdir -p /var/lib/ludus/audio \
+ && chown -R ludus:ludus /app /var/lib/ludus
 USER ludus
 
 EXPOSE 8080
