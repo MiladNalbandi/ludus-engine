@@ -51,6 +51,31 @@ Two starts fail rather than continue:
 `v2.0.0`, [#17](https://github.com/MiladNalbandi/ludus-engine/issues/17) — so today it produces an
 engine with no project, which is only useful for confirming that the switch exists.
 
+## Audio
+
+| Variable | Default | |
+|---|---|---|
+| `LUDUS_AUDIO_DIRECTORY` | *(none)* | Where clip bytes are written. Required once audio is used |
+| `LUDUS_AUDIO_MAX_FILE_SIZE` | `64MB` | Refused above this, per file and per request |
+
+**Clip bytes are not in the database.** Metadata is; the bytes are files on a disk you mount. A
+database row holding a 40 MB track is read into memory to be served, which is the thing the whole
+audio path is built to avoid, and it makes every backup carry the music.
+
+The compose file mounts a named volume at `/var/lib/ludus/audio` and sets the variable to match.
+If you run the engine some other way, point it at a directory that persists across deploys —
+a container's own filesystem does not, and the clips would disappear on the next release while
+the database went on listing them.
+
+The directory is checked for existence and writability at startup, and the engine refuses to
+start if it fails. Discovering that at boot is better than discovering it from the first editor
+who tries to upload a track.
+
+**Nothing is streamed into memory at either end**, and that is enforced by a test rather than a
+convention: `AudioStreamingIT` pushes a clip larger than the entire heap through storage and back
+out over HTTP, in a JVM capped at 256 MB. If it ever fails with `OutOfMemoryError`, the fix is on
+the code path, not in the heap size.
+
 ## Security
 
 | Variable | Default | |
@@ -106,8 +131,17 @@ git repository and a shipped game binary, and anything it can do should be assum
 | `/api-docs`, `/docs` | yes | The API contract, not data |
 | `/api/v1/auth/token` | yes | Signing in cannot require being signed in |
 | `/api/v1/auth/refresh` | yes | The refresh token is itself the credential |
+| `/api/v1/public/**` | yes | Published content and audio: what every copy of the game downloads |
+| `/api/v1/admin/waves/**`, `/api/v1/admin/audio/**` | no | Editors and above |
 | `/api/v1/admin/**` | no | Administrators only |
 | everything else | no | Any valid credential; deny-by-default for anything unnamed |
+
+`/api/v1/public/**` requires no credential on purpose. An API key that ships inside a game binary
+is not a secret, and published content is by definition what every player downloads — demanding a
+key there would stop nobody while suggesting a boundary that is not real. The routes stay in the
+same filter chain as everything else rather than getting their own, so a caller that *does* send a
+key is still identified; none is required. That is what keeps client identification, project
+selection and rate limiting available later without reopening the question.
 
 An anonymous request to a protected path gets `401`, and a request with a valid credential that
 lacks the role gets `403`. The two are worth telling apart: one sends you to look at your token,

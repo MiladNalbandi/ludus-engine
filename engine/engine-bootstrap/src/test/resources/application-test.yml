@@ -24,6 +24,8 @@ spring:
     fail-on-missing-locations: false
 
 ludus:
+  audio:
+    directory: ${java.io.tmpdir}/ludus-audio-test
   security:
     jwt:
       # A fixed, obviously-fake secret for tests. It is long enough for HS256 and short enough

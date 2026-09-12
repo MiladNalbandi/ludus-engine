@@ -156,6 +156,19 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <version>${maven-failsafe-plugin.version}</version>
+        <!-- Integration tests run in a deliberately small heap. AudioStreamingIT pushes 12 MB
+             through upload and download inside it, so an implementation that buffers a whole clip
+             fails here rather than in production under concurrency. If a new IT needs more memory
+             than this, that is worth a conversation rather than a bigger number. -->
+        <configuration>
+          <argLine>-Xmx256m</argLine>
+          <!-- spring-boot-maven-plugin:repackage runs at `package`, before `integration-test`,
+               and makes the fat jar the module's main artifact. Failsafe would otherwise resolve
+               that jar, where the application class sits under BOOT-INF/classes and is invisible
+               to a normal classpath scan, and @SpringBootTest then reports "Unable to find a
+               @SpringBootConfiguration". Pointing at the plain output directory avoids it. -->
+          <classesDirectory>${project.build.outputDirectory}</classesDirectory>
+        </configuration>
         <executions>
           <execution>
             <goals>

@@ -256,11 +256,67 @@
         }
       }
     },
+    "/api/v1/admin/audio" : {
+      "get" : {
+        "tags" : [ "Audio" ],
+        "summary" : "List audio clips. Metadata only; no file is opened.",
+        "operationId" : "list_1",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Summary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Audio" ],
+        "summary" : "Upload an audio clip",
+        "description" : "Streamed to storage; the recorded size is what was actually written, not a length the client declared.",
+        "operationId" : "upload",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/api-keys" : {
       "get" : {
         "tags" : [ "API keys" ],
         "summary" : "List keys, including revoked ones",
-        "operationId" : "list_1",
+        "operationId" : "list_2",
         "responses" : {
           "200" : {
             "description" : "OK",
@@ -425,6 +481,34 @@
         }
       }
     },
+    "/api/v1/public/audio/{id}" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "Stream an audio clip",
+        "description" : "Cached immutably: a clip never changes under its id, so a client that has it never asks again.",
+        "operationId" : "stream",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StreamingResponseBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me" : {
       "get" : {
         "tags" : [ "Authentication" ],
@@ -461,6 +545,26 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/audio/{id}" : {
+      "delete" : {
+        "tags" : [ "Audio" ],
+        "summary" : "Delete a clip and its bytes",
+        "operationId" : "delete_1",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
           }
         }
       }
@@ -623,6 +727,7 @@
           }
         }
       },
+      "StreamingResponseBody" : { },
       "CurrentCaller" : {
         "type" : "object",
         "properties" : {

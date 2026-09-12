@@ -16,6 +16,13 @@ spring:
     url: jdbc:postgresql://${LUDUS_DB_HOST:localhost}:${LUDUS_DB_PORT:5432}/${LUDUS_DB_NAME:ludus}
     username: ${LUDUS_DB_USER:ludus}
     password: ${LUDUS_DB_PASSWORD:}
+  servlet:
+    multipart:
+      # A clip is streamed to disk rather than buffered, so the in-memory threshold is small on
+      # purpose: anything past it spills to a temp file, which is what we want for all of it.
+      file-size-threshold: 64KB
+      max-file-size: ${LUDUS_AUDIO_MAX_FILE_SIZE:64MB}
+      max-request-size: ${LUDUS_AUDIO_MAX_FILE_SIZE:64MB}
   jpa:
     open-in-view: false
     hibernate:
@@ -64,6 +71,12 @@ ludus:
     # install wants. 'multi' arrives in the SaaS phase; the project boundary exists in the
     # schema from the first migration so that switch is configuration, not a rewrite.
     mode: ${LUDUS_TENANCY_MODE:single}
+  audio:
+    # Where clip bytes are written. Not the database: audio is large, immutable once uploaded and
+    # streamed straight out, none of which benefits from a bytea column -- and all of which makes
+    # backups larger and restores slower. Must be a volume that survives a restart; compose
+    # provides one. The engine refuses to start if it is unset or unwritable.
+    directory: ${LUDUS_AUDIO_DIRECTORY:}
   security:
     jwt:
       # Deliberately no default. A signing secret published in a public repository lets anyone

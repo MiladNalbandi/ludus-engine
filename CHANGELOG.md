@@ -11,6 +11,29 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Audio**, part of `v0.2.0`, [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). Clips
+  are uploaded by an editor under `/api/v1/admin/audio` and streamed to anyone from
+  `/api/v1/public/audio/{id}`.
+  - **Nothing holds a clip in memory, at either end**, and that is the whole design. The outbound
+    port takes and returns `InputStream`; the controller returns a `StreamingResponseBody`; the
+    upload reads `getInputStream()` and never `getBytes()`. The codebase this was extracted from
+    read whole files into byte arrays and fell over on a 256 MB heap.
+  - `AudioStreamingIT` runs in a JVM capped at 256 MB and pushes a clip **larger than that entire
+    heap** through storage and back out over HTTP. The size is chosen so buffering cannot succeed
+    by luck: two earlier drafts — one 12 MB clip, then sixteen at once — both passed against a
+    deliberately buffering controller before being replaced. A guard that only fails when threads
+    interleave the right way is not a guard.
+  - Bytes are files under `LUDUS_AUDIO_DIRECTORY`, addressed by clip id and nothing else, so no
+    client-supplied filename ever reaches a path. Writes go to a `.partial` and are moved into
+    place atomically, and the directory is checked for writability at startup rather than on the
+    first upload.
+  - Metadata is in the database and the bytes are not. A 40 MB track in a row has to be read into
+    memory to be served, and it makes every backup carry the music.
+  - Content types are an allow-list. Storing and serving back whatever was uploaded would
+    otherwise make this a way to host a page on the engine's own origin.
+  - Served `immutable` with a year's `max-age` and no `ETag`: a clip never changes under its id,
+    because a new upload is a new id. That is the one thing here that differs from wave documents.
+
 - **The OpenAPI document is committed** at `docs/api/openapi.json`, and `OpenApiSnapshotTest` fails
   the build when it changes. A document generated at runtime agrees with the implementation by
   construction, including on the day the implementation changes by accident; committing it turns

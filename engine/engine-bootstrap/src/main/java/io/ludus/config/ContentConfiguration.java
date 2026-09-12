@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.ludus.config;
 
+import io.ludus.application.content.AudioLibrary;
 import io.ludus.application.content.AuthorWave;
 import io.ludus.application.content.WaveCatalogue;
+import io.ludus.application.content.port.out.AudioClipRepository;
+import io.ludus.application.content.port.out.AudioStore;
 import io.ludus.application.content.port.out.DocumentReader;
 import io.ludus.application.content.port.out.DocumentValidator;
 import io.ludus.application.content.port.out.SchemaVersionStamper;
@@ -44,5 +47,11 @@ public class ContentConfiguration {
     @Bean
     public WaveCatalogue waveCatalogue(WaveRepository waves, Clock clock) {
         return new WaveCatalogue(waves, clock);
+    }
+
+    @Bean
+    public AudioLibrary audioLibrary(
+            AudioClipRepository clips, AudioStore store, Clock clock) {
+        return new AudioLibrary(clips, store, clock);
     }
 }
