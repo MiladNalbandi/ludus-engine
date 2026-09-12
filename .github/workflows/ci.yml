@@ -32,6 +32,13 @@ jobs:
       - name: Verify
         run: ./mvnw -B verify
 
+      # The snapshot is committed, so `verify` above already compared against it and a drift
+      # failed the build. This step exists for the reviewer: it prints the difference rather than
+      # leaving them to infer it from an assertion message.
+      - name: Show the contract diff if it moved
+        if: failure()
+        run: git --no-pager diff -- docs/api/openapi.json
+
       - name: Publish test results
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

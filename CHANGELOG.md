@@ -11,6 +11,14 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **The OpenAPI document is committed** at `docs/api/openapi.json`, and `OpenApiSnapshotTest` fails
+  the build when it changes. A document generated at runtime agrees with the implementation by
+  construction, including on the day the implementation changes by accident; committing it turns
+  "the API changed" into a line in a diff somebody has to approve. That matters more as `v1.0.0`
+  approaches, since that release promises a frozen contract — a promise about something nobody
+  tracks is not a promise. Regenerate with
+  `./mvnw -pl engine/engine-bootstrap test -Dtest=OpenApiSnapshotTest -Dludus.openapi.write=true`.
+
 - **Public content routes**, under `/api/v1/public` — the second half of `v0.2.0`,
   [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). A game client can now fetch what an
   editor published.
@@ -38,8 +46,9 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 - Three status blurbs said there was no content API after authoring had shipped, and
   `OpenApiConfiguration`'s javadoc claimed the OpenAPI document was committed under `docs/api` and
-  diffed in CI — a mechanism that does not exist. Documentation asserting something untrue is the
-  same failure as a green check that means nothing.
+  diffed in CI — a mechanism that did not exist. Documentation asserting something untrue is the
+  same failure as a green check that means nothing. The claim was removed; it is back now, above,
+  because the mechanism is.
 
 - **Wave authoring** — the first half of `v0.2.0`,
   [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). Documents can be created,
