@@ -28,6 +28,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,13 +47,20 @@ import org.springframework.transaction.annotation.Transactional;
  * grant fail on the foreign key and assert a balance of zero — which looks exactly like a lost
  * update and is not one.
  *
- * <p>So nothing is rolled back, and each test makes its own project and player with a unique slug.
- * Rows accumulate in the module's H2 database for the length of the run, which costs nothing and is
- * cheaper than the alternative of not testing this at all.
+ * <p>Which means the rows it writes are committed, and <b>that needs its own database</b>. The
+ * first version shared the module's, and its committed projects collided with
+ * {@code ProjectRepositoryAdapterTest}'s {@code default} slug — passing locally on test ordering
+ * and failing on CI, which is the worst way to find out. A separate in-memory URL makes the
+ * isolation structural rather than a matter of who runs first.
  */
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @Transactional(propagation = Propagation.NOT_SUPPORTED)
+@TestPropertySource(
+        properties =
+                "spring.datasource.url="
+                        + "jdbc:h2:mem:ludus-wallet-concurrency"
+                        + ";DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE")
 @Import({
     ProjectRepositoryAdapter.class,
     PlayerRepositoryAdapter.class,
