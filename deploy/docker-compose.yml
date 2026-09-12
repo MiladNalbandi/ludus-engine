@@ -44,6 +44,12 @@ services:
       # exists these do nothing, so an install past its first start can leave them unset.
       LUDUS_ADMIN_EMAIL: ${LUDUS_ADMIN_EMAIL:-}
       LUDUS_ADMIN_PASSWORD: ${LUDUS_ADMIN_PASSWORD:-}
+      # Audio bytes live on a volume rather than in the database. Losing this volume loses every
+      # uploaded clip while the rows describing them survive, so it is a real backup target.
+      LUDUS_AUDIO_DIRECTORY: /var/lib/ludus/audio
+      LUDUS_AUDIO_MAX_FILE_SIZE: ${LUDUS_AUDIO_MAX_FILE_SIZE:-64MB}
+    volumes:
+      - ludus-audio:/var/lib/ludus/audio
     ports:
       # Bound to loopback by default. Put a reverse proxy in front before exposing this;
       # /actuator/prometheus is reachable by anything that can reach the port.
@@ -52,3 +58,4 @@ services:
 
 volumes:
   ludus-db:
+  ludus-audio:

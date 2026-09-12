@@ -25,3 +25,7 @@ spring:
     # normal rather than an error.
     fail-on-missing-locations: false
     clean-disabled: false
+
+ludus:
+  audio:
+    directory: ${java.io.tmpdir}/ludus-audio-test
