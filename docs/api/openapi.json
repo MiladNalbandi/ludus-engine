@@ -222,6 +222,35 @@
         }
       }
     },
+    "/api/v1/public/waves/batch" : {
+      "post" : {
+        "tags" : [ "Public content" ],
+        "summary" : "Several published documents at once",
+        "description" : "For a first launch, when a client has nothing cached. Unknown or unpublished ids are simply absent. Not cacheable; revalidate with the single document routes.",
+        "operationId" : "batchGetPublishedWaves",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BatchRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/token" : {
       "post" : {
         "tags" : [ "Authentication" ],
@@ -379,6 +408,69 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/Summary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/bulk" : {
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Create or replace many waves at once",
+        "description" : "All or nothing: one invalid document rejects the whole batch, and every violation is reported with the index of the document that caused it. Imported waves are drafts, like any other save.",
+        "operationId" : "importWaves",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/Summary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/batch-delete" : {
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Delete many waves at once",
+        "description" : "All or nothing. An id that is not there is a violation rather than a silent skip: 'delete these six' is a statement about a known set.",
+        "operationId" : "batchDeleteWaves",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BatchDeleteRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DeletedResponse"
                 }
               }
             }
@@ -914,6 +1006,17 @@
           }
         }
       },
+      "BatchRequest" : {
+        "type" : "object",
+        "properties" : {
+          "ids" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
       "TokenRequest" : {
         "type" : "object",
         "properties" : {
@@ -962,6 +1065,26 @@
           }
         },
         "required" : [ "refreshToken" ]
+      },
+      "BatchDeleteRequest" : {
+        "type" : "object",
+        "properties" : {
+          "ids" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "DeletedResponse" : {
+        "type" : "object",
+        "properties" : {
+          "deleted" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
       },
       "CreateRequest" : {
         "type" : "object",

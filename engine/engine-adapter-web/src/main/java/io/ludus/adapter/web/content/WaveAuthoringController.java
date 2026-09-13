@@ -2,6 +2,7 @@
 package io.ludus.adapter.web.content;
 
 import io.ludus.application.content.AuthorWave;
+import io.ludus.application.content.BulkAuthoring;
 import io.ludus.application.content.WaveCatalogue;
 import io.ludus.application.project.port.in.ActiveProject;
 import io.ludus.domain.content.ContentBody;
@@ -37,15 +38,65 @@ import org.springframework.web.bind.annotation.RestController;
 class WaveAuthoringController {
 
     private final AuthorWave authorWave;
+    private final BulkAuthoring bulk;
     private final WaveCatalogue catalogue;
     private final ActiveProject activeProject;
 
     WaveAuthoringController(
-            AuthorWave authorWave, WaveCatalogue catalogue, ActiveProject activeProject) {
+            AuthorWave authorWave,
+            BulkAuthoring bulk,
+            WaveCatalogue catalogue,
+            ActiveProject activeProject) {
         this.authorWave = authorWave;
+        this.bulk = bulk;
         this.catalogue = catalogue;
         this.activeProject = activeProject;
     }
+
+    /**
+     * Imports many documents, all or nothing.
+     *
+     * <p>The body is a JSON array of documents, taken as a raw string and split by the application
+     * layer's reader — not bound to {@code List<Object>}, because binding would parse and
+     * re-serialise every document on the way through and move all of their bytes.
+     */
+    @PostMapping(path = "/bulk", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            operationId = "importWaves",
+            summary = "Create or replace many waves at once",
+            description =
+                    "All or nothing: one invalid document rejects the whole batch, and every"
+                            + " violation is reported with the index of the document that caused"
+                            + " it. Imported waves are drafts, like any other save.")
+    ResponseEntity<List<WaveDtos.Summary>> importAll(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true)
+                    @RequestBody(required = false)
+                    String documents) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(
+                        bulk.importAll(activeProject.id(), JsonArrays.split(documents)).stream()
+                                .map(WaveDtos.Summary::of)
+                                .toList());
+    }
+
+    @PostMapping(path = "/batch-delete", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            operationId = "batchDeleteWaves",
+            summary = "Delete many waves at once",
+            description =
+                    "All or nothing. An id that is not there is a violation rather than a silent"
+                            + " skip: 'delete these six' is a statement about a known set.")
+    ResponseEntity<DeletedResponse> batchDelete(
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(required = true)
+                    @RequestBody(required = false)
+                    BatchDeleteRequest request) {
+        List<String> ids = request == null ? null : request.ids();
+        return ResponseEntity.ok(new DeletedResponse(bulk.deleteAll(activeProject.id(), ids)));
+    }
+
+    record BatchDeleteRequest(List<String> ids) {}
+
+    record DeletedResponse(int deleted) {}
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
     @Operation(operationId = "createWave",
