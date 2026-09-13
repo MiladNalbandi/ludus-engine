@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { NotSignedIn, restoreSession, signOut } from '@/lib/api';
 import { engine, type CurrentCaller, type WaveLevelSummary, type WaveSummary } from '@/lib/waves';
@@ -102,7 +103,9 @@ export default function CataloguePage() {
                 }}
               >
                 <span>
-                  <code>{wave.id}</code>{' '}
+                  <Link href={`/waves/${encodeURIComponent(wave.id)}`}>
+                    <code>{wave.id}</code>
+                  </Link>{' '}
                   <span className="muted">
                     · {wave.name} · order {wave.order}
                   </span>

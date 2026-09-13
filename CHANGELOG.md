@@ -11,6 +11,29 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **The editor's timeline, preview and behaviour panels** — `v0.3.0`,
+  [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9). A wave's movement sequence is edited
+  as a timeline, previewed on a canvas, and saved back as the same document it was opened as.
+  - **A zero-duration `jump` is folded into the next block, not drawn.** It relocates the entity
+    instantly, so it occupies no time: as a block it would be an unclickable sliver, and dropped it
+    would silently delete an author's instruction. It becomes the following movement's starting
+    position and is unfolded on the way out. A trailing one is kept as a block, because there is
+    nothing after it to fold into — the lossless option, not the tidy one.
+  - **Opening a wave and saving it without touching anything produces the same document.** Asserted
+    directly, because the alternative is that every author who opens a wave to look at it rewrites
+    it, moving the ETag and making every client re-download the catalogue for nothing.
+  - **The simulator is a pure function of time**, so seeking to a moment is identical to playing to
+    it. A preview that accumulated state per frame shows an author something the game never
+    produces, which makes it worse than no preview because it is convincing.
+  - Movements and their editing panels resolve through **registries** —
+    `simulatorRegistry.register('patrol', …)`, `behaviorEditorRegistry.register('patrol', …)` — not
+    a `switch`. That is what makes `v1.1.0` a decomposition rather than a rewrite, and it means a
+    movement type with nothing registered is reported to the author rather than drawn as a
+    stationary dot that looks like a working entity standing still. Both registries refuse a second
+    registration for one type, and a test pins each against the schema's own list of eleven.
+  - The preview is a schematic and says so. The roadmap rules out a general-purpose 2D simulation,
+    so what this answers is "where does each entity go, and when".
+
 - **The editor, first release** — the foundation of `v0.3.0`,
   [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9). A Next.js application under
   `editor/`, served beside the engine by `docker compose up`, holding no content of its own.
