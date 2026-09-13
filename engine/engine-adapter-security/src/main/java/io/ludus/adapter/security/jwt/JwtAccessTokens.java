@@ -35,6 +35,22 @@ public class JwtAccessTokens implements AccessTokenIssuer {
     static final String CLAIM_PROJECT = "pid";
     static final String CLAIM_ROLE = "role";
 
+    /**
+     * Which kind of token this is, and why it is stamped rather than inferred.
+     *
+     * <p>Player session tokens are signed with the same secret, so without this the two differ only
+     * in which claims they happen to carry. A player token presented here would today be rejected
+     * because it has no {@code role} claim and {@code Role.fromString(null)} throws — which is
+     * accidental safety, and stops being safe the first time somebody makes the role optional with
+     * a sensible default. Stamped and required, the separation does not depend on that.
+     *
+     * <p>Introducing it invalidates tokens issued by an older build. They last fifteen minutes by
+     * default, so a deploy resolves itself; it is a re-login at worst, not a migration.
+     */
+    static final String CLAIM_TYPE = "typ";
+
+    static final String TYPE_USER = "user";
+
     private final SecretKey key;
     private final String issuer;
     private final java.time.Clock clock;
@@ -54,6 +70,7 @@ public class JwtAccessTokens implements AccessTokenIssuer {
                 .subject(user.id().toString())
                 .claim(CLAIM_PROJECT, user.projectId().toString())
                 .claim(CLAIM_ROLE, user.role().name())
+                .claim(CLAIM_TYPE, TYPE_USER)
                 .issuedAt(Date.from(issuedAt))
                 .expiration(Date.from(expiresAt))
                 .signWith(key)
@@ -74,6 +91,9 @@ public class JwtAccessTokens implements AccessTokenIssuer {
                     Jwts.parser()
                             .verifyWith(key)
                             .requireIssuer(issuer)
+                            // A player session token must not authenticate a person, whatever
+                            // else it carries.
+                            .require(CLAIM_TYPE, TYPE_USER)
                             // The same clock the tokens were issued against. Left to default,
                             // this reads the wall clock, and every assertion about expiry
                             // becomes a statement about when the test happened to run.

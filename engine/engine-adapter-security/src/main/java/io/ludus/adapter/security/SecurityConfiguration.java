@@ -75,6 +75,7 @@ public class SecurityConfiguration {
             HttpSecurity http,
             JwtAccessTokens tokens,
             ApiKeys apiKeys,
+            io.ludus.adapter.security.player.JwtPlayerTokens playerTokens,
             ActiveProject activeProject)
             throws Exception {
 
@@ -88,6 +89,12 @@ public class SecurityConfiguration {
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(
                         new ApiKeyAuthenticationFilter(apiKeys, activeProject),
+                        UsernamePasswordAuthenticationFilter.class)
+                // Last of the three, and it authenticates only when the others have not. A request
+                // carrying an administrator's token must never also be read as a player.
+                .addFilterBefore(
+                        new io.ludus.adapter.security.player.PlayerAuthenticationFilter(
+                                playerTokens, activeProject),
                         UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(
                         e ->
@@ -106,6 +113,15 @@ public class SecurityConfiguration {
                                         // than getting its own: both credential filters still run,
                                         // so a caller who does present a key is still identified,
                                         // and none is required.
+                                        // Minting a credential is not reading published content.
+                                        // It requires an API key -- which a key has, being a
+                                        // VIEWER -- so an operator can cut off a compromised
+                                        // build by revoking it. Listed before the permitAll below,
+                                        // which would otherwise shadow it.
+                                        .requestMatchers(
+                                                org.springframework.http.HttpMethod.POST,
+                                                "/api/v1/public/players/session")
+                                        .hasRole("VIEWER")
                                         .requestMatchers("/api/v1/public/**")
                                         .permitAll()
                                         // Authoring content is an editor's job, and the whole
@@ -123,8 +139,20 @@ public class SecurityConfiguration {
                                         // shadow it -- the narrower rule has to come first.
                                         .requestMatchers("/api/v1/admin/**")
                                         .hasRole("ADMIN")
+                                        // A player acts only on their own state, and this is the
+                                        // only matcher that accepts ROLE_PLAYER.
+                                        .requestMatchers("/api/v1/player/**")
+                                        .hasAuthority(
+                                                io.ludus.adapter.security.player
+                                                        .PlayerAuthenticationFilter.AUTHORITY)
+                                        // Deny-by-default, and it requires a real role rather than
+                                        // merely being authenticated. With `authenticated()` a
+                                        // player session token would reach every API route nobody
+                                        // had thought to name -- authenticated is not the same
+                                        // question as authorised, and this is where the two
+                                        // diverge.
                                         .anyRequest()
-                                        .authenticated());
+                                        .hasAnyRole("VIEWER", "EDITOR", "ADMIN"));
         return http.build();
     }
 }
