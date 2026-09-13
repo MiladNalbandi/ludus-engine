@@ -47,6 +47,8 @@ services:
       # Audio bytes live on a volume rather than in the database. Losing this volume loses every
       # uploaded clip while the rows describing them survive, so it is a real backup target.
       LUDUS_AUDIO_DIRECTORY: /var/lib/ludus/audio
+      # Item art, on its own volume for the same reasons as audio.
+      LUDUS_SPRITE_DIRECTORY: /var/lib/ludus/sprites
       LUDUS_AUDIO_MAX_FILE_SIZE: ${LUDUS_AUDIO_MAX_FILE_SIZE:-64MB}
       # Mixing is off unless this is 'ffmpeg' AND the image actually carries FFmpeg, which the
       # standard one does not. See deploy/Dockerfile.engine-ffmpeg.
@@ -55,6 +57,7 @@ services:
       LUDUS_AUDIO_MIXER_MAX_TRACKS: ${LUDUS_AUDIO_MIXER_MAX_TRACKS:-8}
     volumes:
       - ludus-audio:/var/lib/ludus/audio
+      - ludus-sprites:/var/lib/ludus/sprites
     ports:
       # Bound to loopback by default. Put a reverse proxy in front before exposing this;
       # /actuator/prometheus is reachable by anything that can reach the port.
@@ -84,4 +87,5 @@ services:
 
 volumes:
   ludus-db:
+  ludus-sprites:
   ludus-audio:

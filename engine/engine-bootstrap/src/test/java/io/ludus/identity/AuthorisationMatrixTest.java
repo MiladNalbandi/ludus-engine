@@ -228,7 +228,11 @@ class AuthorisationMatrixTest {
                 Arguments.of("api-key", "/api/v1/admin/leaderboards", HttpStatus.FORBIDDEN),
                 Arguments.of("editor", "/api/v1/admin/leaderboards", HttpStatus.OK),
                 Arguments.of("api-key", "/api/v1/player/leaderboards", HttpStatus.FORBIDDEN),
-                Arguments.of("admin", "/api/v1/player/leaderboards", HttpStatus.FORBIDDEN));
+                Arguments.of("admin", "/api/v1/player/leaderboards", HttpStatus.FORBIDDEN),
+
+                // Item art: uploaded by an editor, served to anybody, like audio.
+                Arguments.of("api-key", "/api/v1/admin/sprites", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/admin/sprites", HttpStatus.OK));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")
