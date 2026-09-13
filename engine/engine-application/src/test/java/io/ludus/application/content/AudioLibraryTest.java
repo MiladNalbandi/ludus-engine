@@ -40,7 +40,23 @@ class AudioLibraryTest {
     private final Clips clips = new Clips();
     private final Store store = new Store();
     private final AudioLibrary audio =
-            new AudioLibrary(clips, store, Clock.fixed(Instant.parse("2026-09-12T10:00:00Z"), ZoneOffset.UTC));
+            new AudioLibrary(
+                    clips,
+                    store,
+                    // Mixing is exercised in AudioMixingTest; this file is about the upload,
+                    // open and delete paths, so it is given a mixer that refuses.
+                    new io.ludus.application.content.port.out.AudioMixer() {
+                        @Override
+                        public boolean available() {
+                            return false;
+                        }
+
+                        @Override
+                        public Mixed mix(java.util.List<Source> sources) {
+                            throw new MixFailed("this install cannot mix");
+                        }
+                    },
+                    Clock.fixed(Instant.parse("2026-09-12T10:00:00Z"), ZoneOffset.UTC));
 
     private static InputStream bytes(String content) {
         return new ByteArrayInputStream(content.getBytes(StandardCharsets.UTF_8));

@@ -1,0 +1,25 @@
+# syntax=docker/dockerfile:1
+
+# The engine, plus FFmpeg, for installs that want audio mixing.
+#
+# A second image rather than a bigger one. FFmpeg is a large dependency with its own vulnerability
+# history, and the roadmap is explicit that a self-hoster must never have to acquire a media
+# toolchain to get a working engine -- so the standard image does not carry it and mixing is
+# refused there with a message naming this image.
+#
+# Built FROM the engine image so the two can never drift: there is one build of the application and
+# this adds a package to it.
+ARG LUDUS_ENGINE_IMAGE=ludus-engine:local
+FROM ${LUDUS_ENGINE_IMAGE}
+
+# Root only to install, then straight back to the unprivileged user the base image set up.
+USER root
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ffmpeg \
+ && rm -rf /var/lib/apt/lists/* \
+ && test -x /usr/bin/ffmpeg
+USER ludus
+
+# Still off by default. Having the tool and using it are separate decisions, and an image that
+# silently enabled a subprocess-spawning feature would be a surprise.
+ENV LUDUS_AUDIO_MIXER_MODE=none

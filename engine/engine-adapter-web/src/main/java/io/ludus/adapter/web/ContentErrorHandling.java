@@ -3,6 +3,7 @@ package io.ludus.adapter.web;
 
 import io.ludus.application.content.ContentRejected;
 import io.ludus.application.content.ContentViolation;
+import io.ludus.application.content.port.out.AudioMixer;
 import java.util.List;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -34,6 +35,22 @@ class ContentErrorHandling {
                         "The document was rejected. See violations for each reason and where.");
         problem.setTitle("Invalid content");
         problem.setProperty("violations", asMaps(rejection.violations()));
+        return problem;
+    }
+
+    /**
+     * Mixing could not be done.
+     *
+     * <p>{@code 503}, not {@code 500}: nothing is broken. Either this install has no mixer — the
+     * common case, and the message says which image and variable to change — or the tool refused
+     * the tracks or took too long. All three are conditions of the service rather than faults in
+     * the request, and a caller deciding whether to retry needs them apart from a real failure.
+     */
+    @ExceptionHandler(AudioMixer.MixFailed.class)
+    ProblemDetail mixFailed(AudioMixer.MixFailed failure) {
+        ProblemDetail problem =
+                ProblemDetail.forStatusAndDetail(HttpStatus.SERVICE_UNAVAILABLE, failure.getMessage());
+        problem.setTitle("Mixing unavailable");
         return problem;
     }
 

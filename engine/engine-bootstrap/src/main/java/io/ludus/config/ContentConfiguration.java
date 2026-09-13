@@ -8,6 +8,7 @@ import io.ludus.application.content.BulkAuthoring;
 import io.ludus.application.content.WaveCatalogue;
 import io.ludus.application.content.WaveLevels;
 import io.ludus.application.content.port.out.AudioClipRepository;
+import io.ludus.application.content.port.out.AudioMixer;
 import io.ludus.application.content.port.out.AudioStore;
 import io.ludus.application.content.port.out.DocumentReader;
 import io.ludus.application.content.port.out.DocumentValidator;
@@ -76,7 +77,7 @@ public class ContentConfiguration {
 
     @Bean
     public AudioLibrary audioLibrary(
-            AudioClipRepository clips, AudioStore store, Clock clock) {
-        return new AudioLibrary(clips, store, clock);
+            AudioClipRepository clips, AudioStore store, Clock clock, AudioMixer mixer) {
+        return new AudioLibrary(clips, store, mixer, clock);
     }
 }

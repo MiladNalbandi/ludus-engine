@@ -2,12 +2,14 @@
 package io.ludus.application.content;
 
 import io.ludus.application.content.port.out.AudioClipRepository;
+import io.ludus.application.content.port.out.AudioMixer;
 import io.ludus.application.content.port.out.AudioStore;
 import io.ludus.domain.content.AudioClip;
 import io.ludus.domain.content.AudioClipId;
 import io.ludus.domain.project.ProjectId;
 import java.io.InputStream;
 import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -39,11 +41,14 @@ public class AudioLibrary {
 
     private final AudioClipRepository clips;
     private final AudioStore store;
+    private final AudioMixer mixer;
     private final Clock clock;
 
-    public AudioLibrary(AudioClipRepository clips, AudioStore store, Clock clock) {
+    public AudioLibrary(
+            AudioClipRepository clips, AudioStore store, AudioMixer mixer, Clock clock) {
         this.clips = clips;
         this.store = store;
+        this.mixer = mixer;
         this.clock = clock;
     }
 
@@ -96,6 +101,80 @@ public class AudioLibrary {
         return clips.find(projectId, id)
                 .flatMap(clip -> store.open(id).map(bytes -> new Streamed(clip, bytes)));
     }
+
+    /** Whether this install can mix at all, so a caller can hide the feature rather than offer it. */
+    public boolean canMix() {
+        return mixer.available();
+    }
+
+    /**
+     * Mixes existing clips into a new one.
+     *
+     * <p>Every track is resolved through {@link #open} first, so a clip from another project cannot
+     * be mixed into this one and a missing clip is reported before any work starts. The mixer never
+     * receives an id it has not been handed the bytes for, and never receives a filename at all.
+     *
+     * <p>The result is stored like any upload, which means it is an ordinary clip afterwards: it
+     * can be served, listed and deleted, and nothing has to remember it was produced rather than
+     * uploaded. The predecessor kept mixes in the editor's own filesystem and needed a
+     * restore-from-backend hack to survive a restart; there is nothing here to restore.
+     */
+    public AudioClip mix(ProjectId projectId, String filename, List<MixTrack> tracks) {
+        if (tracks == null || tracks.isEmpty()) {
+            throw new ContentRejected(
+                    List.of(new ContentViolation("/tracks", "a mix needs at least one track")));
+        }
+
+        List<ContentViolation> missing = new ArrayList<>();
+        List<AudioMixer.Source> sources = new ArrayList<>();
+        try {
+            for (int index = 0; index < tracks.size(); index++) {
+                MixTrack track = tracks.get(index);
+                Optional<Streamed> found =
+                        track.clipId() == null
+                                ? Optional.empty()
+                                : open(projectId, track.clipId());
+                if (found.isEmpty()) {
+                    missing.add(
+                            new ContentViolation(
+                                    "/tracks/" + index,
+                                    "no clip '" + track.clipId() + "' in this project"));
+                    continue;
+                }
+                sources.add(
+                        new AudioMixer.Source(
+                                found.get().clip().id(), found.get().bytes(), track.gainDb()));
+            }
+
+            if (!missing.isEmpty()) {
+                throw new ContentRejected(missing);
+            }
+
+            AudioMixer.Mixed mixed = mixer.mix(sources);
+            try (InputStream bytes = mixed.bytes()) {
+                return upload(projectId, filename, mixed.contentType(), bytes);
+            } catch (java.io.IOException failed) {
+                throw new AudioMixer.MixFailed("the mixed clip could not be stored", failed);
+            }
+        } finally {
+            // Every stream this method opened is closed, including on the rejection path. Without
+            // this, a request naming one missing clip among five leaks four open files.
+            for (AudioMixer.Source source : sources) {
+                closeQuietly(source.bytes());
+            }
+        }
+    }
+
+    private static void closeQuietly(InputStream stream) {
+        try {
+            stream.close();
+        } catch (java.io.IOException ignored) {
+            // Nothing useful to do; the mix has already succeeded or failed.
+        }
+    }
+
+    /** One clip in a mix, and how loud. */
+    public record MixTrack(AudioClipId clipId, double gainDb) {}
 
     /** Removes metadata first, then bytes: a clip nobody can find is better than bytes nobody owns. */
     public boolean delete(ProjectId projectId, AudioClipId id) {

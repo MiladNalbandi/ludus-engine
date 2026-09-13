@@ -11,6 +11,32 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Audio mixing, in the engine and never through a shell** — `v0.3.0`,
+  [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9).
+  `POST /api/v1/admin/audio/mix` combines clips into a new one, behind an `AudioMixer` port.
+  - **The reason this is in the engine and not the editor**: mixing in the editor makes the editor
+    stateful, and a stateful editor cannot run as more than one replica. The result is stored like
+    any upload, so there is nothing to restore after a restart — the predecessor kept mixes on the
+    editor's own filesystem and needed a restore-from-backend hack to survive one.
+  - **An argv list, never a command line.** The predecessor built an FFmpeg command as a string and
+    handed it to `child_process.exec` — through a shell, with interpolated filenames — which gave
+    any authenticated editor user command execution on the container. The fix is not better
+    escaping; it is that there is nothing to escape. `ProcessBuilder` with a `List` reaches
+    `execve` directly, and a test runs a real subprocess whose own filename is
+    ``re; touch pwned.txt; corder $(whoami) `id` & | x .sh`` — a successful mix *is* the proof no
+    shell saw it, because a shell would have tried to run `re;`.
+  - **No client string ever becomes an argument.** Inputs are written to a per-job temporary
+    directory under names derived from their index, and `AudioMixer.Source` has no field a filename
+    could travel in — asserted by a test over the record's components.
+  - A hard timeout, an output size cap, one directory per job removed when the result stream closes,
+    and the tool's own output logged rather than returned, because it names paths inside the
+    container.
+  - **Off by default, in a second image.** FFmpeg is a large dependency with its own vulnerability
+    history, and the roadmap is explicit that a self-hoster must never have to acquire a media
+    toolchain to get a working engine. The standard image refuses with a `503` naming the image and
+    the variable to change; `deploy/Dockerfile.engine-ffmpeg` builds `FROM` the engine image so the
+    two cannot drift.
+
 - **The editor's timeline, preview and behaviour panels** — `v0.3.0`,
   [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9). A wave's movement sequence is edited
   as a timeline, previewed on a canvas, and saved back as the same document it was opened as.
