@@ -32,7 +32,7 @@ class AuthController {
     }
 
     @PostMapping("/token")
-    @Operation(
+    @Operation(operationId = "signIn",
             summary = "Exchange an email address and password for tokens",
             description =
                     "Every failure returns the same 401 with the same body. The difference"
@@ -47,7 +47,7 @@ class AuthController {
     }
 
     @PostMapping("/refresh")
-    @Operation(
+    @Operation(operationId = "refreshSession",
             summary = "Exchange a refresh token for a new pair",
             description =
                     "The presented token is revoked as part of the exchange, so a stolen token"

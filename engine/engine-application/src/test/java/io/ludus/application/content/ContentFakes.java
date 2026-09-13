@@ -2,15 +2,19 @@
 package io.ludus.application.content;
 
 import io.ludus.application.content.port.out.DocumentReader;
+import io.ludus.application.content.port.out.WaveLevelRepository;
 import io.ludus.application.content.port.out.DocumentValidator;
 import io.ludus.application.content.port.out.SchemaVersionStamper;
 import io.ludus.application.content.port.out.WaveRepository;
 import io.ludus.domain.content.ContentBody;
 import io.ludus.domain.content.ContentHashes;
 import io.ludus.domain.content.Wave;
+import io.ludus.domain.content.WaveLevel;
+import io.ludus.domain.content.WaveLevelId;
 import io.ludus.domain.project.ProjectId;
 import io.ludus.domain.shared.Slug;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -79,6 +83,56 @@ final class ContentFakes {
         @Override
         public List<ContentHashes.Entry> publishedCatalogue(ProjectId projectId) {
             return listPublished(projectId).stream().map(Wave::catalogueEntry).toList();
+        }
+    }
+
+    /**
+     * Levels, and the one activation a project is allowed.
+     *
+     * <p>The activation is a {@code Map} keyed by project rather than a flag on each level, exactly
+     * as the schema is a table keyed by project rather than a boolean column. A fake that allowed
+     * two active levels would let a test pass that the database would refuse.
+     */
+    static final class Levels implements WaveLevelRepository {
+        private final Map<WaveLevelId, WaveLevel> byId = new LinkedHashMap<>();
+        private final Map<ProjectId, WaveLevelId> active = new HashMap<>();
+
+        @Override
+        public WaveLevel save(WaveLevel level) {
+            byId.put(level.id(), level);
+            return level;
+        }
+
+        @Override
+        public Optional<WaveLevel> find(ProjectId projectId, WaveLevelId id) {
+            return Optional.ofNullable(byId.get(id)).filter(l -> l.projectId().equals(projectId));
+        }
+
+        @Override
+        public List<WaveLevel> list(ProjectId projectId) {
+            return byId.values().stream().filter(l -> l.projectId().equals(projectId)).toList();
+        }
+
+        @Override
+        public boolean delete(ProjectId projectId, WaveLevelId id) {
+            if (find(projectId, id).isEmpty()) {
+                return false;
+            }
+            byId.remove(id);
+            // The database cascades this; so must the fake, or a test would pass here and fail
+            // against a real schema.
+            active.entrySet().removeIf(entry -> entry.getValue().equals(id));
+            return true;
+        }
+
+        @Override
+        public void activate(ProjectId projectId, WaveLevelId id, java.time.Instant at) {
+            active.put(projectId, id);
+        }
+
+        @Override
+        public Optional<WaveLevel> findActive(ProjectId projectId) {
+            return Optional.ofNullable(active.get(projectId)).flatMap(id -> find(projectId, id));
         }
     }
 

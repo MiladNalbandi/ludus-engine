@@ -2,6 +2,7 @@
 package io.ludus.adapter.web.content;
 
 import io.ludus.application.content.WaveCatalogue;
+import io.ludus.application.content.WaveLevels;
 import io.ludus.application.project.port.in.ActiveProject;
 import io.ludus.domain.content.ContentHashes;
 import io.ludus.domain.content.EntityTags;
@@ -10,6 +11,7 @@ import io.ludus.domain.project.ProjectId;
 import io.ludus.domain.shared.Slug;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.http.CacheControl;
@@ -44,10 +46,13 @@ import org.springframework.web.bind.annotation.RestController;
 class PublicContentController {
 
     private final WaveCatalogue catalogue;
+    private final WaveLevels levels;
     private final ActiveProject activeProject;
 
-    PublicContentController(WaveCatalogue catalogue, ActiveProject activeProject) {
+    PublicContentController(
+            WaveCatalogue catalogue, WaveLevels levels, ActiveProject activeProject) {
         this.catalogue = catalogue;
+        this.levels = levels;
         this.activeProject = activeProject;
     }
 
@@ -59,7 +64,7 @@ class PublicContentController {
      * from ids and timestamps alone.
      */
     @GetMapping("/status")
-    @Operation(
+    @Operation(operationId = "contentStatus",
             summary = "The content hash for everything published",
             description =
                     "Compare it with the one you cached. Unchanged means play from cache and make"
@@ -72,7 +77,7 @@ class PublicContentController {
     }
 
     @GetMapping("/waves")
-    @Operation(
+    @Operation(operationId = "listPublishedWaves",
             summary = "Every published wave, in progression order",
             description = "Summaries only. Fetch a document from the raw route when you need it.")
     ResponseEntity<List<WaveDtos.Summary>> waves(
@@ -93,7 +98,7 @@ class PublicContentController {
     }
 
     @GetMapping("/waves/{id}")
-    @Operation(summary = "One published wave's indexed fields")
+    @Operation(operationId = "getPublishedWave", summary = "One published wave's indexed fields")
     ResponseEntity<?> wave(
             @PathVariable String id,
             @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
@@ -117,7 +122,7 @@ class PublicContentController {
      * and re-emits them, the two stop describing the same thing.
      */
     @GetMapping(path = "/waves/{id}/raw", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(
+    @Operation(operationId = "getPublishedWaveDocument",
             summary = "One published wave's document",
             description = "Byte-for-byte what was stored. Cache these bytes with the ETag.")
     ResponseEntity<String> raw(
@@ -131,6 +136,48 @@ class PublicContentController {
         Wave wave = found.get();
         return notModifiedOr(
                 ifNoneMatch, ContentHashes.ofDocument(wave.body()), () -> wave.body().json());
+    }
+
+    /**
+     * The level the project is currently playing, with its published waves in order.
+     *
+     * <p>Unpublished members are absent rather than listed-but-unfetchable. A level is assembled
+     * while its waves are still being written, and publication is what says a wave is ready; the
+     * authoring view marks which members players are not receiving, so the gap is visible to the
+     * person who can act on it rather than to the player.
+     *
+     * <p>No active level is a {@code 404}. A project that has not chosen one has no content to
+     * play, and an empty body pretending otherwise would have a client render an empty level.
+     *
+     * <p>The ETag covers the level <em>and</em> its members, so renaming the level, resequencing
+     * it, or editing any wave inside it all move it. Computed with the same
+     * {@link ContentHashes#ofCatalogue} the poll and the wave list use, for the same reason.
+     */
+    @GetMapping("/wave-levels/active")
+    @Operation(operationId = "getActiveWaveLevel",
+            summary = "The level currently being played",
+            description =
+                    "Published waves only, in play order. 404 when the project has no active"
+                            + " level.")
+    ResponseEntity<?> activeLevel(
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+
+        Optional<WaveLevels.PlayableLevel> found = levels.activeForPlayers(activeProject.id());
+        if (found.isEmpty()) {
+            return notFound();
+        }
+        WaveLevels.PlayableLevel playable = found.get();
+
+        List<ContentHashes.Entry> entries = new ArrayList<>();
+        entries.add(
+                new ContentHashes.Entry(
+                        playable.level().id().toString(), playable.level().updatedAt()));
+        playable.waves().forEach(wave -> entries.add(wave.catalogueEntry()));
+
+        return notModifiedOr(
+                ifNoneMatch,
+                ContentHashes.ofCatalogue(entries),
+                () -> WaveLevelDtos.Playable.of(playable));
     }
 
     /**

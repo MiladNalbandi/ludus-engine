@@ -43,7 +43,7 @@ class AudioAdminController {
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    @Operation(
+    @Operation(operationId = "uploadAudioClip",
             summary = "Upload an audio clip",
             description =
                     "Streamed to storage; the recorded size is what was actually written, not a"
@@ -64,13 +64,13 @@ class AudioAdminController {
     }
 
     @GetMapping
-    @Operation(summary = "List audio clips. Metadata only; no file is opened.")
+    @Operation(operationId = "listAudioClips", summary = "List audio clips. Metadata only; no file is opened.")
     List<AudioDtos.Summary> list() {
         return audio.list(activeProject.id()).stream().map(AudioDtos.Summary::of).toList();
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a clip and its bytes")
+    @Operation(operationId = "deleteAudioClip", summary = "Delete a clip and its bytes")
     ResponseEntity<Void> delete(@PathVariable String id) {
         return audio.delete(activeProject.id(), AudioClipId.of(id))
                 ? ResponseEntity.noContent().build()

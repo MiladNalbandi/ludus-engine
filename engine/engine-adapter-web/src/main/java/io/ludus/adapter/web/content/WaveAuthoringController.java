@@ -48,7 +48,7 @@ class WaveAuthoringController {
     }
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(
+    @Operation(operationId = "createWave",
             summary = "Create a wave from a document",
             description =
                     "The document's own id is used. Saving never publishes: a new wave is a draft"
@@ -59,7 +59,7 @@ class WaveAuthoringController {
     }
 
     @PutMapping(path = "/{id}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(
+    @Operation(operationId = "replaceWave",
             summary = "Replace a wave's document",
             description = "The id in the URL and the id in the document must agree.")
     WaveDtos.Summary replace(@PathVariable String id, @RequestBody String document) {
@@ -69,13 +69,13 @@ class WaveAuthoringController {
     }
 
     @GetMapping
-    @Operation(summary = "List every wave, drafts included")
+    @Operation(operationId = "listWaves", summary = "List every wave, drafts included")
     List<WaveDtos.Summary> list() {
         return catalogue.forAuthors(activeProject.id()).stream().map(WaveDtos.Summary::of).toList();
     }
 
     @GetMapping("/next-order")
-    @Operation(
+    @Operation(operationId = "nextWaveOrder",
             summary = "An order that would not collide",
             description =
                     "Advisory. The order lives in the document and the author owns it; this only"
@@ -85,7 +85,7 @@ class WaveAuthoringController {
     }
 
     @GetMapping(path = "/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(
+    @Operation(operationId = "getWaveDocument",
             summary = "Fetch a wave's document, draft or not",
             description = "Returns the stored bytes exactly as they were received.")
     ResponseEntity<String> document(@PathVariable String id) {
@@ -96,19 +96,19 @@ class WaveAuthoringController {
     }
 
     @PostMapping("/{id}/publish")
-    @Operation(summary = "Publish a wave, making it visible to clients")
+    @Operation(operationId = "publishWave", summary = "Publish a wave, making it visible to clients")
     ResponseEntity<WaveDtos.Summary> publish(@PathVariable String id) {
         return setPublished(id, true);
     }
 
     @PostMapping("/{id}/unpublish")
-    @Operation(summary = "Withdraw a wave. Clients stop seeing it entirely, as a 404.")
+    @Operation(operationId = "unpublishWave", summary = "Withdraw a wave. Clients stop seeing it entirely, as a 404.")
     ResponseEntity<WaveDtos.Summary> unpublish(@PathVariable String id) {
         return setPublished(id, false);
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Delete a wave")
+    @Operation(operationId = "deleteWave", summary = "Delete a wave")
     ResponseEntity<Void> delete(@PathVariable String id) {
         return catalogue.delete(activeProject.id(), new Slug(id))
                 ? ResponseEntity.noContent().build()

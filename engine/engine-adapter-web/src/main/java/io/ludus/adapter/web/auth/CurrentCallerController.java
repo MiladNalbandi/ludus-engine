@@ -28,7 +28,7 @@ class CurrentCallerController {
     }
 
     @GetMapping
-    @Operation(summary = "The identity behind the credential you presented")
+    @Operation(operationId = "currentCaller", summary = "The identity behind the credential you presented")
     AuthDtos.CurrentCaller me() {
         Caller caller = currentCaller.require();
         return new AuthDtos.CurrentCaller(

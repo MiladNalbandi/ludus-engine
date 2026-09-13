@@ -151,6 +151,16 @@ class AuthorisationMatrixTest {
                 // A key ends up in a shipped game binary. It must never be able to author.
                 Arguments.of("api-key", "/api/v1/admin/waves", HttpStatus.FORBIDDEN),
 
+                // Levels are authoring too, and got their own matcher entry rather than being
+                // assumed covered. "/api/v1/admin/waves/**" does not match "/api/v1/admin/
+                // wave-levels" -- a hyphen is not a slash -- so without these rows a new editor
+                // route would silently have landed under the ADMIN-only matcher instead.
+                Arguments.of("anonymous", "/api/v1/admin/wave-levels", HttpStatus.UNAUTHORIZED),
+                Arguments.of("viewer", "/api/v1/admin/wave-levels", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/admin/wave-levels", HttpStatus.OK),
+                Arguments.of("admin", "/api/v1/admin/wave-levels", HttpStatus.OK),
+                Arguments.of("api-key", "/api/v1/admin/wave-levels", HttpStatus.FORBIDDEN),
+
                 // Published content is what every copy of the game downloads. It is public by
                 // definition, so anonymous reaches it -- and that is the only thing anonymous
                 // reaches. These rows are what stops the permitAll matcher widening by accident.
@@ -158,7 +168,11 @@ class AuthorisationMatrixTest {
                 Arguments.of("anonymous", "/api/v1/public/waves", HttpStatus.OK),
                 Arguments.of("api-key", "/api/v1/public/waves", HttpStatus.OK),
                 Arguments.of("viewer", "/api/v1/public/waves", HttpStatus.OK),
-                Arguments.of("admin", "/api/v1/public/waves", HttpStatus.OK));
+                Arguments.of("admin", "/api/v1/public/waves", HttpStatus.OK),
+                // The active level, with no level chosen: a 404 rather than a 401, which is how
+                // this row proves the route was reached rather than refused.
+                Arguments.of("anonymous", "/api/v1/public/wave-levels/active", HttpStatus.NOT_FOUND),
+                Arguments.of("api-key", "/api/v1/public/wave-levels/active", HttpStatus.NOT_FOUND));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")
