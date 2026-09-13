@@ -1,0 +1,2712 @@
+{
+  "openapi" : "3.1.0",
+  "info" : {
+    "title" : "Ludus Engine API",
+    "description" : "Backend engine for 2D games. Content is authored in the editor and served to game clients over the public routes, which are cacheable and validated by ETag.",
+    "license" : {
+      "name" : "AGPL-3.0-or-later",
+      "url" : "https://www.gnu.org/licenses/agpl-3.0.txt"
+    },
+    "version" : "${project.version}"
+  },
+  "paths" : {
+    "/api/v1/admin/xp-curve" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "The project's XP curve",
+        "description" : "Empty when the project has not defined one; a player then has no stage.",
+        "operationId" : "getXpCurve",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/XpCurve"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Players" ],
+        "summary" : "Replace the project's XP curve",
+        "description" : "Wholesale. The stages are only meaningful relative to each other, so editing one in isolation can leave a stage that begins before the one before it. Every problem is reported at once, with the index.",
+        "operationId" : "replaceXpCurve",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/XpCurve"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/XpCurve"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/{id}" : {
+      "get" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Fetch a wave's document, draft or not",
+        "description" : "Returns the stored bytes exactly as they were received.",
+        "operationId" : "getWaveDocument",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Replace a wave's document",
+        "description" : "The id in the URL and the id in the document must agree.",
+        "operationId" : "replaceWave",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveSummary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Delete a wave",
+        "operationId" : "deleteWave",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/wave-levels/{id}" : {
+      "get" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "One level",
+        "operationId" : "getWaveLevel",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveLevelSummary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Rename or resequence a level",
+        "description" : "The wave list is replaced wholesale, in the order given.",
+        "operationId" : "updateWaveLevel",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WaveLevelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveLevelSummary"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Delete a level",
+        "description" : "The waves themselves are untouched; only their membership of this level goes. Deleting the active level leaves the project with none active.",
+        "operationId" : "deleteWaveLevel",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/leaderboards/{boardId}" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "A page of a board",
+        "operationId" : "getLeaderboardPageAsAdmin",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Create or replace a board",
+        "description" : "`descending` says whether a bigger number is better. It belongs to the board rather than to a query, so two callers cannot disagree about a player's rank.",
+        "operationId" : "saveLeaderboard",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LeaderboardRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Delete a board",
+        "description" : "Its scores go with it, by foreign key.",
+        "operationId" : "deleteLeaderboard",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/items/{id}" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "One item",
+        "operationId" : "getItem",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ItemView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Items" ],
+        "summary" : "Create or replace an item",
+        "description" : "Attributes are validated against this project's own item schema, if it has declared one. Violations are reported at /attributes plus the pointer inside the document.",
+        "operationId" : "saveItem",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ItemRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ItemView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Items" ],
+        "summary" : "Delete an item",
+        "description" : "It is removed from every player's inventory too, by foreign key.",
+        "operationId" : "deleteItem",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/item-schema" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "The project's item-attribute schema",
+        "description" : "An empty object when the project has not declared one, which validates nothing.",
+        "operationId" : "getItemSchema",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Items" ],
+        "summary" : "Replace the project's item-attribute schema",
+        "description" : "Refused now rather than on first use if it is unusable. Remote $ref targets are rejected: the engine will not fetch a URL chosen by whoever wrote the schema. Existing items are not re-validated.",
+        "operationId" : "replaceItemSchema",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/app-config" : {
+      "get" : {
+        "tags" : [ "Application configuration" ],
+        "summary" : "The current configuration document",
+        "description" : "An empty object when the project has never been configured.",
+        "operationId" : "getAppConfig",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Application configuration" ],
+        "summary" : "Replace the configuration document",
+        "description" : "The whole document, not a patch. The engine does not interpret any of these keys, so it has no basis for merging one document into another.",
+        "operationId" : "replaceAppConfig",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/waves/batch" : {
+      "post" : {
+        "tags" : [ "Public content" ],
+        "summary" : "Several published documents at once",
+        "description" : "For a first launch, when a client has nothing cached. Unknown or unpublished ids are simply absent. Not cacheable; revalidate with the single document routes.",
+        "operationId" : "batchGetPublishedWaves",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WaveBatchRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/players/session" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Exchange the game's player identifier for a session token",
+        "description" : "Creates the player on first sight, and is idempotent: retrying after a network failure resolves the same player rather than making a second one. Requires an API key. The token it returns is the only credential that can write this player's state, and only this player's.",
+        "operationId" : "startPlayerSession",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerSessionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerSession"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/me/wallet/spend" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Spend from this player's balance",
+        "description" : "Refused with a 422 when the balance is insufficient, rather than clamped to zero. A player can spend their own currency; only an editor can award it.",
+        "operationId" : "spendPlayerCurrency",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerSpendRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerBalance"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/leaderboards/{boardId}/me" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Where this player sits on a board",
+        "description" : "404 when they have not scored on it.",
+        "operationId" : "getOwnLeaderboardEntry",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardEntryView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Record this player's score",
+        "description" : "The better of the new score and the existing one is kept, in the board's own direction. Always this player: there is no route that writes another's.",
+        "operationId" : "submitOwnScore",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ScoreSubmission"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardEntryView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/token" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Exchange an email address and password for tokens",
+        "description" : "Every failure returns the same 401 with the same body. The difference between an unknown address and a wrong password is not something to tell whoever is asking.",
+        "operationId" : "signIn",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TokenRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh" : {
+      "post" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "Exchange a refresh token for a new pair",
+        "description" : "The presented token is revoked as part of the exchange, so a stolen token and the real one cannot both keep working.",
+        "operationId" : "refreshSession",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves" : {
+      "get" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "List every wave, drafts included",
+        "operationId" : "listWaves",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/WaveSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Create a wave from a document",
+        "description" : "The document's own id is used. Saving never publishes: a new wave is a draft and invisible to clients until it is published.",
+        "operationId" : "createWave",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/{id}/unpublish" : {
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Withdraw a wave. Clients stop seeing it entirely, as a 404.",
+        "operationId" : "unpublishWave",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/{id}/publish" : {
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Publish a wave, making it visible to clients",
+        "operationId" : "publishWave",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/bulk" : {
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Create or replace many waves at once",
+        "description" : "All or nothing: one invalid document rejects the whole batch, and every violation is reported with the index of the document that caused it. Imported waves are drafts, like any other save.",
+        "operationId" : "importWaves",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/WaveSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/batch-delete" : {
+      "post" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "Delete many waves at once",
+        "description" : "All or nothing. An id that is not there is a violation rather than a silent skip: 'delete these six' is a statement about a known set.",
+        "operationId" : "batchDeleteWaves",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WaveBatchDeleteRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveBatchDeleteResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/wave-levels" : {
+      "get" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Every level in the project",
+        "operationId" : "listWaveLevels",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/WaveLevelSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Create a level",
+        "description" : "The waves are listed in play order. Creating a level never activates it; activation is a separate call.",
+        "operationId" : "createWaveLevel",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/WaveLevelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveLevelSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/wave-levels/{id}/activate" : {
+      "post" : {
+        "tags" : [ "Wave levels" ],
+        "summary" : "Make this the level players receive",
+        "description" : "Replaces whatever was active. A project has at most one active level, which the database guarantees rather than this endpoint.",
+        "operationId" : "activateWaveLevel",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveLevelSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/sprites" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "Every uploaded sprite",
+        "operationId" : "listSprites",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/SpriteSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Items" ],
+        "summary" : "Upload item art",
+        "description" : "PNG, JPEG, WebP and GIF. SVG is refused deliberately: it can carry script, and it would run on this engine's origin.",
+        "operationId" : "uploadSprite",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SpriteSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/wallet/grant" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Award currency to a player",
+        "description" : "Editors and above. Not available to a game client: an API key ships inside the binary, so a client-authorised grant makes the currency whatever a modified binary says it is.",
+        "operationId" : "grantPlayerCurrency",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerGrantRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerBalance"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/reward" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Award several currencies and XP together",
+        "description" : "All or nothing: one rejected grant rolls back the whole reward.",
+        "operationId" : "rewardPlayer",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerRewardRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerRewardResult"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/inventory/grant" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Give or take several items at once",
+        "description" : "All or nothing: one rejected line rolls back the whole grant. A player who received the sword and not the shield has been given something the game never offered.",
+        "operationId" : "grantPlayerItems",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InventoryGrantRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerInventory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/audio" : {
+      "get" : {
+        "tags" : [ "Audio" ],
+        "summary" : "List audio clips. Metadata only; no file is opened.",
+        "operationId" : "listAudioClips",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/AudioClipSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Audio" ],
+        "summary" : "Upload an audio clip",
+        "description" : "Streamed to storage; the recorded size is what was actually written, not a length the client declared.",
+        "operationId" : "uploadAudioClip",
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "type" : "object",
+                "properties" : {
+                  "file" : {
+                    "type" : "string",
+                    "format" : "binary"
+                  }
+                },
+                "required" : [ "file" ]
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AudioClipSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/audio/mix" : {
+      "post" : {
+        "tags" : [ "Audio" ],
+        "summary" : "Mix several clips into one",
+        "description" : "The result is an ordinary clip afterwards: served, listed and deleted like any upload. Returns 503 when this engine has no mixer configured.",
+        "operationId" : "mixAudioClips",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AudioMixRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AudioClipSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/api-keys" : {
+      "get" : {
+        "tags" : [ "API keys" ],
+        "summary" : "List keys, including revoked ones",
+        "operationId" : "listApiKeys",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ApiKeySummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "API keys" ],
+        "summary" : "Mint a key. The response is the only time it is shown.",
+        "operationId" : "createApiKey",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ApiKeyRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiKeyCreated"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/me" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "The player this token acts as",
+        "description" : "There is no route for another player's profile, deliberately.",
+        "operationId" : "getPlayerSelf",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerProfile"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch" : {
+        "tags" : [ "Players" ],
+        "summary" : "Set or clear this player's display name",
+        "description" : "Blank clears it. Names are not unique; two players may share one.",
+        "operationId" : "renamePlayerSelf",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerRenameRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerProfile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/waves" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "Every published wave, in progression order",
+        "description" : "Summaries only. Fetch a document from the raw route when you need it.",
+        "operationId" : "listPublishedWaves",
+        "parameters" : [ {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/WaveSummary"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/waves/{id}" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "One published wave's indexed fields",
+        "operationId" : "getPublishedWave",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The wave's indexed fields",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WaveSummary"
+                }
+              }
+            }
+          },
+          "304" : {
+            "description" : "Your cached copy is current"
+          },
+          "404" : {
+            "description" : "No such published wave. A draft answers this way too"
+          }
+        }
+      }
+    },
+    "/api/v1/public/waves/{id}/raw" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "One published wave's document",
+        "description" : "Byte-for-byte what was stored. Cache these bytes with the ETag.",
+        "operationId" : "getPublishedWaveDocument",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/wave-levels/active" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "The level currently being played",
+        "description" : "Published waves only, in play order. 404 when the project has no active level.",
+        "operationId" : "getActiveWaveLevel",
+        "parameters" : [ {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "The active level and its published waves",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayableWaveLevel"
+                }
+              }
+            }
+          },
+          "304" : {
+            "description" : "Your cached copy is current"
+          },
+          "404" : {
+            "description" : "This project has no active level"
+          }
+        }
+      }
+    },
+    "/api/v1/public/status" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "The content hash for everything published",
+        "description" : "Compare it with the one you cached. Unchanged means play from cache and make no further requests. This value is identical to the ETag of the wave list for the same data.",
+        "operationId" : "contentStatus",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ContentStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/sprites/{id}" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "Fetch item art",
+        "description" : "Cached immutably: a sprite never changes under its id.",
+        "operationId" : "streamSprite",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StreamingResponseBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/audio/{id}" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "Stream an audio clip",
+        "description" : "Cached immutably: a clip never changes under its id, so a client that has it never asks again.",
+        "operationId" : "streamAudioClip",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StreamingResponseBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/app-config" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "The settings this game should launch with",
+        "description" : "Byte-for-byte what was stored. Cache it with the ETag.",
+        "operationId" : "getPublicAppConfig",
+        "parameters" : [ {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/me/wallet" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "What this player holds",
+        "description" : "Read-only. Awarding currency needs a credential that does not ship in the game.",
+        "operationId" : "getPlayerWallet",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerWallet"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/me/progress" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "This player's XP and stage",
+        "description" : "The stage is derived from the project's curve, not stored.",
+        "operationId" : "getPlayerProgress",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerProgress"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/me/inventory" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "What this player holds",
+        "description" : "Read-only. Granting items needs a credential that does not ship in the game.",
+        "operationId" : "getPlayerInventory",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerInventory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/leaderboards" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Every board this project defines",
+        "operationId" : "listLeaderboards",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LeaderboardView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/leaderboards/{boardId}" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "A page of a board, in rank order",
+        "description" : "Cursor-paged. A row whose score does not change is returned exactly once across a walk, however many other scores are written meanwhile; a row whose score does change may move. There is no page number, deliberately.",
+        "operationId" : "getLeaderboardPage",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/me" : {
+      "get" : {
+        "tags" : [ "Authentication" ],
+        "summary" : "The identity behind the credential you presented",
+        "operationId" : "currentCaller",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CurrentCaller"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/waves/next-order" : {
+      "get" : {
+        "tags" : [ "Wave authoring" ],
+        "summary" : "An order that would not collide",
+        "description" : "Advisory. The order lives in the document and the author owns it; this only answers what is free right now.",
+        "operationId" : "nextWaveOrder",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "integer",
+                  "format" : "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "Players, most recently seen first",
+        "description" : "Cursor-paged: pass the nextCursor from the previous page. Offsets are not offered, because the ordering column changes on every session.",
+        "operationId" : "listPlayers",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "One player",
+        "operationId" : "getPlayer",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerProfile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/wallet" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "What a player holds",
+        "operationId" : "getPlayerWalletAsAdmin",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerWallet"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/inventory" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "What a player holds",
+        "operationId" : "getPlayerInventoryAsAdmin",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerInventory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/leaderboards" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Every board",
+        "operationId" : "listLeaderboardsAsAdmin",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LeaderboardView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/items" : {
+      "get" : {
+        "tags" : [ "Items" ],
+        "summary" : "Every item this project defines",
+        "operationId" : "listItems",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/ItemView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/sprites/{id}" : {
+      "delete" : {
+        "tags" : [ "Items" ],
+        "summary" : "Delete a sprite",
+        "description" : "Items referring to it are not changed. spriteRef is an opaque reference the game resolves -- it may be a URL or an atlas key -- so the engine has no list of what points at what.",
+        "operationId" : "deleteSprite",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/audio/{id}" : {
+      "delete" : {
+        "tags" : [ "Audio" ],
+        "summary" : "Delete a clip and its bytes",
+        "operationId" : "deleteAudioClip",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/admin/api-keys/{id}" : {
+      "delete" : {
+        "tags" : [ "API keys" ],
+        "summary" : "Revoke a key",
+        "description" : "The row is kept and stamped, not deleted: when a key stopped working is a question people ask after an incident.",
+        "operationId" : "revokeApiKey",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string",
+            "format" : "uuid"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiKeySummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components" : {
+    "schemas" : {
+      "XpCurve" : {
+        "type" : "object",
+        "description" : "The project's XP curve, in ascending order.",
+        "properties" : {
+          "stages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/XpStageView"
+            }
+          }
+        }
+      },
+      "XpStageView" : {
+        "type" : "object",
+        "description" : "One step of the project's XP curve.",
+        "properties" : {
+          "stage" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "xpRequired" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        }
+      },
+      "WaveSummary" : {
+        "type" : "object",
+        "description" : "A wave's indexed fields. The document itself is fetched separately.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "order" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "schemaVersion" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "published" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "WaveLevelRequest" : {
+        "type" : "object",
+        "description" : "A level's name and the waves it sequences, in play order.",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "waves" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "WaveLevelMember" : {
+        "type" : "object",
+        "description" : "One wave's place in a level, and whether players will receive it.",
+        "properties" : {
+          "waveId" : {
+            "type" : "string"
+          },
+          "published" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "WaveLevelSummary" : {
+        "type" : "object",
+        "description" : "A level, its waves, and which of them players can actually reach.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "waves" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WaveLevelMember"
+            }
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "LeaderboardRequest" : {
+        "type" : "object",
+        "description" : "A board to create or replace.",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "descending" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "LeaderboardView" : {
+        "type" : "object",
+        "description" : "A board the project defines, and which way it sorts.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "descending" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ItemRequest" : {
+        "type" : "object",
+        "description" : "An item to create or replace.",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "itemType" : {
+            "type" : "string"
+          },
+          "spriteRef" : {
+            "type" : "string"
+          },
+          "attributes" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ItemView" : {
+        "type" : "object",
+        "description" : "An item the project defines. Attributes are the project's own shape.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "itemType" : {
+            "type" : "string"
+          },
+          "spriteRef" : {
+            "type" : "string"
+          },
+          "attributes" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "WaveBatchRequest" : {
+        "type" : "object",
+        "properties" : {
+          "ids" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "PlayerSessionRequest" : {
+        "type" : "object",
+        "description" : "The game's own identifier for this player.",
+        "properties" : {
+          "externalId" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlayerSession" : {
+        "type" : "object",
+        "description" : "A player session token and who it acts as.",
+        "properties" : {
+          "playerId" : {
+            "type" : "string"
+          },
+          "externalId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "token" : {
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PlayerSpendRequest" : {
+        "type" : "object",
+        "description" : "How much of which currency to spend.",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PlayerBalance" : {
+        "type" : "object",
+        "description" : "How much of one currency a player has.",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ScoreSubmission" : {
+        "type" : "object",
+        "description" : "A score to record. The better of the two is kept.",
+        "properties" : {
+          "score" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "LeaderboardEntryView" : {
+        "type" : "object",
+        "description" : "One player's place. Rank is computed, not stored.",
+        "properties" : {
+          "playerId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "score" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "rank" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "TokenRequest" : {
+        "type" : "object",
+        "properties" : {
+          "email" : {
+            "type" : "string",
+            "example" : "you@example.com",
+            "minLength" : 1
+          },
+          "password" : {
+            "type" : "string",
+            "format" : "password",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "email", "password" ]
+      },
+      "TokenResponse" : {
+        "type" : "object",
+        "description" : "A pair of tokens. The refresh token is shown once and is not recoverable.",
+        "properties" : {
+          "accessToken" : {
+            "type" : "string"
+          },
+          "tokenType" : {
+            "type" : "string"
+          },
+          "accessTokenExpiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "refreshToken" : {
+            "type" : "string"
+          },
+          "refreshTokenExpiresAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "RefreshRequest" : {
+        "type" : "object",
+        "properties" : {
+          "refreshToken" : {
+            "type" : "string",
+            "minLength" : 1
+          }
+        },
+        "required" : [ "refreshToken" ]
+      },
+      "WaveBatchDeleteRequest" : {
+        "type" : "object",
+        "properties" : {
+          "ids" : {
+            "type" : "array",
+            "items" : {
+              "type" : "string"
+            }
+          }
+        }
+      },
+      "WaveBatchDeleteResult" : {
+        "type" : "object",
+        "properties" : {
+          "deleted" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        }
+      },
+      "SpriteSummary" : {
+        "type" : "object",
+        "description" : "An uploaded image. The bytes come from the public route.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "contentType" : {
+            "type" : "string"
+          },
+          "sizeBytes" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PlayerGrantRequest" : {
+        "type" : "object",
+        "description" : "How much of which currency to award.",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PlayerRewardRequest" : {
+        "type" : "object",
+        "description" : "Currencies and XP to award together, or not at all.",
+        "properties" : {
+          "grants" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlayerGrantRequest"
+            }
+          },
+          "xp" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PlayerRewardResult" : {
+        "type" : "object",
+        "description" : "What a reward left behind.",
+        "properties" : {
+          "balances" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlayerBalance"
+            }
+          },
+          "xp" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "stage" : {
+            "$ref" : "#/components/schemas/XpStageView"
+          }
+        }
+      },
+      "InventoryGrantRequest" : {
+        "type" : "object",
+        "description" : "Several items to grant together, or not at all.",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/ItemGrantRequest"
+            }
+          }
+        }
+      },
+      "ItemGrantRequest" : {
+        "type" : "object",
+        "description" : "An item and how many; negative takes them away.",
+        "properties" : {
+          "itemId" : {
+            "type" : "string"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "InventoryEntryView" : {
+        "type" : "object",
+        "description" : "How many of one item a player holds.",
+        "properties" : {
+          "itemId" : {
+            "type" : "string"
+          },
+          "quantity" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PlayerInventory" : {
+        "type" : "object",
+        "description" : "Everything a player holds.",
+        "properties" : {
+          "items" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/InventoryEntryView"
+            }
+          }
+        }
+      },
+      "AudioClipSummary" : {
+        "type" : "object",
+        "description" : "An audio clip's metadata. The bytes are fetched from the stream route.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "contentType" : {
+            "type" : "string"
+          },
+          "sizeBytes" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "AudioMixRequest" : {
+        "type" : "object",
+        "description" : "The clips to combine, and how loud each should be.",
+        "properties" : {
+          "filename" : {
+            "type" : "string"
+          },
+          "tracks" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/AudioMixTrack"
+            }
+          }
+        }
+      },
+      "AudioMixTrack" : {
+        "type" : "object",
+        "description" : "One clip in a mix. Gain is in decibels; 0 leaves it alone.",
+        "properties" : {
+          "clipId" : {
+            "type" : "string"
+          },
+          "gainDb" : {
+            "type" : "number",
+            "format" : "double"
+          }
+        }
+      },
+      "ApiKeyRequest" : {
+        "type" : "object",
+        "properties" : {
+          "name" : {
+            "type" : "string",
+            "description" : "So a human can tell keys apart",
+            "example" : "android-client",
+            "maxLength" : 120,
+            "minLength" : 0
+          }
+        },
+        "required" : [ "name" ]
+      },
+      "ApiKeyCreated" : {
+        "type" : "object",
+        "description" : "The only response that ever contains the key itself. It is stored as a digest, so it cannot be shown again by anyone, including whoever runs the database.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "key" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlayerRenameRequest" : {
+        "type" : "object",
+        "description" : "A display name the player chose. Blank clears it.",
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlayerProfile" : {
+        "type" : "object",
+        "description" : "A player's identity and when they were last seen.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "externalId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "lastSeenAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "PlayableWaveLevel" : {
+        "type" : "object",
+        "description" : "The level currently being played, and its published waves in order.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "waves" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WaveSummary"
+            }
+          }
+        }
+      },
+      "ContentStatus" : {
+        "type" : "object",
+        "properties" : {
+          "contentHash" : {
+            "type" : "string"
+          }
+        }
+      },
+      "StreamingResponseBody" : { },
+      "PlayerWallet" : {
+        "type" : "object",
+        "description" : "Every currency this player holds.",
+        "properties" : {
+          "balances" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlayerBalance"
+            }
+          }
+        }
+      },
+      "PlayerProgress" : {
+        "type" : "object",
+        "description" : "XP, the stage reached, and the next one.",
+        "properties" : {
+          "xp" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "stage" : {
+            "$ref" : "#/components/schemas/XpStageView"
+          },
+          "nextStage" : {
+            "$ref" : "#/components/schemas/XpStageView"
+          }
+        }
+      },
+      "LeaderboardPage" : {
+        "type" : "object",
+        "description" : "A page of a board, with the cursor for the next.",
+        "properties" : {
+          "board" : {
+            "$ref" : "#/components/schemas/LeaderboardView"
+          },
+          "entries" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LeaderboardEntryView"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "CurrentCaller" : {
+        "type" : "object",
+        "properties" : {
+          "kind" : {
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "project" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlayerPage" : {
+        "type" : "object",
+        "description" : "Players, most recently seen first, with a cursor.",
+        "properties" : {
+          "players" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlayerProfile"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
+          }
+        }
+      },
+      "ApiKeySummary" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "revokedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      }
+    }
+  }
+}

@@ -8,19 +8,23 @@ The live roadmap is **[issue #18](https://github.com/MiladNalbandi/ludus-engine/
 with one issue per phase. This page explains the shape of it; the issues carry the detail and
 the current state.
 
-The picture above is the current release drawn out: a green tick is in the box today, and the
-two panels on the right are not. It is a snapshot of one version rather than a permanent
-diagram, so it gets replaced when the ticks change.
+The picture above was drawn for the foundation release and is now out of date; it is a snapshot of
+one version rather than a permanent diagram, and it is kept until there is a replacement rather
+than deleted, because a missing figure is harder to notice than a stale one. The table below is
+current.
+
+**`v1.0.0` is the line.** Everything above it shipped while the contract could still move.
+Everything below it is additive, or costs a major version.
 
 | | Release | |
 |---|---|---|
 | ✅ | `v0.0.1` | Foundation: build, architecture guardrails, content contract, running service |
 | ✅ | `v0.1.0` | Identity: JWT, roles, API keys, the project boundary |
-| 🚧 | `v0.2.0` | Content API: author, validate, publish and serve, with ETag caching |
-| 📋 | `v0.3.0` | The editor: timeline, live preview, audio, level sequencer |
-| 📋 | `v0.4.0` | Live-ops: players, items, XP, currency, inventory, leaderboards |
-| 📋 | `v1.0.0` | Frozen HTTP contract, documentation, semantic-versioning commitment |
-| 📋 | `v1.1.0` | Plugin substrate: entity, behaviour and content types become data |
+| ✅ | `v0.2.0` | Content API: author, validate, publish and serve, with ETag caching |
+| ✅ | `v0.3.0` | The editor: timeline, live preview, audio, level sequencer |
+| ✅ | `v0.4.0` | Live-ops: players, items, XP, currency, inventory, leaderboards |
+| ✅ | `v1.0.0` | Frozen HTTP contract, documentation, semantic-versioning commitment |
+| 🚧 | `v1.1.0` | Plugin substrate: entity, behaviour and content types become data |
 | 📋 | `v1.2.0` | Schema-driven editor, pluggable preview |
 | 📋 | `v1.3.0` | Maps and blocks: the tilemap content type |
 | 📋 | `v1.4.0` | Notification centre: templates, player segments, scheduling |

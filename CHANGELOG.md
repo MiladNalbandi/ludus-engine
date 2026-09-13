@@ -9,6 +9,49 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ## [Unreleased]
 
+Nothing yet.
+
+## [1.0.0] - 2026-09-12
+
+**The first release that makes a promise.**
+
+Everything below shipped between `0.1.0` and here: the content API, the editor, live-ops, and the
+freeze itself. From this release the HTTP contract in `docs/api/openapi.json` is fixed, and
+semantic versioning starts meaning something — a breaking change costs a major version, and
+`FrozenContractTest` fails the build if one lands without one.
+
+The freeze happens here rather than earlier because an API whose shape was never exercised by a real
+client is not worth committing to; and rather than later because the first adopters should not be
+building on something that can move under them. The editor and live-ops have now exercised it, and
+nobody has built on it hard enough that a change is expensive.
+
+### The promise, precisely
+
+- **Breaking** — removing a path, an operation, a response property or an enum value, or making an
+  optional request property required. Costs a major version.
+- **Additive** — new paths, operations, optional properties, enum values. A minor version.
+- **Not covered** — the database schema, which migrates forwards on start; the editor, which is a
+  client like any other; and a wave document's own `schema_version`, which moves independently.
+
+`docs/api/openapi-v1.json` is the frozen baseline and `FrozenContractTest` compares against it on
+every build. It is deliberately not a diff: the snapshot test already fails on *any* change, which
+is the right signal for a reviewer and the wrong one for a promise, because it cannot tell an added
+endpoint from a deleted one and so gets regenerated without being read. This one says nothing about
+additions, which is what makes it worth reading when it speaks.
+
+### Added in this release
+
+- **A test that the configuration guide and `application.yml` agree, in both directions.** The
+  direction people forget is the second: a documented setting the engine no longer reads is worse
+  than an undocumented one, because somebody sets it, watches nothing happen, and cannot tell
+  whether it was ignored or misspelled. It found two undocumented settings on its first run.
+- **`scripts/import-waves.mjs`**, posting to the bulk endpoint so an import is all-or-nothing. It
+  leaves everything as a draft: publishing a half-reviewed catalogue to every player is not
+  something a migration script should be able to do by accident. CI round-trips the demo set through
+  it against a real engine and asserts the documents come back byte-for-byte.
+- **An upgrade guide**, which currently says there is nothing to do — and says which two volumes a
+  database dump does not contain, because that is the part that bites.
+
 ### Added
 
 - **Item art**, completing `v0.4.0`,
