@@ -28,7 +28,10 @@ class ContentErrorHandling {
         ProblemDetail problem =
                 ProblemDetail.forStatusAndDetail(
                         HttpStatus.UNPROCESSABLE_ENTITY,
-                        "The document did not satisfy the wave schema.");
+                        // Not "did not satisfy the wave schema", which it said while waves were
+                        // the only content there was. Levels and application configuration are
+                        // rejected through here too, and neither is validated against a schema.
+                        "The document was rejected. See violations for each reason and where.");
         problem.setTitle("Invalid content");
         problem.setProperty("violations", asMaps(rejection.violations()));
         return problem;

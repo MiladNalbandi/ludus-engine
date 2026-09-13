@@ -11,6 +11,25 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Application configuration**, part of `v0.2.0`,
+  [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8). The settings a game reads at launch,
+  edited at `/api/v1/admin/app-config` and served from `/api/v1/public/app-config`.
+  - **Free-form, deliberately.** Waves have a schema because the engine interprets them — it derives
+    an order, a name and a publication state from the document. Nothing here is interpreted by the
+    engine at all, so a schema would mean a release of Ludus every time a game wanted a new
+    difficulty knob.
+  - Stored verbatim with a generated `jsonb` column, exactly like a wave, and for the sharper
+    version of the same reason: this document is fetched by every client on every launch, so a hash
+    that moves when nothing changed costs more here than anywhere else.
+  - One row per project, with `project_id` as the primary key. Configuration is singular; a table
+    that allowed two would need a rule somewhere choosing between them.
+  - **Replace, never patch.** A merge endpoint has to decide what a null means, whether an absent
+    key removes or preserves, and how deep to go — three questions the engine cannot answer, since
+    it does not know what any of the keys mean.
+  - An unconfigured project returns `{}` rather than a `404`, because that is exactly what "no
+    overrides" means. This differs from the active level, where absence is a real state a game must
+    cope with.
+
 - **Wave levels**, part of `v0.2.0`, [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8).
   Waves are sequenced into levels under `/api/v1/admin/wave-levels`, and a game client fetches the
   one being played from `/api/v1/public/wave-levels/active`.
@@ -102,6 +121,17 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
   one `v1.0.0` can promise to freeze.
 
 ### Fixed
+
+- **An empty request body returned `401`, on every document route.** `@RequestBody` is required by
+  default, so Spring refused an empty one before any controller code ran — and that refusal goes out
+  through the container's error dispatch, which re-enters the security filter chain with no
+  authentication in it. A perfectly well authenticated request came back unauthenticated. It is the
+  same mechanism that once turned a `403` into a `401`, and just as unreadable from outside: the
+  status names the wrong problem entirely. The body is now bound leniently and rejected at the edge
+  as a `422`, while the published contract still says a body is required, because it is.
+- The `422` handler told every caller their document "did not satisfy the wave schema". That was the
+  whole truth when waves were the only content there was; levels and application configuration are
+  rejected through the same handler and neither is validated against a schema.
 
 - Three status blurbs said there was no content API after authoring had shipped, and
   `OpenApiConfiguration`'s javadoc claimed the OpenAPI document was committed under `docs/api` and

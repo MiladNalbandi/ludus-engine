@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 package io.ludus.adapter.web.content;
 
+import io.ludus.application.content.ApplicationConfig;
 import io.ludus.application.content.WaveCatalogue;
 import io.ludus.application.content.WaveLevels;
 import io.ludus.application.project.port.in.ActiveProject;
+import io.ludus.domain.content.AppConfig;
 import io.ludus.domain.content.ContentHashes;
 import io.ludus.domain.content.EntityTags;
 import io.ludus.domain.content.Wave;
@@ -47,12 +49,17 @@ class PublicContentController {
 
     private final WaveCatalogue catalogue;
     private final WaveLevels levels;
+    private final ApplicationConfig config;
     private final ActiveProject activeProject;
 
     PublicContentController(
-            WaveCatalogue catalogue, WaveLevels levels, ActiveProject activeProject) {
+            WaveCatalogue catalogue,
+            WaveLevels levels,
+            ApplicationConfig config,
+            ActiveProject activeProject) {
         this.catalogue = catalogue;
         this.levels = levels;
+        this.config = config;
         this.activeProject = activeProject;
     }
 
@@ -178,6 +185,30 @@ class PublicContentController {
                 ifNoneMatch,
                 ContentHashes.ofCatalogue(entries),
                 () -> WaveLevelDtos.Playable.of(playable));
+    }
+
+    /**
+     * The settings a client reads at launch.
+     *
+     * <p>Always an answer, never a {@code 404}: a project that has never been configured returns an
+     * empty object, because that is precisely what "no overrides" means and a client that has to
+     * treat absence as a separate case will get it wrong on one of its platforms.
+     *
+     * <p>The bytes are returned as stored, and the ETag is a hash of exactly those bytes. This is
+     * fetched on every launch by every client, so the cost of a hash that moves when nothing
+     * changed is higher here than anywhere else in the API.
+     */
+    @GetMapping(path = "/app-config", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            operationId = "getPublicAppConfig",
+            summary = "The settings this game should launch with",
+            description = "Byte-for-byte what was stored. Cache it with the ETag.")
+    ResponseEntity<String> appConfig(
+            @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
+
+        AppConfig current = config.current(activeProject.id());
+        return notModifiedOr(
+                ifNoneMatch, ContentHashes.ofDocument(current.body()), () -> current.body().json());
     }
 
     /**

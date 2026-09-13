@@ -174,6 +174,54 @@
         }
       }
     },
+    "/api/v1/admin/app-config" : {
+      "get" : {
+        "tags" : [ "Application configuration" ],
+        "summary" : "The current configuration document",
+        "description" : "An empty object when the project has never been configured.",
+        "operationId" : "getAppConfig",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Application configuration" ],
+        "summary" : "Replace the configuration document",
+        "description" : "The whole document, not a patch. The engine does not interpret any of these keys, so it has no basis for merging one document into another.",
+        "operationId" : "replaceAppConfig",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "type" : "string"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/token" : {
       "post" : {
         "tags" : [ "Authentication" ],
@@ -690,6 +738,34 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/StreamingResponseBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/public/app-config" : {
+      "get" : {
+        "tags" : [ "Public content" ],
+        "summary" : "The settings this game should launch with",
+        "description" : "Byte-for-byte what was stored. Cache it with the ETag.",
+        "operationId" : "getPublicAppConfig",
+        "parameters" : [ {
+          "name" : "If-None-Match",
+          "in" : "header",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             }

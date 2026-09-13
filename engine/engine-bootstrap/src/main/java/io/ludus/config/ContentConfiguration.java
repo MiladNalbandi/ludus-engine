@@ -3,6 +3,7 @@ package io.ludus.config;
 
 import io.ludus.application.content.AudioLibrary;
 import io.ludus.application.content.AuthorWave;
+import io.ludus.application.content.ApplicationConfig;
 import io.ludus.application.content.WaveCatalogue;
 import io.ludus.application.content.WaveLevels;
 import io.ludus.application.content.port.out.AudioClipRepository;
@@ -10,6 +11,8 @@ import io.ludus.application.content.port.out.AudioStore;
 import io.ludus.application.content.port.out.DocumentReader;
 import io.ludus.application.content.port.out.DocumentValidator;
 import io.ludus.application.content.port.out.SchemaVersionStamper;
+import io.ludus.application.content.port.out.AppConfigRepository;
+import io.ludus.application.content.port.out.DocumentSyntax;
 import io.ludus.application.content.port.out.WaveLevelRepository;
 import io.ludus.application.content.port.out.WaveRepository;
 import java.time.Clock;
@@ -49,6 +52,12 @@ public class ContentConfiguration {
     @Bean
     public WaveCatalogue waveCatalogue(WaveRepository waves, Clock clock) {
         return new WaveCatalogue(waves, clock);
+    }
+
+    @Bean
+    public ApplicationConfig applicationConfig(
+            AppConfigRepository configs, DocumentSyntax syntax, Clock clock) {
+        return new ApplicationConfig(configs, syntax, clock);
     }
 
     @Bean
