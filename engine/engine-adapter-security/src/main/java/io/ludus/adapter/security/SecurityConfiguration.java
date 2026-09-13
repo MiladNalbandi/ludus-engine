@@ -138,7 +138,10 @@ public class SecurityConfiguration {
                                                 // a credential that ships in the game can do.
                                                 "/api/v1/admin/players/**",
                                                 "/api/v1/admin/players",
-                                                "/api/v1/admin/xp-curve")
+                                                "/api/v1/admin/xp-curve",
+                                                "/api/v1/admin/items/**",
+                                                "/api/v1/admin/items",
+                                                "/api/v1/admin/item-schema")
                                         .hasAnyRole("EDITOR", "ADMIN")
                                         // Issuing and revoking credentials is not. This matcher
                                         // is listed after the one above and would otherwise

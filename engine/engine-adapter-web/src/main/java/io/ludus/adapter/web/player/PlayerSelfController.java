@@ -4,6 +4,7 @@ package io.ludus.adapter.web.player;
 import io.ludus.application.content.ContentRejected;
 import io.ludus.application.content.ContentViolation;
 import io.ludus.application.player.PlayerCaller;
+import io.ludus.application.player.ItemCatalogue;
 import io.ludus.application.player.PlayerEconomy;
 import io.ludus.application.player.PlayerSessions;
 import io.ludus.application.player.port.in.CurrentPlayer;
@@ -34,12 +35,17 @@ class PlayerSelfController {
 
     private final PlayerSessions sessions;
     private final PlayerEconomy economy;
+    private final ItemCatalogue items;
     private final CurrentPlayer currentPlayer;
 
     PlayerSelfController(
-            PlayerSessions sessions, PlayerEconomy economy, CurrentPlayer currentPlayer) {
+            PlayerSessions sessions,
+            PlayerEconomy economy,
+            ItemCatalogue items,
+            CurrentPlayer currentPlayer) {
         this.sessions = sessions;
         this.economy = economy;
+        this.items = items;
         this.currentPlayer = currentPlayer;
     }
 
@@ -131,5 +137,25 @@ class PlayerSelfController {
     PlayerDtos.ProgressView progress() {
         PlayerCaller player = currentPlayer.require();
         return PlayerDtos.ProgressView.of(economy.progressOf(player.projectId(), player.id()));
+    }
+
+    /**
+     * What this player holds.
+     *
+     * <p>Read-only, like the wallet. Granting items is an editor's act for the same reason granting
+     * currency is: a credential that ships inside the game cannot be trusted to say what a player
+     * earned.
+     */
+    @GetMapping(path = "/me/inventory", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(
+            operationId = "getPlayerInventory",
+            summary = "What this player holds",
+            description = "Read-only. Granting items needs a credential that does not ship in the game.")
+    ItemDtos.Inventory inventory() {
+        PlayerCaller player = currentPlayer.require();
+        return new ItemDtos.Inventory(
+                items.inventoryOf(player.projectId(), player.id()).stream()
+                        .map(ItemDtos.EntryView::of)
+                        .toList());
     }
 }

@@ -2,11 +2,15 @@
 package io.ludus.config;
 
 import io.ludus.application.content.port.out.UnitOfWork;
+import io.ludus.application.player.ItemCatalogue;
 import io.ludus.application.player.PlayerEconomy;
 import io.ludus.application.player.PlayerSessions;
 import io.ludus.application.player.port.out.PlayerRepository;
 import io.ludus.application.player.port.out.PlayerTokenIssuer;
+import io.ludus.application.player.port.out.InventoryRepository;
+import io.ludus.application.player.port.out.ItemRepository;
 import io.ludus.application.player.port.out.ProgressRepository;
+import io.ludus.application.player.port.out.SchemaValidator;
 import io.ludus.application.player.port.out.WalletRepository;
 import java.time.Clock;
 import org.springframework.context.annotation.Bean;
@@ -36,5 +40,16 @@ public class PlayerConfiguration {
             UnitOfWork unitOfWork,
             Clock clock) {
         return new PlayerEconomy(players, wallet, progress, unitOfWork, clock);
+    }
+
+    @Bean
+    public ItemCatalogue itemCatalogue(
+            ItemRepository items,
+            InventoryRepository inventory,
+            PlayerRepository players,
+            SchemaValidator schemas,
+            UnitOfWork unitOfWork,
+            Clock clock) {
+        return new ItemCatalogue(items, inventory, players, schemas, unitOfWork, clock);
     }
 }
