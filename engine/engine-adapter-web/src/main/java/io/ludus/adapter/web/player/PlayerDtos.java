@@ -68,4 +68,64 @@ final class PlayerDtos {
      */
     @Schema(name = "PlayerPage", description = "Players, most recently seen first, with a cursor.")
     record Page(List<Profile> players, long total, String nextCursor) {}
+
+    @Schema(name = "PlayerBalance", description = "How much of one currency a player has.")
+    record BalanceView(String currency, long amount, Instant updatedAt) {
+
+        static BalanceView of(io.ludus.domain.player.Balance balance) {
+            return new BalanceView(
+                    balance.currency().value(), balance.amount(), balance.updatedAt());
+        }
+    }
+
+    @Schema(name = "PlayerWallet", description = "Every currency this player holds.")
+    record Wallet(List<BalanceView> balances) {}
+
+    @Schema(name = "PlayerSpendRequest", description = "How much of which currency to spend.")
+    record SpendRequest(String currency, Long amount) {}
+
+    @Schema(name = "PlayerGrantRequest", description = "How much of which currency to award.")
+    record GrantRequest(String currency, Long amount) {}
+
+    @Schema(name = "PlayerRewardRequest", description = "Currencies and XP to award together, or not at all.")
+    record RewardRequest(List<GrantRequest> grants, Long xp) {}
+
+    @Schema(name = "XpStageView", description = "One step of the project's XP curve.")
+    record StageView(int stage, long xpRequired, String label) {
+
+        static StageView of(io.ludus.domain.player.XpStage stage) {
+            return stage == null ? null : new StageView(stage.stage(), stage.xpRequired(), stage.label());
+        }
+    }
+
+    /**
+     * A player's XP and where it puts them.
+     *
+     * <p>{@code stage} and {@code nextStage} are null when the project has defined no curve, which
+     * is the honest answer rather than inventing a stage 0 for a client to render.
+     */
+    @Schema(name = "PlayerProgress", description = "XP, the stage reached, and the next one.")
+    record ProgressView(long xp, StageView stage, StageView nextStage) {
+
+        static ProgressView of(io.ludus.application.player.PlayerEconomy.Progress progress) {
+            return new ProgressView(
+                    progress.xp(),
+                    StageView.of(progress.stage()),
+                    StageView.of(progress.nextStage()));
+        }
+    }
+
+    @Schema(name = "PlayerRewardResult", description = "What a reward left behind.")
+    record RewardView(List<BalanceView> balances, long xp, StageView stage) {
+
+        static RewardView of(io.ludus.application.player.PlayerEconomy.Reward reward) {
+            return new RewardView(
+                    reward.balances().stream().map(BalanceView::of).toList(),
+                    reward.xp(),
+                    StageView.of(reward.stage()));
+        }
+    }
+
+    @Schema(name = "XpCurve", description = "The project's XP curve, in ascending order.")
+    record Curve(List<StageView> stages) {}
 }

@@ -11,6 +11,36 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **Currency and XP progression**, part of `v0.4.0`,
+  [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10).
+  - **A player may spend and may not be granted, and that asymmetry is the trust model.** A forged
+    spend costs the person who forged it, so exposing it to a client is safe. A forged grant would
+    make the currency whatever a modified binary says it is, so crediting needs a credential that
+    does not ship inside the game. A game with no server of its own therefore cannot award currency
+    through Ludus — a real limitation, stated rather than left open to avoid admitting it.
+  - **The arithmetic happens in the database.** `set amount = amount + :delta`, one statement, no
+    read-modify-write. Twenty concurrent grants of one coin total twenty; done in Java the reads
+    overlap, the writes overwrite each other, and the total is some number below twenty that changes
+    every run. A lost update is not an error — nothing fails, nothing logs, and the player is short.
+  - **The first grant was racy, and the test caught it.** Several threads found no row, all tried to
+    insert, one won and the losers were silently dropped: twenty grants became eighteen. The insert
+    race is now a retry rather than a refusal, which is the same silent-loss failure the
+    single-statement arithmetic exists to prevent, reintroduced one layer up.
+  - Overdraft is the `amount >= 0` check on the table, and spending is **refused rather than
+    clamped**. The code does not test the balance and then subtract — a check-then-act is two
+    statements with a gap a concurrent spend fits into exactly. Twenty attempts to spend one coin
+    from a balance of ten: ten succeed, ten fail.
+  - A **reward** is several currencies and XP together, all or nothing. A player who received the
+    coins and not the gems has been given something the game never offered, and the balances look
+    right, so nothing appears broken.
+  - **The XP curve is data the project owns**, not a curve in code — the models this is reshaped
+    from had fixed semantics, so a game with a different ramp needed a fork. And **there is no
+    stored stage**: it is derived from the XP and the curve, because a column would go stale for
+    every player at once the moment somebody edited the curve. A project with no curve reports no
+    stage rather than inventing stage 0 for a client to render.
+  - Players are listed cursor-paged, never offset-paged: `last_seen_at` changes on every session, so
+    an offset skips and repeats rows as people play.
+
 - **Players, and the credential live-ops actually needs** — the foundation of `v0.4.0`,
   [#10](https://github.com/MiladNalbandi/ludus-engine/issues/10).
   - **The issue asks that "a game client can read and write player state with an API key". It

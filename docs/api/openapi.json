@@ -10,6 +10,54 @@
     "version" : "${project.version}"
   },
   "paths" : {
+    "/api/v1/admin/xp-curve" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "The project's XP curve",
+        "description" : "Empty when the project has not defined one; a player then has no stage.",
+        "operationId" : "getXpCurve",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/XpCurve"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Players" ],
+        "summary" : "Replace the project's XP curve",
+        "description" : "Wholesale. The stages are only meaningful relative to each other, so editing one in isolation can leave a stage that begins before the one before it. Every problem is reported at once, with the index.",
+        "operationId" : "replaceXpCurve",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/XpCurve"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/XpCurve"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/waves/{id}" : {
       "get" : {
         "tags" : [ "Wave authoring" ],
@@ -274,6 +322,36 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PlayerSession"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/me/wallet/spend" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Spend from this player's balance",
+        "description" : "Refused with a 422 when the balance is insufficient, rather than clamped to zero. A player can spend their own currency; only an editor can award it.",
+        "operationId" : "spendPlayerCurrency",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerSpendRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerBalance"
                 }
               }
             }
@@ -579,6 +657,82 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/WaveLevelSummary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/wallet/grant" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Award currency to a player",
+        "description" : "Editors and above. Not available to a game client: an API key ships inside the binary, so a client-authorised grant makes the currency whatever a modified binary says it is.",
+        "operationId" : "grantPlayerCurrency",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerGrantRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerBalance"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/reward" : {
+      "post" : {
+        "tags" : [ "Players" ],
+        "summary" : "Award several currencies and XP together",
+        "description" : "All or nothing: one rejected grant rolls back the whole reward.",
+        "operationId" : "rewardPlayer",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PlayerRewardRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerRewardResult"
                 }
               }
             }
@@ -985,6 +1139,46 @@
         }
       }
     },
+    "/api/v1/player/me/wallet" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "What this player holds",
+        "description" : "Read-only. Awarding currency needs a credential that does not ship in the game.",
+        "operationId" : "getPlayerWallet",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerWallet"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/me/progress" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "This player's XP and stage",
+        "description" : "The stage is derived from the project's curve, not stored.",
+        "operationId" : "getPlayerProgress",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerProgress"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me" : {
       "get" : {
         "tags" : [ "Authentication" ],
@@ -1018,6 +1212,96 @@
                 "schema" : {
                   "type" : "integer",
                   "format" : "int32"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "Players, most recently seen first",
+        "description" : "Cursor-paged: pass the nextCursor from the previous page. Offsets are not offered, because the ordering column changes on every session.",
+        "operationId" : "listPlayers",
+        "parameters" : [ {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "One player",
+        "operationId" : "getPlayer",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerProfile"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/players/{id}/wallet" : {
+      "get" : {
+        "tags" : [ "Players" ],
+        "summary" : "What a player holds",
+        "operationId" : "getPlayerWalletAsAdmin",
+        "parameters" : [ {
+          "name" : "id",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PlayerWallet"
                 }
               }
             }
@@ -1077,6 +1361,35 @@
   },
   "components" : {
     "schemas" : {
+      "XpCurve" : {
+        "type" : "object",
+        "description" : "The project's XP curve, in ascending order.",
+        "properties" : {
+          "stages" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/XpStageView"
+            }
+          }
+        }
+      },
+      "XpStageView" : {
+        "type" : "object",
+        "description" : "One step of the project's XP curve.",
+        "properties" : {
+          "stage" : {
+            "type" : "integer",
+            "format" : "int32"
+          },
+          "xpRequired" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        }
+      },
       "WaveSummary" : {
         "type" : "object",
         "description" : "A wave's indexed fields. The document itself is fetched separately.",
@@ -1212,6 +1525,36 @@
           }
         }
       },
+      "PlayerSpendRequest" : {
+        "type" : "object",
+        "description" : "How much of which currency to spend.",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PlayerBalance" : {
+        "type" : "object",
+        "description" : "How much of one currency a player has.",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "TokenRequest" : {
         "type" : "object",
         "properties" : {
@@ -1278,6 +1621,54 @@
           "deleted" : {
             "type" : "integer",
             "format" : "int32"
+          }
+        }
+      },
+      "PlayerGrantRequest" : {
+        "type" : "object",
+        "description" : "How much of which currency to award.",
+        "properties" : {
+          "currency" : {
+            "type" : "string"
+          },
+          "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PlayerRewardRequest" : {
+        "type" : "object",
+        "description" : "Currencies and XP to award together, or not at all.",
+        "properties" : {
+          "grants" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlayerGrantRequest"
+            }
+          },
+          "xp" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "PlayerRewardResult" : {
+        "type" : "object",
+        "description" : "What a reward left behind.",
+        "properties" : {
+          "balances" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlayerBalance"
+            }
+          },
+          "xp" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "stage" : {
+            "$ref" : "#/components/schemas/XpStageView"
           }
         }
       },
@@ -1429,6 +1820,34 @@
         }
       },
       "StreamingResponseBody" : { },
+      "PlayerWallet" : {
+        "type" : "object",
+        "description" : "Every currency this player holds.",
+        "properties" : {
+          "balances" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlayerBalance"
+            }
+          }
+        }
+      },
+      "PlayerProgress" : {
+        "type" : "object",
+        "description" : "XP, the stage reached, and the next one.",
+        "properties" : {
+          "xp" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "stage" : {
+            "$ref" : "#/components/schemas/XpStageView"
+          },
+          "nextStage" : {
+            "$ref" : "#/components/schemas/XpStageView"
+          }
+        }
+      },
       "CurrentCaller" : {
         "type" : "object",
         "properties" : {
@@ -1442,6 +1861,25 @@
             "type" : "string"
           },
           "role" : {
+            "type" : "string"
+          }
+        }
+      },
+      "PlayerPage" : {
+        "type" : "object",
+        "description" : "Players, most recently seen first, with a cursor.",
+        "properties" : {
+          "players" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/PlayerProfile"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
             "type" : "string"
           }
         }
