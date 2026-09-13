@@ -1,0 +1,42 @@
+# syntax=docker/dockerfile:1
+
+# The editor. Built in the image so that a clone plus Docker is the only prerequisite, matching
+# Dockerfile.engine.
+FROM node:22-alpine AS build
+WORKDIR /src
+
+# Dependencies first, from the lockfile alone, so an ordinary source change does not re-resolve.
+COPY editor/package.json editor/package-lock.json ./
+RUN npm ci
+
+COPY editor/ ./
+# The generated wave types are committed, and this is the build that would notice if they had
+# drifted from the schema. The schema is copied in for exactly that check.
+COPY contracts/ ../contracts/
+RUN npm run verify:types && npm run build
+
+FROM node:22-alpine AS runtime
+
+# A non-root user, as on the engine image. Next's standalone output needs nothing else.
+RUN addgroup --system --gid 1001 ludus \
+ && adduser --system --uid 1001 --ingroup ludus --home /app ludus
+WORKDIR /app
+
+# `output: 'standalone'` emits a self-contained server plus only the node_modules it needs.
+COPY --from=build --chown=ludus:ludus /src/.next/standalone ./
+COPY --from=build --chown=ludus:ludus /src/.next/static ./.next/static
+COPY --from=build --chown=ludus:ludus /src/public ./public
+
+USER ludus
+EXPOSE 3000
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+# A healthcheck that actually renders the login page. One that only opened a socket would report
+# healthy while the app was failing to start.
+HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=5 \
+  CMD wget -q -O /dev/null http://localhost:3000/login || exit 1
+
+CMD ["node", "server.js"]

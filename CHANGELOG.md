@@ -11,6 +11,36 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Added
 
+- **The editor, first release** — the foundation of `v0.3.0`,
+  [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9). A Next.js application under
+  `editor/`, served beside the engine by `docker compose up`, holding no content of its own.
+  - **The browser never talks to the engine.** Every call goes through the editor's own route
+    handlers, which is what lets the refresh token live in an httpOnly cookie page JavaScript cannot
+    read — and lets a deployment leave the engine unpublished entirely, reachable on the compose
+    network and nowhere else, with no CORS policy to get wrong.
+  - **The access token is held in memory and nowhere else.** Not `localStorage`, not
+    `sessionStorage`, not a readable cookie: all three are readable by any script that reaches the
+    page, so one cross-site scripting hole becomes a session that outlives the tab. The visible cost
+    is a spinner on first paint while the refresh cookie is exchanged.
+  - `apiFetch` refreshes **once** on a `401` and retries once, never looping — and concurrent
+    callers **share one refresh**. That second rule is correct on every single request and wrong the
+    moment two arrive together: the engine revokes each refresh token as it issues the next, so ten
+    simultaneous refreshes mean nine presented after revocation and a session that dies for no
+    visible reason. Of the thirteen tests, that is the one that fails when the sharing is removed.
+  - **The wave types are generated** from `contracts/schemas/wave/v1.json` with
+    `json-schema-to-typescript`, committed, and checked in CI. Hand-written types beside a schema
+    drift quietly: the editor keeps compiling, the engine keeps rejecting, and the author sees a
+    `422` about a field their form does not show.
+  - The middleware is a redirect, not a security control, and says so. It checks only whether a
+    cookie is *present*. The codebase this was extracted from had one that exempted `/api/*` because
+    "they have their own auth", and some of those routes had none — which is how unauthenticated
+    writes shipped. There is no filesystem content store here, and will not be.
+  - Quickstart asserts the refresh cookie is `HttpOnly` and `SameSite=Lax` and that the access token
+    comes back in the body. A flag that silently stopped being set would leave sessions stealable
+    with nothing failing anywhere.
+  - Still to come in `v0.3.0`: the timeline, the canvas preview, audio mixing, and the Playwright
+    smoke test, which needs real editing UI to walk through.
+
 - **Bulk and batch operations**, completing `v0.2.0`,
   [#8](https://github.com/MiladNalbandi/ludus-engine/issues/8).
   - `POST /api/v1/admin/waves/bulk` imports many documents and

@@ -1,0 +1,83 @@
+/* The brand palette, from assets/brand: navy field, blue accent, slate for secondary text. */
+:root {
+  --navy: #111f3a;
+  --navy-raised: #1b2c4e;
+  --blue: #1ca9f0;
+  --slate: #8fa6c4;
+  --danger: #e06c5a;
+  --text: #ffffff;
+  --radius: 10px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--navy);
+  color: var(--text);
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+a {
+  color: var(--blue);
+}
+
+code,
+pre {
+  font-family: Menlo, Monaco, 'DejaVu Sans Mono', monospace;
+}
+
+button {
+  font: inherit;
+  border: 0;
+  border-radius: var(--radius);
+  padding: 0.6rem 1.1rem;
+  background: var(--blue);
+  color: var(--navy);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+
+input {
+  font: inherit;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--slate);
+  background: var(--navy-raised);
+  color: var(--text);
+}
+
+label {
+  display: block;
+  margin-bottom: 0.9rem;
+  color: var(--slate);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panel {
+  background: var(--navy-raised);
+  border: 1px solid rgba(143, 166, 196, 0.3);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+}
+
+.error {
+  color: var(--danger);
+}
+
+.muted {
+  color: var(--slate);
+}
