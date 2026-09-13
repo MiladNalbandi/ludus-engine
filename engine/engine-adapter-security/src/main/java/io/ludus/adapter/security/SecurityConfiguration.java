@@ -141,7 +141,9 @@ public class SecurityConfiguration {
                                                 "/api/v1/admin/xp-curve",
                                                 "/api/v1/admin/items/**",
                                                 "/api/v1/admin/items",
-                                                "/api/v1/admin/item-schema")
+                                                "/api/v1/admin/item-schema",
+                                                "/api/v1/admin/leaderboards/**",
+                                                "/api/v1/admin/leaderboards")
                                         .hasAnyRole("EDITOR", "ADMIN")
                                         // Issuing and revoking credentials is not. This matcher
                                         // is listed after the one above and would otherwise

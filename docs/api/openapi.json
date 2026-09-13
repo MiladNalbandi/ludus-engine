@@ -222,6 +222,96 @@
         }
       }
     },
+    "/api/v1/admin/leaderboards/{boardId}" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "A page of a board",
+        "operationId" : "getLeaderboardPageAsAdmin",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardPage"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Create or replace a board",
+        "description" : "`descending` says whether a bigger number is better. It belongs to the board rather than to a query, so two callers cannot disagree about a player's rank.",
+        "operationId" : "saveLeaderboard",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/LeaderboardRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Delete a board",
+        "description" : "Its scores go with it, by foreign key.",
+        "operationId" : "deleteLeaderboard",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        }
+      }
+    },
     "/api/v1/admin/items/{id}" : {
       "get" : {
         "tags" : [ "Items" ],
@@ -482,6 +572,70 @@
               "*/*" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PlayerBalance"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/leaderboards/{boardId}/me" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Where this player sits on a board",
+        "description" : "404 when they have not scored on it.",
+        "operationId" : "getOwnLeaderboardEntry",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardEntryView"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Record this player's score",
+        "description" : "The better of the new score and the existing one is kept, in the board's own direction. Always this player: there is no route that writes another's.",
+        "operationId" : "submitOwnScore",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ScoreSubmission"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardEntryView"
                 }
               }
             }
@@ -1367,6 +1521,71 @@
         }
       }
     },
+    "/api/v1/player/leaderboards" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Every board this project defines",
+        "operationId" : "listLeaderboards",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LeaderboardView"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/player/leaderboards/{boardId}" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "A page of a board, in rank order",
+        "description" : "Cursor-paged. A row whose score does not change is returned exactly once across a walk, however many other scores are written meanwhile; a row whose score does change may move. There is no page number, deliberately.",
+        "operationId" : "getLeaderboardPage",
+        "parameters" : [ {
+          "name" : "boardId",
+          "in" : "path",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "cursor",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "name" : "limit",
+          "in" : "query",
+          "required" : false,
+          "schema" : {
+            "type" : "integer",
+            "format" : "int32"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LeaderboardPage"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/me" : {
       "get" : {
         "tags" : [ "Authentication" ],
@@ -1517,6 +1736,28 @@
               "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/PlayerInventory"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/leaderboards" : {
+      "get" : {
+        "tags" : [ "Leaderboards" ],
+        "summary" : "Every board",
+        "operationId" : "listLeaderboardsAsAdmin",
+        "responses" : {
+          "200" : {
+            "description" : "OK",
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "array",
+                  "items" : {
+                    "$ref" : "#/components/schemas/LeaderboardView"
+                  }
                 }
               }
             }
@@ -1720,6 +1961,41 @@
           }
         }
       },
+      "LeaderboardRequest" : {
+        "type" : "object",
+        "description" : "A board to create or replace.",
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          },
+          "descending" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "LeaderboardView" : {
+        "type" : "object",
+        "description" : "A board the project defines, and which way it sorts.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "descending" : {
+            "type" : "boolean"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
       "ItemRequest" : {
         "type" : "object",
         "description" : "An item to create or replace.",
@@ -1830,6 +2106,40 @@
             "type" : "string"
           },
           "amount" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ScoreSubmission" : {
+        "type" : "object",
+        "description" : "A score to record. The better of the two is kept.",
+        "properties" : {
+          "score" : {
+            "type" : "integer",
+            "format" : "int64"
+          }
+        }
+      },
+      "LeaderboardEntryView" : {
+        "type" : "object",
+        "description" : "One player's place. Rank is computed, not stored.",
+        "properties" : {
+          "playerId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "score" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "rank" : {
             "type" : "integer",
             "format" : "int64"
           },
@@ -2183,6 +2493,28 @@
           },
           "nextStage" : {
             "$ref" : "#/components/schemas/XpStageView"
+          }
+        }
+      },
+      "LeaderboardPage" : {
+        "type" : "object",
+        "description" : "A page of a board, with the cursor for the next.",
+        "properties" : {
+          "board" : {
+            "$ref" : "#/components/schemas/LeaderboardView"
+          },
+          "entries" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/LeaderboardEntryView"
+            }
+          },
+          "total" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "nextCursor" : {
+            "type" : "string"
           }
         }
       },

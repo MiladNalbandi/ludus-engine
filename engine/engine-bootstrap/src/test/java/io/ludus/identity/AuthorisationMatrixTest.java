@@ -222,7 +222,13 @@ class AuthorisationMatrixTest {
                 Arguments.of("viewer", "/api/v1/admin/items", HttpStatus.FORBIDDEN),
                 Arguments.of("editor", "/api/v1/admin/items", HttpStatus.OK),
                 Arguments.of("admin", "/api/v1/admin/items", HttpStatus.OK),
-                Arguments.of("api-key", "/api/v1/player/me/inventory", HttpStatus.FORBIDDEN));
+                Arguments.of("api-key", "/api/v1/player/me/inventory", HttpStatus.FORBIDDEN),
+
+                // Boards are defined by an editor and read by a player. A key is neither.
+                Arguments.of("api-key", "/api/v1/admin/leaderboards", HttpStatus.FORBIDDEN),
+                Arguments.of("editor", "/api/v1/admin/leaderboards", HttpStatus.OK),
+                Arguments.of("api-key", "/api/v1/player/leaderboards", HttpStatus.FORBIDDEN),
+                Arguments.of("admin", "/api/v1/player/leaderboards", HttpStatus.FORBIDDEN));
     }
 
     @ParameterizedTest(name = "{0} calling {1} gets {2}")
