@@ -42,82 +42,103 @@ export function Timeline() {
           </p>
         ) : (
           blocks.map((block, index) => (
-            <button
+            <div
               key={block.id}
-              type="button"
-              title={`${block.type} · ${block.duration}s${block.jumpTo ? ' · jumps here first' : ''}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                selectBlock(block.id);
-              }}
               style={{
-                // A floor, so a zero-duration block is still clickable.
+                // The block and its reorder controls are siblings, not nested. An interactive
+                // element inside another interactive element is invalid ARIA, and it made the
+                // block's accessible name include the two arrows -- which is noise for a screen
+                // reader and is how the end-to-end test failed to find it.
                 flexGrow: Math.max(block.duration, total * 0.04),
                 flexBasis: 0,
-                minWidth: '2.5rem',
-                background:
-                  selectedBlock === block.id ? 'var(--blue)' : 'var(--navy)',
-                color: selectedBlock === block.id ? 'var(--navy)' : 'var(--text)',
-                border: `1px solid ${selectedBlock === block.id ? 'var(--blue)' : 'var(--slate)'}`,
-                borderRadius: 'var(--radius)',
-                padding: '0.5rem 0.4rem',
-                fontSize: '12px',
-                overflow: 'hidden',
-                textAlign: 'left',
-                position: 'relative',
+                minWidth: '3rem',
+                display: 'flex',
+                flexDirection: 'column',
               }}
             >
-              {/* A folded zero-duration jump is shown as a marker on the block it precedes,
-                  because that is what it is: where this movement begins. */}
-              {block.jumpTo ? (
+              <button
+                type="button"
+                // Explicit, so the name is the block rather than whatever text happens to be
+                // inside it. Also what a screen reader reads.
+                aria-label={`${block.type}, ${block.duration} seconds`}
+                aria-pressed={selectedBlock === block.id}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  selectBlock(block.id);
+                }}
+                style={{
+                  background: selectedBlock === block.id ? 'var(--blue)' : 'var(--navy)',
+                  color: selectedBlock === block.id ? 'var(--navy)' : 'var(--text)',
+                  border: `1px solid ${selectedBlock === block.id ? 'var(--blue)' : 'var(--slate)'}`,
+                  borderRadius: 'var(--radius)',
+                  padding: '0.5rem 0.4rem',
+                  fontSize: '12px',
+                  overflow: 'hidden',
+                  textAlign: 'left',
+                  position: 'relative',
+                  flexGrow: 1,
+                }}
+              >
+                {/* A folded zero-duration jump is shown as a marker on the block it precedes,
+                    because that is what it is: where this movement begins. */}
+                {block.jumpTo ? (
+                  <span
+                    title="jumps before this movement"
+                    style={{ position: 'absolute', left: 2, top: 2, color: 'var(--danger)' }}
+                  >
+                    ↷
+                  </span>
+                ) : null}
+                <span style={{ display: 'block', fontWeight: 600 }}>{block.type}</span>
                 <span
-                  aria-label="jumps before this movement"
-                  style={{ position: 'absolute', left: 2, top: 2, color: 'var(--danger)' }}
+                  style={{ display: 'block' }}
+                  className={selectedBlock === block.id ? undefined : 'muted'}
                 >
-                  ↷
+                  {block.duration}s
                 </span>
-              ) : null}
-              <div style={{ fontWeight: 600 }}>{block.type}</div>
-              <div className={selectedBlock === block.id ? undefined : 'muted'}>
-                {block.duration}s
-              </div>
-              <div style={{ display: 'flex', gap: '2px', marginTop: '0.3rem' }}>
-                <span
-                  role="button"
-                  tabIndex={0}
+              </button>
+
+              <div style={{ display: 'flex', gap: '2px', marginTop: '2px' }}>
+                <button
+                  type="button"
                   aria-label={`move ${block.type} earlier`}
+                  disabled={index === 0}
                   onClick={(event) => {
                     event.stopPropagation();
                     moveBlock(index, index - 1);
                   }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      moveBlock(index, index - 1);
-                    }
+                  style={{
+                    flex: 1,
+                    padding: '0.1rem',
+                    fontSize: '11px',
+                    background: 'var(--navy)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--slate)',
                   }}
-                  style={{ cursor: 'pointer', opacity: index === 0 ? 0.3 : 1 }}
                 >
                   ‹
-                </span>
-                <span
-                  role="button"
-                  tabIndex={0}
+                </button>
+                <button
+                  type="button"
                   aria-label={`move ${block.type} later`}
+                  disabled={index === blocks.length - 1}
                   onClick={(event) => {
                     event.stopPropagation();
                     moveBlock(index, index + 1);
                   }}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      moveBlock(index, index + 1);
-                    }
+                  style={{
+                    flex: 1,
+                    padding: '0.1rem',
+                    fontSize: '11px',
+                    background: 'var(--navy)',
+                    color: 'var(--text)',
+                    border: '1px solid var(--slate)',
                   }}
-                  style={{ cursor: 'pointer', opacity: index === blocks.length - 1 ? 0.3 : 1 }}
                 >
                   ›
-                </span>
+                </button>
               </div>
-            </button>
+            </div>
           ))
         )}
 

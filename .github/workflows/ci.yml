@@ -265,6 +265,43 @@ jobs:
             | grep -q '"accessToken"' || {
               echo "login did not return an access token in the body"; exit 1; }
 
+      # The journey from #9's acceptance criteria, in a real browser against this stack: log in,
+      # build, preview, save, publish, and fetch the result from the public API. It runs here
+      # rather than in its own job because this is the only place the editor container, the engine,
+      # PostgreSQL and the volume are all up at once, and standing that up twice costs minutes for
+      # nothing.
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: editor/package-lock.json
+
+      - name: Install the editor's test dependencies
+        working-directory: editor
+        run: npm ci
+
+      - name: Install the browser Playwright drives
+        working-directory: editor
+        run: npx playwright install --with-deps chromium
+
+      - name: The whole journey, in a browser
+        working-directory: editor
+        env:
+          CI: 'true'
+          LUDUS_EDITOR_URL: http://localhost:3000
+          LUDUS_ENGINE_URL: http://localhost:8080
+          LUDUS_E2E_EMAIL: ci@example.test
+          LUDUS_E2E_PASSWORD: ci-not-a-real-password
+        run: npm run e2e
+
+      - name: The browser trace, when it failed
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: playwright-report
+          path: editor/playwright-report/
+          retention-days: 7
+
       - name: A wrong password is refused
         run: |
           status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/auth/token \

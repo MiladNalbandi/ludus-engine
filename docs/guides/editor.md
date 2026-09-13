@@ -131,9 +131,31 @@ claiming one type means whichever loaded last silently wins.
 which needs a position picker that does not exist yet, and a half-built one that wrote the wrong
 shape would be worse than a JSON field.
 
+## The end-to-end test
+
+`editor/e2e/journey.spec.ts` walks the whole thing in a real browser against `docker compose up`:
+log in, open a wave, add a movement, scrub the preview, save, publish, and fetch the result from the
+public API — then re-fetch with the `ETag` and require a `304`.
+
+It runs inside CI's Quickstart job, because that is the only place the editor container, the engine,
+PostgreSQL and the audio volume are all up at once.
+
+```bash
+cd deploy && docker compose up -d --build
+cd ../editor && npm ci && npx playwright install chromium && npm run e2e
+```
+
+Everything checkable without a stack already is — the conversion, the stores, the simulator and the
+fetch wrapper have unit tests. What only this can catch is the failure where every component works
+and the system does not: a proxy that drops a header, a cookie the browser will not send back, a
+published wave the public route cannot see.
+
+It also asserts the session properties from the outside: the refresh cookie is `httpOnly` and
+`SameSite=Lax`, and neither `localStorage`, `sessionStorage` nor `document.cookie` contains a token.
+
 ## Not here yet
 
-Audio mixing, and the Playwright smoke test. The mixing decision `v0.3.0` calls for — never through
-a shell — is not built, and no audio mixing happens in the editor at all today. The Playwright test
-covers logging in, building, previewing, publishing and fetching from the public API; it needs a
-running stack, so it lands with CI rather than as a local-only check.
+Nothing outstanding for `v0.3.0`. The next phases add live-ops (`v0.4.0`) and then, at `v1.2.0`, a
+schema-driven editor that generates the behaviour panels from the JSON Schema rather than from the
+hand-written forms here — which is what the registry exists to make a replacement rather than a
+rewrite.
