@@ -156,6 +156,22 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ### Fixed
 
+- **The published contract described four different endpoints with one schema.** Four records were
+  named `Summary` — waves, wave levels, audio clips and API keys — and springdoc names a schema
+  after the Java class's simple name and silently keeps one of any two that collide. So
+  `docs/api/openapi.json` said `GET /api/v1/admin/audio` returns `order`, `schemaVersion` and
+  `published`, when it returns `filename`, `contentType` and `sizeBytes`. A generated client was
+  correct for waves and wrong about the other three. Nothing failed: the document was valid, the
+  endpoints worked, and only the description was untrue — which is the same failure as a green check
+  that means nothing, in the one file `v1.0.0` promises to freeze.
+  - Every request and response record now declares `@Schema(name = ...)`, and
+    `SchemaNamesAreExplicitTest` fails the build when one does not. The snapshot test would have
+    shown the collision as a diff; it would not have said what the diff meant, and "the wave-levels
+    response now references Summary" reads like housekeeping.
+  - The two routes returning `ResponseEntity<?>` were described as returning a bare object, which is
+    as useful to a generated client as no description at all. Both now declare their body type and
+    their real status codes, including the `304` and the `404`.
+
 - **An empty request body returned `401`, on every document route.** `@RequestBody` is required by
   default, so Spring refused an empty one before any controller code ran — and that refusal goes out
   through the container's error dispatch, which re-enters the security filter chain with no

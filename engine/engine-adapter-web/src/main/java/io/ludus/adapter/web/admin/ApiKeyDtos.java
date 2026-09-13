@@ -12,17 +12,17 @@ final class ApiKeyDtos {
 
     private ApiKeyDtos() {}
 
+    @Schema(name = "ApiKeyRequest")
     record CreateRequest(
             @NotBlank @Size(max = ApiKey.MAX_NAME_LENGTH)
                     @Schema(example = "android-client", description = "So a human can tell keys apart")
                     String name) {}
 
-    @Schema(
-            description =
+    @Schema(name = "ApiKeyCreated", description =
                     "The only response that ever contains the key itself. It is stored as a"
                             + " digest, so it cannot be shown again by anyone, including whoever"
                             + " runs the database.")
-    record CreatedResponse(
+        record CreatedResponse(
             String id, String name, String prefix, String role, Instant createdAt, String key) {
 
         static CreatedResponse of(ApiKeys.NewApiKey issued) {
@@ -38,6 +38,7 @@ final class ApiKeyDtos {
     }
 
     /** Everything about a key except the key. */
+    @Schema(name = "ApiKeySummary")
     record Summary(
             String id,
             String name,

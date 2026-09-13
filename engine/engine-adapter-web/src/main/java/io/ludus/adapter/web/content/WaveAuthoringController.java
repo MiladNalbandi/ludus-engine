@@ -9,6 +9,7 @@ import io.ludus.domain.content.ContentBody;
 import io.ludus.domain.content.Wave;
 import io.ludus.domain.shared.Slug;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import java.util.List;
 import java.util.Optional;
@@ -94,8 +95,10 @@ class WaveAuthoringController {
         return ResponseEntity.ok(new DeletedResponse(bulk.deleteAll(activeProject.id(), ids)));
     }
 
+    @Schema(name = "WaveBatchDeleteRequest")
     record BatchDeleteRequest(List<String> ids) {}
 
+    @Schema(name = "WaveBatchDeleteResult")
     record DeletedResponse(int deleted) {}
 
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE)

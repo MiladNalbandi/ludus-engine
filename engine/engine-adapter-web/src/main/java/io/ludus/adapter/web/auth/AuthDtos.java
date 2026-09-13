@@ -17,14 +17,16 @@ final class AuthDtos {
 
     private AuthDtos() {}
 
+    @Schema(name = "TokenRequest")
     record TokenRequest(
             @Schema(example = "you@example.com") @NotBlank String email,
             @Schema(format = "password") @NotBlank String password) {}
 
+    @Schema(name = "RefreshRequest")
     record RefreshRequest(@NotBlank String refreshToken) {}
 
-    @Schema(description = "A pair of tokens. The refresh token is shown once and is not recoverable.")
-    record TokenResponse(
+    @Schema(name = "TokenResponse", description = "A pair of tokens. The refresh token is shown once and is not recoverable.")
+        record TokenResponse(
             String accessToken,
             String tokenType,
             Instant accessTokenExpiresAt,
@@ -41,5 +43,6 @@ final class AuthDtos {
         }
     }
 
+    @Schema(name = "CurrentCaller")
     record CurrentCaller(String kind, String subject, String project, String role) {}
 }

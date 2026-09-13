@@ -66,7 +66,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/WaveSummary"
                 }
               }
             }
@@ -111,7 +111,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/WaveLevelSummary"
                 }
               }
             }
@@ -135,7 +135,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Request"
+                "$ref" : "#/components/schemas/WaveLevelRequest"
               }
             }
           },
@@ -147,7 +147,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/WaveLevelSummary"
                 }
               }
             }
@@ -232,7 +232,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/BatchRequest"
+                "$ref" : "#/components/schemas/WaveBatchRequest"
               }
             }
           }
@@ -324,7 +324,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/Summary"
+                    "$ref" : "#/components/schemas/WaveSummary"
                   }
                 }
               }
@@ -353,7 +353,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/WaveSummary"
                 }
               }
             }
@@ -380,7 +380,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/WaveSummary"
                 }
               }
             }
@@ -407,7 +407,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/WaveSummary"
                 }
               }
             }
@@ -439,7 +439,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/Summary"
+                    "$ref" : "#/components/schemas/WaveSummary"
                   }
                 }
               }
@@ -458,7 +458,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/BatchDeleteRequest"
+                "$ref" : "#/components/schemas/WaveBatchDeleteRequest"
               }
             }
           },
@@ -470,7 +470,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/DeletedResponse"
+                  "$ref" : "#/components/schemas/WaveBatchDeleteResult"
                 }
               }
             }
@@ -491,7 +491,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/Summary"
+                    "$ref" : "#/components/schemas/WaveLevelSummary"
                   }
                 }
               }
@@ -508,7 +508,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Request"
+                "$ref" : "#/components/schemas/WaveLevelRequest"
               }
             }
           },
@@ -520,7 +520,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/WaveLevelSummary"
                 }
               }
             }
@@ -548,7 +548,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/WaveLevelSummary"
                 }
               }
             }
@@ -569,7 +569,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/Summary"
+                    "$ref" : "#/components/schemas/AudioClipSummary"
                   }
                 }
               }
@@ -604,7 +604,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/AudioClipSummary"
                 }
               }
             }
@@ -625,7 +625,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/Summary"
+                    "$ref" : "#/components/schemas/ApiKeySummary"
                   }
                 }
               }
@@ -641,7 +641,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/CreateRequest"
+                "$ref" : "#/components/schemas/ApiKeyRequest"
               }
             }
           },
@@ -653,7 +653,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/CreatedResponse"
+                  "$ref" : "#/components/schemas/ApiKeyCreated"
                 }
               }
             }
@@ -683,7 +683,7 @@
                 "schema" : {
                   "type" : "array",
                   "items" : {
-                    "$ref" : "#/components/schemas/Summary"
+                    "$ref" : "#/components/schemas/WaveSummary"
                   }
                 }
               }
@@ -714,14 +714,20 @@
         } ],
         "responses" : {
           "200" : {
-            "description" : "OK",
+            "description" : "The wave's indexed fields",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WaveSummary"
                 }
               }
             }
+          },
+          "304" : {
+            "description" : "Your cached copy is current"
+          },
+          "404" : {
+            "description" : "No such published wave. A draft answers this way too"
           }
         }
       }
@@ -777,14 +783,20 @@
         } ],
         "responses" : {
           "200" : {
-            "description" : "OK",
+            "description" : "The active level and its published waves",
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/PlayableWaveLevel"
                 }
               }
             }
+          },
+          "304" : {
+            "description" : "Your cached copy is current"
+          },
+          "404" : {
+            "description" : "This project has no active level"
           }
         }
       }
@@ -801,7 +813,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/StatusResponse"
+                  "$ref" : "#/components/schemas/ContentStatus"
                 }
               }
             }
@@ -946,7 +958,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Summary"
+                  "$ref" : "#/components/schemas/ApiKeySummary"
                 }
               }
             }
@@ -957,7 +969,7 @@
   },
   "components" : {
     "schemas" : {
-      "Summary" : {
+      "WaveSummary" : {
         "type" : "object",
         "description" : "A wave's indexed fields. The document itself is fetched separately.",
         "properties" : {
@@ -988,7 +1000,7 @@
           }
         }
       },
-      "Request" : {
+      "WaveLevelRequest" : {
         "type" : "object",
         "description" : "A level's name and the waves it sequences, in play order.",
         "properties" : {
@@ -1006,7 +1018,51 @@
           }
         }
       },
-      "BatchRequest" : {
+      "WaveLevelMember" : {
+        "type" : "object",
+        "description" : "One wave's place in a level, and whether players will receive it.",
+        "properties" : {
+          "waveId" : {
+            "type" : "string"
+          },
+          "published" : {
+            "type" : "boolean"
+          }
+        }
+      },
+      "WaveLevelSummary" : {
+        "type" : "object",
+        "description" : "A level, its waves, and which of them players can actually reach.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "active" : {
+            "type" : "boolean"
+          },
+          "waves" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WaveLevelMember"
+            }
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "updatedAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "WaveBatchRequest" : {
         "type" : "object",
         "properties" : {
           "ids" : {
@@ -1066,7 +1122,7 @@
         },
         "required" : [ "refreshToken" ]
       },
-      "BatchDeleteRequest" : {
+      "WaveBatchDeleteRequest" : {
         "type" : "object",
         "properties" : {
           "ids" : {
@@ -1077,7 +1133,7 @@
           }
         }
       },
-      "DeletedResponse" : {
+      "WaveBatchDeleteResult" : {
         "type" : "object",
         "properties" : {
           "deleted" : {
@@ -1086,7 +1142,30 @@
           }
         }
       },
-      "CreateRequest" : {
+      "AudioClipSummary" : {
+        "type" : "object",
+        "description" : "An audio clip's metadata. The bytes are fetched from the stream route.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "contentType" : {
+            "type" : "string"
+          },
+          "sizeBytes" : {
+            "type" : "integer",
+            "format" : "int64"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          }
+        }
+      },
+      "ApiKeyRequest" : {
         "type" : "object",
         "properties" : {
           "name" : {
@@ -1099,7 +1178,7 @@
         },
         "required" : [ "name" ]
       },
-      "CreatedResponse" : {
+      "ApiKeyCreated" : {
         "type" : "object",
         "description" : "The only response that ever contains the key itself. It is stored as a digest, so it cannot be shown again by anyone, including whoever runs the database.",
         "properties" : {
@@ -1124,7 +1203,25 @@
           }
         }
       },
-      "StatusResponse" : {
+      "PlayableWaveLevel" : {
+        "type" : "object",
+        "description" : "The level currently being played, and its published waves in order.",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "waves" : {
+            "type" : "array",
+            "items" : {
+              "$ref" : "#/components/schemas/WaveSummary"
+            }
+          }
+        }
+      },
+      "ContentStatus" : {
         "type" : "object",
         "properties" : {
           "contentHash" : {
@@ -1147,6 +1244,31 @@
           },
           "role" : {
             "type" : "string"
+          }
+        }
+      },
+      "ApiKeySummary" : {
+        "type" : "object",
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "prefix" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "createdAt" : {
+            "type" : "string",
+            "format" : "date-time"
+          },
+          "revokedAt" : {
+            "type" : "string",
+            "format" : "date-time"
           }
         }
       }
