@@ -2,7 +2,7 @@
 
 # The editor. Built in the image so that a clone plus Docker is the only prerequisite, matching
 # Dockerfile.engine.
-FROM node:22-alpine AS build
+FROM node:26-alpine AS build
 WORKDIR /src
 
 # Dependencies first, from the lockfile alone, so an ordinary source change does not re-resolve.
@@ -15,7 +15,7 @@ COPY editor/ ./
 COPY contracts/ ../contracts/
 RUN npm run verify:types && npm run build
 
-FROM node:22-alpine AS runtime
+FROM node:26-alpine AS runtime
 
 # A non-root user, as on the engine image. Next's standalone output needs nothing else.
 RUN addgroup --system --gid 1001 ludus \
