@@ -15,13 +15,26 @@ from wavemaker.platform.config import Settings
 from wavemaker.platform.kernel.registry import AppRegistry
 from wavemaker.platform.kernel.version import PLATFORM_VERSION
 from wavemaker.platform.plugins.loader import load_manifests
+from wavemaker.platform.plugins.mounting import builtin_manifests, mount
 
 
 def build_registry(settings: Settings) -> AppRegistry:
+    """Built-in apps first, then installed plugins, through one registry.
+
+    Both come from the same loader reading the same manifest format, so an app that moves out
+    of this repository and returns through `plugin install` is the same thing to the core. It
+    also means an installed plugin cannot take a built-in app's name: the second one to
+    register is refused, whichever it is.
+    """
     registry = AppRegistry(platform_version=PLATFORM_VERSION)
-    for manifest in load_manifests(settings.plugins_directory):
+    for manifest in [*builtin_manifests(), *load_manifests(settings.plugins_directory)]:
         registry.register(manifest)
     return registry
+
+
+def builtin_names() -> set[str]:
+    """The apps whose code ships with this process, and so are the only ones with routes."""
+    return {manifest.name for manifest in builtin_manifests()}
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -30,6 +43,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="WaveMaker", version=PLATFORM_VERSION)
     app.state.registry = registry
+    mount(app, registry, builtin_names())
 
     @app.get("/health")
     def health() -> dict[str, Any]:
