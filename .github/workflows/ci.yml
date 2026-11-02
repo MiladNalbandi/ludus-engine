@@ -99,6 +99,39 @@ jobs:
           LUDUS_ENGINE_URL: http://localhost:8080
         run: npm run build
 
+  service:
+    name: Service
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+
+      - name: Install exactly what the project declares
+        working-directory: service
+        run: pip install -e ".[dev]"
+
+      # First, because it is the cheapest failure to read and the one that matters most: an app
+      # importing another app is the moment the plugin model stops being true, and no test
+      # further down this job would notice it.
+      - name: The architecture walls
+        working-directory: service
+        run: lint-imports
+
+      - name: Lint
+        working-directory: service
+        run: python -m ruff check .
+
+      - name: Types
+        working-directory: service
+        run: python -m mypy .
+
+      - name: Tests
+        working-directory: service
+        run: python -m pytest -q
+
   stack:
     name: Quickstart
     runs-on: ubuntu-latest
