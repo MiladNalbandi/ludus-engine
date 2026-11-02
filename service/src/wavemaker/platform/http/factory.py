@@ -12,6 +12,10 @@ from typing import Any
 from fastapi import FastAPI
 
 from wavemaker.platform.config import Settings
+from wavemaker.platform.identity.accounts import ensure_account
+from wavemaker.platform.identity.http import router as identity_router
+from wavemaker.platform.identity.tokens import MINIMUM_SECRET_BYTES, Role
+from wavemaker.platform.kernel.errors import ConfigurationError
 from wavemaker.platform.kernel.registry import AppRegistry
 from wavemaker.platform.kernel.version import PLATFORM_VERSION
 from wavemaker.platform.persistence.engine import (
@@ -52,7 +56,22 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.session_factory = None
     app.state.project_id = None
 
+    app.state.settings = settings
+
     if settings.database_url:
+        if not settings.jwt_secret:
+            # Loudly, at startup. A generated or defaulted key would let the service boot and
+            # issue tokens that anybody holding this source can forge, and nothing about a
+            # running service would look wrong.
+            raise ConfigurationError(
+                "WAVEMAKER_JWT_SECRET must be set when a database is configured: it is the key "
+                "every access and refresh token is signed with."
+            )
+        if len(settings.jwt_secret.encode()) < MINIMUM_SECRET_BYTES:
+            raise ConfigurationError(
+                f"WAVEMAKER_JWT_SECRET must be at least {MINIMUM_SECRET_BYTES} bytes. A shorter "
+                "key is the one secret that lets anybody mint an administrator."
+            )
         # Migrate before serving. A process that answers requests against a schema it has not
         # been migrated to is the failure where every read works and one write fails hours
         # later, on a different machine, in front of players.
@@ -63,7 +82,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             app.state.project_id = ensure_project(
                 session, settings.project_slug, settings.project_name
             )
+            if settings.admin_email and settings.admin_password:
+                ensure_account(
+                    session,
+                    app.state.project_id,
+                    settings.admin_email,
+                    settings.admin_password,
+                    Role.ADMIN,
+                )
 
+    app.include_router(identity_router)
     mount(app, registry, builtin_names())
 
     @app.get("/health")
