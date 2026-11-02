@@ -1,0 +1,81 @@
+[project]
+name = "wavemaker"
+version = "0.1.0"
+description = "WaveMaker: a modular game backend whose features are installable plugins"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.5.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-cov>=5.0.0",
+    "httpx>=0.27.0",
+    "ruff>=0.6.0",
+    "mypy>=1.11.0",
+    "import-linter>=2.0",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# `pythonpath` rather than an editable install, so `python -m pytest` works in a clean
+# checkout. keel runs its test commands straight after cloning, with no install step.
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+markers = [
+    "ac: the acceptance criterion a test proves, e.g. @pytest.mark.ac('AC-1')",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+files = ["src", "tests"]
+mypy_path = "src"
+python_version = "3.12"
+strict = true
+
+[tool.coverage.run]
+source = ["src/wavemaker"]
+
+# The wall from docs/architecture/platform.md, written as a check that fails the build.
+# An app may import the platform and itself. It may never import another app: if inventory
+# needs money it asks through a port or listens for an event. Without this, the first
+# shortcut between two apps is also the moment the plugin model quietly dies.
+[tool.importlinter]
+root_packages = ["wavemaker"]
+# Required by the "no framework in the kernel" contract: without it import-linter only
+# follows imports inside wavemaker and never sees `import fastapi` at all.
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "The platform core knows nothing about any app"
+type = "forbidden"
+source_modules = ["wavemaker.platform"]
+forbidden_modules = ["wavemaker.apps", "wavemaker.apps.*"]
+
+[[tool.importlinter.contracts]]
+name = "Apps are independent of each other"
+type = "independence"
+modules = ["wavemaker.apps.*"]
+
+[[tool.importlinter.contracts]]
+name = "A domain imports no framework"
+type = "forbidden"
+source_modules = ["wavemaker.platform.kernel"]
+forbidden_modules = ["fastapi", "sqlalchemy", "uvicorn"]
