@@ -36,3 +36,29 @@ class PlayableLevel:
     id: str
     name: str
     wave_ids: list[str]
+
+
+@dataclass(frozen=True, slots=True)
+class LevelMember:
+    """One wave's place in a level, and whether players will actually receive it.
+
+    `published` is carried here rather than looked up by whoever renders the level, because
+    "2 of 3 reach players" is the single most useful thing an author can be told and it must
+    not depend on the caller remembering to ask.
+    """
+
+    wave_id: str
+    published: bool
+
+
+@dataclass(frozen=True, slots=True)
+class LevelSummary:
+    """A level as an author sees it: every wave it names, drafts included."""
+
+    id: str
+    name: str
+    description: str | None
+    active: bool
+    waves: list[LevelMember]
+    created_at: datetime
+    updated_at: datetime

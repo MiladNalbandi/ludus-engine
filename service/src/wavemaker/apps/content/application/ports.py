@@ -13,7 +13,12 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Protocol
 
-from wavemaker.apps.content.domain.wave import PlayableLevel, WaveSummary
+from wavemaker.apps.content.domain.document import WaveDocument
+from wavemaker.apps.content.domain.wave import (
+    LevelSummary,
+    PlayableLevel,
+    WaveSummary,
+)
 
 
 class WaveRepository(Protocol):
@@ -31,3 +36,39 @@ class WaveRepository(Protocol):
 
     def active_level(self) -> PlayableLevel | None:
         """The level being played, or nothing when none is active."""
+
+
+class WaveStore(Protocol):
+    """Authoring. Separate from `WaveRepository` because reading and writing content are
+    different jobs with different callers: a game client only ever needs the first, and a
+    route that holds the smaller port cannot accidentally write."""
+
+    def all_summaries(self) -> Sequence[WaveSummary]:
+        """Every wave an author owns, drafts included, in play order."""
+
+    def document(self, wave_id: str) -> bytes | None:
+        """The stored bytes of any wave, published or not."""
+
+    def save(self, document: WaveDocument) -> WaveSummary:
+        """Create or replace a wave. Publication state is not touched: a save is not a publish."""
+
+    def set_published(self, wave_id: str, published: bool) -> WaveSummary | None:
+        """Publish or withdraw one wave; nothing when it does not exist."""
+
+    def delete(self, wave_id: str) -> bool:
+        """Remove a wave. False when there was nothing to remove."""
+
+    def next_order(self) -> int:
+        """The next free play position, so an author is not asked to guess one."""
+
+    def all_levels(self) -> Sequence[LevelSummary]:
+        """Every level, with each wave's publication state."""
+
+    def activate_level(self, level_id: str) -> LevelSummary | None:
+        """Make one level the active one; nothing when it does not exist."""
+
+    def save_all(self, documents: Sequence[WaveDocument]) -> Sequence[WaveSummary]:
+        """Save every document or none of them.
+
+        An import is one decision by an author, not a sequence of them. Half a catalogue is
+        worse than none: nobody can tell which half arrived without reading the whole thing."""
