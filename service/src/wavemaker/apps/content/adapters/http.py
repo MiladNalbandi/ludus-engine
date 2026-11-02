@@ -9,13 +9,14 @@ or reformat is free to expire every client's cache without changing any content.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, Response
+from fastapi import APIRouter, Depends, Header, Request, Response
 
 from wavemaker.apps.content.adapters.memory import InMemoryWaveRepository
+from wavemaker.apps.content.adapters.postgres import PostgresWaveRepository
 from wavemaker.apps.content.application.ports import WaveRepository
 from wavemaker.apps.content.domain import hashing
 from wavemaker.apps.content.domain.etag import matches, quote
@@ -26,14 +27,25 @@ router = APIRouter(prefix="/api/v1/public", tags=["content"])
 IfNoneMatch = Annotated[str | None, Header(alias="If-None-Match")]
 
 
-def get_wave_repository() -> WaveRepository:
-    """Where content is read from.
+def get_wave_repository(request: Request) -> Iterator[WaveRepository]:
+    """Where content is read from: PostgreSQL when one is configured, nothing when not.
 
-    Empty until R1 wires PostgreSQL behind the same port. A service with no storage answers
-    honestly — an empty catalogue with a stable hash — rather than failing at the first
-    request.
+    A service with no database answers honestly — an empty catalogue with a stable hash —
+    rather than failing at the first request. That is the shape a fresh install has before
+    anyone has pointed it at a database, and it should look like a service with no content
+    rather than a broken one.
+
+    One session per request, closed when the request ends. A session held open across requests
+    keeps a transaction open with it, and a long-lived read transaction is how a reader starts
+    serving a snapshot of the world from an hour ago.
     """
-    return InMemoryWaveRepository(waves=[], documents={}, level=None)
+    factory = getattr(request.app.state, "session_factory", None)
+    if factory is None:
+        yield InMemoryWaveRepository(waves=[], documents={}, level=None)
+        return
+
+    with factory() as session:
+        yield PostgresWaveRepository(session, request.app.state.project_id)
 
 
 Repository = Annotated[WaveRepository, Depends(get_wave_repository)]
