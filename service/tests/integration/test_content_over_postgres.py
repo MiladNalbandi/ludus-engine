@@ -26,7 +26,14 @@ SECOND = '{"id":"second","schema_version":1,"name":"Crossfire"}'
 
 @pytest.fixture
 def client(database_url: str) -> Iterator[TestClient]:
-    app = create_app(Settings(plugins_directory=None, database_url=database_url))
+    app = create_app(
+        Settings(
+            plugins_directory=None,
+            database_url=database_url,
+            # A database implies a signing key: the service refuses to start without one.
+            jwt_secret="a-content-test-signing-key-of-a-respectable-length",  # keel:allow-secret
+        )
+    )
     _seed(app.state.session_factory, app.state.project_id)
     with TestClient(app) as running:
         yield running
