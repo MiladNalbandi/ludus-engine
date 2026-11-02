@@ -14,8 +14,14 @@ from fastapi import FastAPI
 from wavemaker.platform.config import Settings
 from wavemaker.platform.kernel.registry import AppRegistry
 from wavemaker.platform.kernel.version import PLATFORM_VERSION
+from wavemaker.platform.persistence.engine import (
+    create_database_engine,
+    create_session_factory,
+    migrate,
+)
 from wavemaker.platform.plugins.loader import load_manifests
 from wavemaker.platform.plugins.mounting import builtin_manifests, mount
+from wavemaker.platform.tenancy import ensure_project
 
 
 def build_registry(settings: Settings) -> AppRegistry:
@@ -43,6 +49,21 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="WaveMaker", version=PLATFORM_VERSION)
     app.state.registry = registry
+    app.state.session_factory = None
+    app.state.project_id = None
+
+    if settings.database_url:
+        # Migrate before serving. A process that answers requests against a schema it has not
+        # been migrated to is the failure where every read works and one write fails hours
+        # later, on a different machine, in front of players.
+        migrate(settings.database_url)
+        engine = create_database_engine(settings.database_url)
+        app.state.session_factory = create_session_factory(engine)
+        with app.state.session_factory() as session:
+            app.state.project_id = ensure_project(
+                session, settings.project_slug, settings.project_name
+            )
+
     mount(app, registry, builtin_names())
 
     @app.get("/health")

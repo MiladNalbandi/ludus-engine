@@ -51,9 +51,7 @@ class AppManifest:
                 f"'>=1.2,<2', or be left out entirely."
             )
 
-        return cls(
-            name=name, version=version, requires_platform=requires.strip(), source=source
-        )
+        return cls(name=name, version=version, requires_platform=requires.strip(), source=source)
 
     @staticmethod
     def _where(source: str) -> str:

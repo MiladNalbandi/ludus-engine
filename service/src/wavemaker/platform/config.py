@@ -16,3 +16,12 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="WAVEMAKER_", extra="ignore")
 
     plugins_directory: Path | None = None
+
+    # No default either. A service with no database answers an empty catalogue honestly; one
+    # pointed at a guessed local database would look like it was working and serve nothing
+    # anybody wrote.
+    database_url: str | None = None
+
+    # The one project a self-hosted install serves. It is provisioned at startup.
+    project_slug: str = "default"
+    project_name: str = "Default"
