@@ -140,7 +140,8 @@ def test_ac1_an_item_is_deleted_with_a_204_and_is_then_gone(client: TestClient) 
     deleted = client.delete("/api/v1/admin/items/sword", headers=account(client))
     assert deleted.status_code == 204
     assert client.get("/api/v1/admin/items/sword", headers=account(client)).status_code == 404
-    assert client.delete("/api/v1/admin/items/sword", headers=account(client)).status_code == 404
+    answer = client.delete("/api/v1/admin/items/sword", headers=account(client))
+    assert answer.status_code == 404
 
 
 @pytest.mark.parametrize("item_id", ["nothing_here", "Not-An-Id", "x" * 65])

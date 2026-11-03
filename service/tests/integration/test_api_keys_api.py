@@ -69,7 +69,8 @@ def test_ac1_minting_and_revoking_keys_is_an_administrators_job(
     assert minted.status_code == 403
     assert client.get("/api/v1/admin/api-keys", headers=headers).status_code == 403
     key_id = mint_key(client)["id"]
-    assert client.delete(f"/api/v1/admin/api-keys/{key_id}", headers=headers).status_code == 403
+    answer = client.delete(f"/api/v1/admin/api-keys/{key_id}", headers=headers)
+    assert answer.status_code == 403
 
 
 def test_ac1_keys_are_closed_without_a_token(client: TestClient) -> None:

@@ -14,11 +14,15 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from sqlalchemy import CursorResult, text
+from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+
+if TYPE_CHECKING:
+    # Named only in casts: the type checker needs it, the running service does not.
+    from sqlalchemy import CursorResult
 
 from wavemaker.apps.content.domain.document import OrderTaken, WaveDocument
 from wavemaker.apps.content.domain.level import LevelDraft
@@ -207,10 +211,13 @@ class PostgresWaveRepository:
         return None if row is None else _summary(row)
 
     def delete(self, wave_id: str) -> bool:
-        result = cast("CursorResult[Any]", self._session.execute(
-            text("delete from wave where project_id = :p and wave_id = :w"),
-            {"p": self._project, "w": wave_id},
-        ))
+        result = cast(
+            "CursorResult[Any]",
+            self._session.execute(
+                text("delete from wave where project_id = :p and wave_id = :w"),
+                {"p": self._project, "w": wave_id},
+            ),
+        )
         self._session.commit()
         return bool(result.rowcount)
 
@@ -344,13 +351,16 @@ class PostgresWaveRepository:
             text("update wave_level set active = false where project_id = :p and active"),
             {"p": self._project},
         )
-        changed = cast("CursorResult[Any]", self._session.execute(
-            text("""
+        changed = cast(
+            "CursorResult[Any]",
+            self._session.execute(
+                text("""
                 update wave_level set active = true, updated_at = :now
                 where project_id = :p and id = :id
             """),
-            {"now": datetime.now(UTC), "p": self._project, "id": key},
-        ))
+                {"now": datetime.now(UTC), "p": self._project, "id": key},
+            ),
+        )
         if not changed.rowcount:
             self._session.rollback()
             return None
@@ -556,7 +566,6 @@ class PostgresWaveRepository:
         found = {row.wave_id: _summary(row) for row in rows}
         # In the order they were sent, so a caller can line the answer up with its input.
         return [found[wave_id] for wave_id in ids if wave_id in found]
-
 
 
 def _summary(row: Any) -> WaveSummary:

@@ -95,14 +95,13 @@ def test_a_refresh_token_is_not_accepted_as_a_bearer_credential(client: TestClie
 
 def test_an_access_token_cannot_be_used_to_renew(client: TestClient) -> None:
     access = sign_in(client)["accessToken"]
-    assert client.post("/api/v1/auth/refresh", json={"refreshToken": access}).status_code == 401
+    answer = client.post("/api/v1/auth/refresh", json={"refreshToken": access})
+    assert answer.status_code == 401
 
 
 def test_renewing_gives_a_new_pair(client: TestClient) -> None:
     first = sign_in(client)
-    renewed = client.post(
-        "/api/v1/auth/refresh", json={"refreshToken": first["refreshToken"]}
-    )
+    renewed = client.post("/api/v1/auth/refresh", json={"refreshToken": first["refreshToken"]})
     assert renewed.status_code == 200
     assert renewed.json()["refreshToken"] != first["refreshToken"], "the token must rotate"
 
@@ -146,7 +145,8 @@ def test_a_token_this_service_never_issued_is_refused(client: TestClient) -> Non
         role=Role.ADMIN,
         lifetime=timedelta(days=1),
     )
-    assert client.post("/api/v1/auth/refresh", json={"refreshToken": forged}).status_code == 401
+    answer = client.post("/api/v1/auth/refresh", json={"refreshToken": forged})
+    assert answer.status_code == 401
 
 
 def test_only_a_digest_of_a_refresh_token_is_stored(client: TestClient) -> None:
@@ -171,9 +171,7 @@ def test_restarting_does_not_reset_the_administrator_password(database_url: str)
             session.commit()
 
     with TestClient(create_app(settings_for(database_url))) as second:
-        refused = second.post(
-            "/api/v1/auth/token", json={"email": EMAIL, "password": PASSWORD}
-        )
+        refused = second.post("/api/v1/auth/token", json={"email": EMAIL, "password": PASSWORD})
         assert refused.status_code == 401, "startup overwrote the stored password"
 
 
@@ -189,7 +187,5 @@ def test_with_no_database_signing_in_says_so_rather_than_refusing_the_password()
     """503, not 401. Telling a caller their credentials were wrong when nothing could ever
     accept them is a lie that costs somebody an afternoon."""
     with TestClient(create_app(Settings(plugins_directory=None))) as client:
-        response = client.post(
-            "/api/v1/auth/token", json={"email": EMAIL, "password": PASSWORD}
-        )
+        response = client.post("/api/v1/auth/token", json={"email": EMAIL, "password": PASSWORD})
     assert response.status_code == 503

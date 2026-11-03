@@ -102,8 +102,10 @@ def test_open_streams_and_delete_removes(tmp_path: Path) -> None:
     assert opened is not None
     with opened:
         assert opened.read() == b"bytes"
-    assert blobs.delete(blob) is True
-    assert blobs.delete(blob) is False
+    first = blobs.delete(blob)
+    assert first is True
+    second = blobs.delete(blob)
+    assert second is False
     assert blobs.open(blob) is None
 
 

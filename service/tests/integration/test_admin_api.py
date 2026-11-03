@@ -70,16 +70,16 @@ def admin(client: TestClient, email: str = ADMIN) -> dict[str, str]:
 
 def test_authoring_is_closed_without_a_token(client: TestClient) -> None:
     assert client.get("/api/v1/admin/waves").status_code == 401
-    assert client.post("/api/v1/admin/waves", content=a_document()).status_code == 401
+    answer = client.post("/api/v1/admin/waves", content=a_document())
+    assert answer.status_code == 401
 
 
 def test_a_viewer_may_read_drafts_but_not_change_them(client: TestClient) -> None:
     """The role split, which is the only reason a viewer role exists at all."""
     headers = admin(client, VIEWER)
     assert client.get("/api/v1/admin/waves", headers=headers).status_code == 200
-    assert (
-        client.post("/api/v1/admin/waves", content=a_document(), headers=headers).status_code == 403
-    )
+    answer = client.post("/api/v1/admin/waves", content=a_document(), headers=headers)
+    assert answer.status_code == 403
 
 
 def test_a_public_route_still_needs_no_credential(client: TestClient) -> None:
@@ -172,17 +172,16 @@ def test_next_order_is_one_past_the_last(client: TestClient) -> None:
 
 def test_a_wave_can_be_deleted(client: TestClient) -> None:
     client.post("/api/v1/admin/waves", content=a_document(), headers=admin(client))
-    assert (
-        client.delete("/api/v1/admin/waves/demo_first_steps", headers=admin(client)).status_code
-        == 204
-    )
+    answer = client.delete("/api/v1/admin/waves/demo_first_steps", headers=admin(client))
+    assert answer.status_code == 204
     assert (
         client.get("/api/v1/admin/waves/demo_first_steps", headers=admin(client)).status_code == 404
     )
 
 
 def test_deleting_a_wave_that_is_not_there_is_a_404(client: TestClient) -> None:
-    assert client.delete("/api/v1/admin/waves/ghost", headers=admin(client)).status_code == 404
+    answer = client.delete("/api/v1/admin/waves/ghost", headers=admin(client))
+    assert answer.status_code == 404
 
 
 # --- publishing, and what a client sees -------------------------------------------------------
@@ -214,9 +213,8 @@ def test_unpublishing_takes_it_back(client: TestClient) -> None:
 
 
 def test_publishing_something_that_is_not_there_is_a_404(client: TestClient) -> None:
-    assert (
-        client.post("/api/v1/admin/waves/ghost/publish", headers=admin(client)).status_code == 404
-    )
+    answer = client.post("/api/v1/admin/waves/ghost/publish", headers=admin(client))
+    assert answer.status_code == 404
 
 
 def test_a_saved_wave_keeps_its_etag_when_nothing_changed(client: TestClient) -> None:
@@ -291,9 +289,7 @@ def test_two_documents_in_one_batch_cannot_claim_the_same_position(client: TestC
 
 
 def test_a_batch_that_is_not_an_array_is_a_400(client: TestClient) -> None:
-    refused = client.post(
-        "/api/v1/admin/waves/bulk", content=a_document(), headers=admin(client)
-    )
+    refused = client.post("/api/v1/admin/waves/bulk", content=a_document(), headers=admin(client))
     assert refused.status_code == 400
 
 

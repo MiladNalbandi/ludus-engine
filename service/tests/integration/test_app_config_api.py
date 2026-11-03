@@ -133,7 +133,8 @@ def test_the_public_route_needs_no_credential_and_the_admin_route_does(
 ) -> None:
     assert client.get(PUBLIC_CONFIG).status_code == 200
     assert client.get(ADMIN_CONFIG).status_code == 401
-    assert client.put(ADMIN_CONFIG, content=b"{}").status_code == 401
+    answer = client.put(ADMIN_CONFIG, content=b"{}")
+    assert answer.status_code == 401
 
 
 def test_configuration_is_edited_by_the_people_who_edit_content(client: TestClient) -> None:
@@ -141,7 +142,8 @@ def test_configuration_is_edited_by_the_people_who_edit_content(client: TestClie
     not, and a player's token is not an account's."""
     viewer = account(client, VIEWER)
     assert client.get(ADMIN_CONFIG, headers=viewer).status_code == 403
-    assert client.put(ADMIN_CONFIG, content=b"{}", headers=viewer).status_code == 403
+    answer = client.put(ADMIN_CONFIG, content=b"{}", headers=viewer)
+    assert answer.status_code == 403
 
     for allowed in (account(client, EDITOR), account(client)):
         assert client.get(ADMIN_CONFIG, headers=allowed).status_code == 200

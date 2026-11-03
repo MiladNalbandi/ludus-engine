@@ -225,7 +225,8 @@ def test_ac9_removing_a_player_or_an_item_removes_their_rows(world: World) -> No
     inventories.grant(someone, [GrantLine("sword", 1), GrantLine("arrow", 3)])
     inventories.grant(second, [GrantLine("sword", 1)])
 
-    assert PostgresCatalogue(session, project).delete("sword")
+    deleted = PostgresCatalogue(session, project).delete("sword")
+    assert deleted
     assert quantities(inventories.of(someone)) == {"arrow": 3}
     assert inventories.of(second) == []
 
