@@ -243,6 +243,65 @@ button.small {
   padding: 0.15rem 0;
 }
 
+/* A screen that came from an installed plugin rather than with the editor. Dashed, as anything
+   that is not part of the editor itself is drawn. */
+.rail-origin {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 0.3rem;
+  padding: 0 0.45rem;
+  border: 1px dashed rgba(143, 166, 196, 0.55);
+  border-radius: 999px;
+  color: var(--slate);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+
+.rail-failed {
+  padding: 0 0.6rem;
+}
+
+.rail-failed h2 {
+  margin: 0 0 0.4rem;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--danger);
+}
+
+.rail-failed ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rail-failed li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-bottom: 0.4rem;
+  padding: 0.2rem 0 0.25rem 0.6rem;
+  box-shadow: inset 2px 0 0 var(--danger);
+}
+
+.rail-failed-app {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 13px;
+}
+
+.rail-failed-reason {
+  color: var(--slate);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+/* The reasons are written to follow "could not load its screen:", so they start in lower case. */
+.rail-failed-reason::first-letter {
+  text-transform: uppercase;
+}
+
 .rail-note {
   margin: 0;
   padding: 0 0.6rem;
@@ -271,6 +330,16 @@ button.small {
 
 .shell-main {
   min-width: 0;
+}
+
+/* What a module's scoped styles are scoped to. It takes no box of its own. */
+.module-root {
+  display: contents;
+}
+
+.screen-failed .error {
+  max-width: 40rem;
+  overflow-wrap: anywhere;
 }
 
 .shell-message {

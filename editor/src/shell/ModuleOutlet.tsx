@@ -3,14 +3,15 @@
 import { useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
+import { ScreenBoundary } from '@/shell/ScreenBoundary';
 import { useShell } from '@/shell/ShellContext';
 
 /**
  * Renders the module screen at the current address, or says why there is none.
  *
  * This is the only route the shell owns for modules: `/<slug>/<rest…>`. A module's own routes are
- * matched here from its declaration, not from files under `src/app`, which is what will let a
- * module from a plugin bring screens without adding a file to this app.
+ * matched here from its declaration, not from files under `src/app`, which is what lets a module
+ * from an installed plugin bring screens without adding a file to this app.
  */
 export function ModuleOutlet() {
   const { registry, report } = useShell();
@@ -58,7 +59,15 @@ export function ModuleOutlet() {
   }
 
   // Keyed by the address, so moving from one level to another starts the screen afresh instead of
-  // showing the previous level's fields until the next one loads.
+  // showing the previous level's fields until the next one loads. The wrapper is what a module's
+  // scoped styles match (`styles.ts`); the boundary keeps a screen that throws to itself.
   const Screen = found.route.screen;
-  return <Screen key={`${slug}/${rest.join('/')}`} params={found.params} href={href} />;
+  const address = `${slug}/${rest.join('/')}`;
+  return (
+    <div className="module-root" data-module={found.module.slug}>
+      <ScreenBoundary key={address} label={found.module.label}>
+        <Screen params={found.params} href={href} />
+      </ScreenBoundary>
+    </div>
+  );
 }

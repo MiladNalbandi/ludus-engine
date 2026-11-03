@@ -16,7 +16,20 @@ import { engineBaseUrl } from '@/lib/engine';
  * by a cross-site request.
  */
 const FORWARDED_REQUEST_HEADERS = ['authorization', 'content-type', 'if-none-match', 'accept'];
-const FORWARDED_RESPONSE_HEADERS = ['content-type', 'etag', 'cache-control', 'content-disposition'];
+/**
+ * `x-content-type-options` and `content-security-policy` matter for a plugin's `ui/` files: a
+ * bundle must never be sniffed into another type, and a file opened as a page must keep the
+ * service's policy that forbids it every script. This route is excluded from the editor's own
+ * policy (`next.config.ts`) so that the service's is the one that applies.
+ */
+const FORWARDED_RESPONSE_HEADERS = [
+  'content-type',
+  'etag',
+  'cache-control',
+  'content-disposition',
+  'x-content-type-options',
+  'content-security-policy',
+];
 
 async function forward(request: Request, path: string[]): Promise<Response> {
   const url = new URL(request.url);
