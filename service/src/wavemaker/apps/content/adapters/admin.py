@@ -153,13 +153,24 @@ async def import_waves(request: Request, store: Store) -> list[dict[str, Any]]:
         except json.JSONDecodeError as broken:
             raise HTTPException(status_code=400, detail=f"/{index}: {broken}") from broken
         except DocumentError as invalid:
-            raise HTTPException(status_code=422, detail=f"/{index}{invalid}") from invalid
+            raise HTTPException(status_code=422, detail=_at(index, invalid)) from invalid
 
     try:
         return [_summary(wave) for wave in store.save_all(documents)]
     except OrderTaken as taken:
         raise HTTPException(status_code=422, detail=str(taken)) from taken
 
+
+
+def _at(index: int, problem: Exception) -> str:
+    """A problem in one document of a batch, prefixed with that document's position.
+
+    A problem that is already a pointer (`/spawn_rules/0`) extends naturally to `/2/spawn_rules/0`.
+    One that is a sentence (`the document: …`) gets a separator, or the index runs into the words
+    and reads as `/2the document`.
+    """
+    message = str(problem)
+    return f"/{index}{message}" if message.startswith("/") else f"/{index}: {message}"
 
 @router.get("/waves/{wave_id}", dependencies=[READER])
 def get_wave_document(wave_id: str, store: Store) -> Response:
