@@ -207,10 +207,13 @@ class PostgresWaveRepository:
         return None if row is None else _summary(row)
 
     def delete(self, wave_id: str) -> bool:
-        result = cast("CursorResult[Any]", self._session.execute(
-            text("delete from wave where project_id = :p and wave_id = :w"),
-            {"p": self._project, "w": wave_id},
-        ))
+        result = cast(
+            CursorResult[Any],
+            self._session.execute(
+                text("delete from wave where project_id = :p and wave_id = :w"),
+                {"p": self._project, "w": wave_id},
+            ),
+        )
         self._session.commit()
         return bool(result.rowcount)
 
@@ -324,7 +327,7 @@ class PostgresWaveRepository:
         if key is None:
             return False
         result = cast(
-            "CursorResult[Any]",
+            CursorResult[Any],
             self._session.execute(
                 text("delete from wave_level where project_id = :p and id = :id"),
                 {"p": self._project, "id": key},
@@ -344,13 +347,16 @@ class PostgresWaveRepository:
             text("update wave_level set active = false where project_id = :p and active"),
             {"p": self._project},
         )
-        changed = cast("CursorResult[Any]", self._session.execute(
-            text("""
+        changed = cast(
+            CursorResult[Any],
+            self._session.execute(
+                text("""
                 update wave_level set active = true, updated_at = :now
                 where project_id = :p and id = :id
             """),
-            {"now": datetime.now(UTC), "p": self._project, "id": key},
-        ))
+                {"now": datetime.now(UTC), "p": self._project, "id": key},
+            ),
+        )
         if not changed.rowcount:
             self._session.rollback()
             return None
@@ -378,6 +384,30 @@ class PostgresWaveRepository:
             self._session.rollback()
             raise
         return len(gone)
+
+    # --- application configuration ------------------------------------------------------------
+
+    def app_config(self) -> bytes | None:
+        """Read out of `config_json`, as a wave is: the generated column reorders keys."""
+        found = self._session.execute(
+            text("select config_json from app_config where project_id = :p"),
+            {"p": self._project},
+        ).scalar_one_or_none()
+        return None if found is None else str(found).encode()
+
+    def replace_app_config(self, document: bytes) -> bytes:
+        self._session.execute(
+            text("""
+                insert into app_config (project_id, config_json, updated_at)
+                values (:p, :doc, :now)
+                on conflict (project_id) do update set
+                    config_json = excluded.config_json,
+                    updated_at  = excluded.updated_at
+            """),
+            {"p": self._project, "doc": document.decode(), "now": datetime.now(UTC)},
+        )
+        self._session.commit()
+        return document
 
     # --- levels, below the port ---------------------------------------------------------------
 
@@ -532,7 +562,6 @@ class PostgresWaveRepository:
         found = {row.wave_id: _summary(row) for row in rows}
         # In the order they were sent, so a caller can line the answer up with its input.
         return [found[wave_id] for wave_id in ids if wave_id in found]
-
 
 
 def _summary(row: Any) -> WaveSummary:

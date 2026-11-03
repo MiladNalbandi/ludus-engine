@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
 from wavemaker.apps.content.adapters import schema
 from wavemaker.apps.content.adapters.postgres import PostgresWaveRepository
 from wavemaker.apps.content.application.ports import WaveStore
+from wavemaker.apps.content.domain import app_config
 from wavemaker.apps.content.domain.bulk import BulkError, read_batch_ids, split_documents
 from wavemaker.apps.content.domain.document import DocumentError, OrderTaken, WaveDocument
 from wavemaker.apps.content.domain.level import LevelDraft
@@ -109,9 +110,12 @@ def list_waves(store: Store) -> list[dict[str, Any]]:
 
 
 @router.get("/waves/next-order", dependencies=[READER])
-def next_order(store: Store) -> dict[str, int]:
-    """So an author is not asked to guess a free position and collide with somebody else."""
-    return {"order": store.next_order()}
+def next_order(store: Store) -> int:
+    """So an author is not asked to guess a free position and collide with somebody else.
+
+    A bare integer, as the contract and the Java have it: `nextWaveOrder` answers `7`, not an
+    object holding it, and a generated client decodes exactly that."""
+    return store.next_order()
 
 
 @router.post("/waves", dependencies=[WRITER], status_code=201)
@@ -149,13 +153,24 @@ async def import_waves(request: Request, store: Store) -> list[dict[str, Any]]:
         except json.JSONDecodeError as broken:
             raise HTTPException(status_code=400, detail=f"/{index}: {broken}") from broken
         except DocumentError as invalid:
-            raise HTTPException(status_code=422, detail=f"/{index}{invalid}") from invalid
+            raise HTTPException(status_code=422, detail=_at(index, invalid)) from invalid
 
     try:
         return [_summary(wave) for wave in store.save_all(documents)]
     except OrderTaken as taken:
         raise HTTPException(status_code=422, detail=str(taken)) from taken
 
+
+
+def _at(index: int, problem: Exception) -> str:
+    """A problem in one document of a batch, prefixed with that document's position.
+
+    A problem that is already a pointer (`/spawn_rules/0`) extends naturally to `/2/spawn_rules/0`.
+    One that is a sentence (`the document: …`) gets a separator, or the index runs into the words
+    and reads as `/2the document`.
+    """
+    message = str(problem)
+    return f"/{index}{message}" if message.startswith("/") else f"/{index}: {message}"
 
 @router.get("/waves/{wave_id}", dependencies=[READER])
 def get_wave_document(wave_id: str, store: Store) -> Response:
@@ -230,6 +245,40 @@ async def batch_delete_waves(request: Request, store: Store) -> dict[str, int]:
         return {"deleted": store.delete_all(ids)}
     except Rejected as refused:
         raise HTTPException(status_code=422, detail=str(refused)) from refused
+
+
+# --- application configuration ----------------------------------------------------------------
+
+# Edited by the people who edit content, and read by them too: unlike a wave, there is no draft
+# of a configuration for a viewer to look at, only the document every client is about to get.
+
+
+@router.get("/app-config", dependencies=[WRITER], operation_id="getAppConfig")
+def get_app_config(store: Store) -> Response:
+    """The current configuration document, `{}` when the project was never configured."""
+    return Response(content=store.app_config() or app_config.EMPTY, media_type="application/json")
+
+
+@router.put(
+    "/app-config",
+    dependencies=[WRITER],
+    operation_id="replaceAppConfig",
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": {"type": "string"}}},
+        }
+    },
+)
+async def replace_app_config(request: Request, store: Store) -> Response:
+    """The whole document, not a patch. Taken and returned as bytes: binding it to a model and
+    writing it back out would move the bytes, and with them the tag every client checks."""
+    try:
+        document = app_config.accept(await request.body())
+    except DocumentError as invalid:
+        # 422, as the Java answered: the request was read and is not acceptable.
+        raise HTTPException(status_code=422, detail=str(invalid)) from invalid
+    return Response(content=store.replace_app_config(document), media_type="application/json")
 
 
 # --- levels -----------------------------------------------------------------------------------

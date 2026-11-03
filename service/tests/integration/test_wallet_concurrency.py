@@ -17,6 +17,7 @@ import threading
 import uuid
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from typing import TypeVar
 
 import pytest
 from sqlalchemy import Engine
@@ -31,6 +32,7 @@ from wavemaker.platform.tenancy import ensure_project
 
 THREADS = 20
 ROUNDS = 5
+
 
 @pytest.fixture
 def engine(isolated_database_url: str) -> Iterator[Engine]:
@@ -58,7 +60,12 @@ def a_player(factory: sessionmaker[Session], project: uuid.UUID) -> uuid.UUID:
         return players.start(session, project, f"device-{uuid.uuid4()}").id
 
 
-def all_at_once[T](
+# A classic TypeVar rather than `def all_at_once[T]`: CodeQL does not read the 3.12 syntax and
+# reports `T` in the nested function as an uninitialised local.
+T = TypeVar("T")
+
+
+def all_at_once(  # noqa: UP047 - the TypeVar above, kept for CodeQL
     factory: sessionmaker[Session], project: uuid.UUID, work: Callable[[PostgresWallets], T]
 ) -> list[T | Exception]:
     """Run `work` on THREADS threads, released together once every one holds a connection."""

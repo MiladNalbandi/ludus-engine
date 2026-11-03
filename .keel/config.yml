@@ -5,11 +5,9 @@ flow_default: full
 runtime:
   services: docker      # docker | external | none
   app: container              # host | container  (compose: deploy/docker-compose.yml)
-  agent: devcontainer         # host | devcontainer  (.devcontainer/devcontainer.json, JDK 21)
+  agent: devcontainer         # host | devcontainer  (.devcontainer/devcontainer.json)
 
-# The Python platform is where all new work happens. The Java in engine/ is kept as the
-# reference the rewrite is checked against (see docs/architecture/platform.md, R9) and is
-# built by Maven in CI, not driven by keel.
+# The Python platform is the backend. The Java engine was removed in R9 (docs/platform/r9.md).
 backend:
   dir: service
   build: ''
@@ -18,8 +16,8 @@ frontend:
   dir: editor
   package_manager: npm
   generated: src/lib/wave-schema.ts
-# The OpenAPI document frozen at v1.0.0. FrozenContractTest fails the build on a breaking
-# change, and the Python rewrite must answer this same contract until R9.
+# The OpenAPI document frozen at v1.0.0. service/tests/integration/test_frozen_contract.py
+# fails the build on a breaking change.
 contract:
   file: docs/api/openapi-v1.json
 # No E2E suite exists. api_url is loopback v4 on purpose: the engine is published on
@@ -175,10 +173,8 @@ console:
   base_url: http://localhost:8080
   db_url_env: DATABASE_URL   # the env var holding the DSN; never a literal DSN
 
-# The Java engine is kept as a reference until R9 (#77) and is built by Maven in CI, not by keel.
-# Without this, keel detects pom.xml at the root and offers kotlin-spring as a second API stack
-# beside python, which is how earlier flows ended up running Maven against Python criteria.
-# django is the stack of an abandoned attempt and has nothing to build.
+# kotlin-spring was the Java engine, removed in R9 (#77); ignored so a stale detection cannot
+# offer it again. django is the stack of an abandoned attempt and has nothing to build.
 stacks:
   ignore:
   - django

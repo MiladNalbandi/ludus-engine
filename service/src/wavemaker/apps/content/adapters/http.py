@@ -18,7 +18,7 @@ from fastapi import APIRouter, Depends, Header, Request, Response
 from wavemaker.apps.content.adapters.memory import InMemoryWaveRepository
 from wavemaker.apps.content.adapters.postgres import PostgresWaveRepository
 from wavemaker.apps.content.application.ports import WaveRepository
-from wavemaker.apps.content.domain import hashing
+from wavemaker.apps.content.domain import app_config, hashing
 from wavemaker.apps.content.domain.etag import matches, quote
 from wavemaker.apps.content.domain.wave import WaveSummary
 from wavemaker.platform.kernel.storable import storable
@@ -161,6 +161,20 @@ def get_active_wave_level(repository: Repository, if_none_match: IfNoneMatch = N
     playable = _published_in(level.wave_ids, repository)
     body = {"id": level.id, "name": level.name, "waves": [_summary(w) for w in playable]}
     return _conditional(body, hashing.of_catalogue(playable), if_none_match)
+
+
+@router.get("/app-config", operation_id="getPublicAppConfig")
+def get_public_app_config(repository: Repository, if_none_match: IfNoneMatch = None) -> Response:
+    """The settings this game should launch with: the stored bytes, tagged by a hash of them.
+
+    Always an answer, `{}` for a project nobody configured. Fetched by every client on every
+    launch, which is why the tag is over the exact bytes and nothing else.
+    """
+    document = repository.app_config() or app_config.EMPTY
+    tag = hashing.of_document(document)
+    if matches(if_none_match, tag):
+        return Response(status_code=304, headers={"ETag": quote(tag)})
+    return Response(content=document, media_type="application/json", headers={"ETag": quote(tag)})
 
 
 def _published_in(wave_ids: Sequence[str], repository: Repository) -> list[WaveSummary]:

@@ -43,7 +43,8 @@ def a_player(client: TestClient, key: str, name: str | None = None) -> tuple[dic
     session = start_session(client, key, f"device-{uuid.uuid4()}")
     headers = {"Authorization": f"Bearer {session['token']}"}
     if name is not None:
-        assert client.patch("/api/v1/player/me", headers=headers, json={"displayName": name})
+        answer = client.patch("/api/v1/player/me", headers=headers, json={"displayName": name})
+        assert answer
     return headers, str(session["playerId"])
 
 
@@ -141,7 +142,8 @@ def test_ac1_a_viewer_may_neither_define_nor_read_a_board_as_an_administrator(
     assert save_board(client, "other", email=VIEWER).status_code == 403
     assert client.get("/api/v1/admin/leaderboards", headers=viewer).status_code == 403
     assert client.get("/api/v1/admin/leaderboards/high_score", headers=viewer).status_code == 403
-    assert client.delete("/api/v1/admin/leaderboards/high_score", headers=viewer).status_code == 403
+    answer = client.delete("/api/v1/admin/leaderboards/high_score", headers=viewer)
+    assert answer.status_code == 403
 
 
 def test_ac1_a_player_may_not_define_a_board(client: TestClient, key: str) -> None:
@@ -176,8 +178,10 @@ def test_ac1_deleting_a_board_takes_its_scores_with_it(client: TestClient, key: 
     submit(client, headers, "high_score", 10)
     editor = account(client, EDITOR)
 
-    assert client.delete("/api/v1/admin/leaderboards/high_score", headers=editor).status_code == 204
-    assert client.delete("/api/v1/admin/leaderboards/high_score", headers=editor).status_code == 404
+    answer = client.delete("/api/v1/admin/leaderboards/high_score", headers=editor)
+    assert answer.status_code == 204
+    answer = client.delete("/api/v1/admin/leaderboards/high_score", headers=editor)
+    assert answer.status_code == 404
     save_board(client, "high_score")
     assert page(client, headers, "high_score")["total"] == 0
 
@@ -472,7 +476,8 @@ def test_ac9_a_board_that_is_not_there_is_404_on_every_route(
     response = client.get(f"/api/v1/player/leaderboards/{board}/me", headers=headers)
     assert response.status_code == 404
     assert client.get(f"/api/v1/admin/leaderboards/{board}", headers=editor).status_code == 404
-    assert client.delete(f"/api/v1/admin/leaderboards/{board}", headers=editor).status_code == 404
+    answer = client.delete(f"/api/v1/admin/leaderboards/{board}", headers=editor)
+    assert answer.status_code == 404
 
 
 @pytest.mark.parametrize(

@@ -20,8 +20,8 @@ engine does that — Ludus tells it what to build.
 
 |                                              |                                                                           |
 | -------------------------------------------- | ------------------------------------------------------------------------- |
-| [Getting started](guides/getting-started.md) | Run the engine locally and confirm it works                               |
-| [The editor](guides/editor.md)               | The visual editor, and why the browser never talks to the engine directly |
+| [Getting started](guides/getting-started.md) | Run the service locally and confirm it works                              |
+| [The editor](guides/editor.md)               | The visual editor, and why the browser never talks to the service directly |
 | [Deployment](operations/deployment.md)       | Running it somewhere real                                                 |
 | [Upgrading](operations/upgrading.md)         | The versioning promise, and what it does not cover                        |
 | [Configuration](operations/configuration.md) | Every environment variable, and which ones have security consequences     |
@@ -38,9 +38,8 @@ engine does that — Ludus tells it what to build.
 |                                                |                                                                                               |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
 | [Overview](architecture/overview.md)           | The pieces, the modules, and two ideas worth understanding early                              |
-| [Hexagonal rules](architecture/hexagonal.md)   | The layering, and how the build enforces it                                                   |
 | [Decision records](architecture/adr/)          | Why things are the way they are, including rejected options                                   |
-| [WaveMaker platform](architecture/platform.md) | **Proposal.** The modular plugin platform this becomes, and how the Python rewrite gets there |
+| [WaveMaker platform](architecture/platform.md) | The modular plugin platform, the walls the build enforces, and how the rewrite got here       |
 
 ## Project
 

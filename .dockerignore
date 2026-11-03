@@ -1,0 +1,18 @@
+# The images are built with the repository root as their context. Each Dockerfile copies only
+# what it needs, so this list is about speed and about never sending a local secret or a local
+# environment to the daemon: a virtualenv or node_modules built on a Mac is the wrong platform
+# for the image anyway, and the image builds its own.
+.git
+**/.env
+**/node_modules
+**/.next
+**/__pycache__
+**/*.pyc
+service/.venv
+service/.pytest_cache
+service/.mypy_cache
+service/.ruff_cache
+service/.import_linter_cache
+**/*.egg-info
+editor/playwright-report
+editor/test-results

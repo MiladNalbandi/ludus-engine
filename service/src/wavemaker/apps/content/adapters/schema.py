@@ -25,7 +25,7 @@ from jsonschema.exceptions import ValidationError
 from wavemaker.apps.content.domain.document import DocumentError
 from wavemaker.platform.kernel.storable import UnstorableText, refuse_unstorable_in
 
-# contracts/ is the project's, shared with the Java engine and the editor's type generator.
+# contracts/ is the project's, shared with the editor's type generator.
 # Reached by walking out of service/src/wavemaker/apps/content/adapters/ to the repository root.
 #
 # That only works while this app lives in this repository. Once an app is a package somebody

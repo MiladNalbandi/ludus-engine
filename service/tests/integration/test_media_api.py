@@ -112,7 +112,8 @@ def stored_files(blobs: Path) -> list[Path]:
 def test_ac1_the_admin_routes_are_closed_without_a_token(client: TestClient, route: str) -> None:
     assert client.get(f"/api/v1/admin/{route}").status_code == 401
     assert upload(client, route, OGG, "audio/ogg", headers={}).status_code == 401
-    assert client.delete(f"/api/v1/admin/{route}/{uuid.uuid4()}").status_code == 401
+    answer = client.delete(f"/api/v1/admin/{route}/{uuid.uuid4()}")
+    assert answer.status_code == 401
 
 
 @pytest.mark.ac("AC-1")
@@ -121,7 +122,8 @@ def test_ac1_a_viewer_may_list_but_not_change(client: TestClient, route: str) ->
     viewer = bearer(client, VIEWER)
     assert client.get(f"/api/v1/admin/{route}", headers=viewer).status_code == 200
     assert upload(client, route, PNG, "image/png", headers=viewer).status_code == 403
-    assert client.delete(f"/api/v1/admin/{route}/{uuid.uuid4()}", headers=viewer).status_code == 403
+    answer = client.delete(f"/api/v1/admin/{route}/{uuid.uuid4()}", headers=viewer)
+    assert answer.status_code == 403
 
 
 @pytest.mark.ac("AC-1")
@@ -165,10 +167,8 @@ def test_ac1_a_sprite_is_uploaded_listed_and_deleted(client: TestClient, blobs: 
     assert summary["sizeBytes"] == len(PNG)
 
     assert client.get("/api/v1/admin/sprites", headers=bearer(client)).json() == [summary]
-    assert (
-        client.delete(f"/api/v1/admin/sprites/{summary['id']}", headers=bearer(client)).status_code
-        == 204
-    )
+    answer = client.delete(f"/api/v1/admin/sprites/{summary['id']}", headers=bearer(client))
+    assert answer.status_code == 204
     assert client.get("/api/v1/admin/sprites", headers=bearer(client)).json() == []
     assert stored_files(blobs) == []
 
@@ -186,10 +186,8 @@ def test_ac1_audio_and_sprites_are_separate_catalogues(client: TestClient) -> No
     sprite = upload(client, "sprites", PNG, "image/png").json()
     assert client.get("/api/v1/admin/audio", headers=bearer(client)).json() == []
     assert client.get(f"/api/v1/public/audio/{sprite['id']}").status_code == 404
-    assert (
-        client.delete(f"/api/v1/admin/audio/{sprite['id']}", headers=bearer(client)).status_code
-        == 404
-    )
+    answer = client.delete(f"/api/v1/admin/audio/{sprite['id']}", headers=bearer(client))
+    assert answer.status_code == 404
     assert client.get(f"/api/v1/public/sprites/{sprite['id']}").status_code == 200
 
 
@@ -197,7 +195,8 @@ def test_ac1_audio_and_sprites_are_separate_catalogues(client: TestClient) -> No
 @pytest.mark.parametrize("route", ["audio", "sprites"])
 @pytest.mark.parametrize("clip", [str(uuid.UUID(int=0)), "not-an-id", "..%2F..%2Fetc"])
 def test_ac1_deleting_what_is_not_there_is_a_404(client: TestClient, route: str, clip: str) -> None:
-    assert client.delete(f"/api/v1/admin/{route}/{clip}", headers=bearer(client)).status_code == 404
+    answer = client.delete(f"/api/v1/admin/{route}/{clip}", headers=bearer(client))
+    assert answer.status_code == 404
 
 
 # --- AC-2: serving, cached immutably, with a tag ------------------------------------------

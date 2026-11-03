@@ -21,11 +21,11 @@
   <a href="https://github.com/miladnalbandi/ludus-engine/issues/18"><img alt="Roadmap" src="https://img.shields.io/badge/roadmap-%2318-5B4FE9"></a>
 </p>
 
-> **Status: moving to Python.** Ludus is being rebuilt as **WaveMaker**, a modular game backend in
-> Python and FastAPI where every feature is a plugin you can publish and install. The Python service
-> already serves and authors content, signs people in, and runs the web editor unchanged. The
-> Java `v1.0.0` engine stays in this repository as the reference the rewrite is checked against,
-> until every v1 contract test passes on Python ([#77](https://github.com/MiladNalbandi/ludus-engine/issues/77)).
+> **Status: rebuilt in Python.** Ludus now runs on **WaveMaker**, a modular game backend in Python
+> and FastAPI where every feature is a plugin you can publish and install. It serves the whole
+> frozen `v1.0.0` HTTP contract, proved by a test that walks every operation and schema of it, so
+> clients built against the Java engine need no change. The Java engine was removed in
+> [R9](docs/platform/r9.md).
 
 ## What it is, and what it is not
 
@@ -43,20 +43,22 @@ Your engine does that. Ludus tells it what to build.
 git clone https://github.com/miladnalbandi/ludus-engine.git
 cd ludus-engine
 cp deploy/.env.example deploy/.env
-# Set LUDUS_JWT_SECRET (openssl rand -base64 48) and the two LUDUS_ADMIN_* values.
-# The engine refuses to start without a signing secret, deliberately.
+# Set WAVEMAKER_DB_PASSWORD, WAVEMAKER_JWT_SECRET (openssl rand -base64 48) and the two
+# WAVEMAKER_ADMIN_* values. The service refuses to start without a signing secret, deliberately.
 docker compose -f deploy/docker-compose.yml up
 ```
 
-That starts the Java `v1.0.0` engine, which is still the one the Quickstart deploys. Then open:
+That builds and starts the service, PostgreSQL and the editor, with named volumes for uploads and
+plugins. Then open:
 
 | | |
 |---|---|
+| The editor | http://localhost:3000 |
 | API documentation | http://localhost:8080/docs |
-| OpenAPI document | http://localhost:8080/api-docs |
-| Health | http://localhost:8080/actuator/health |
+| OpenAPI document | http://localhost:8080/openapi.json |
+| Health | http://localhost:8080/health |
 
-### The Python service
+### From source
 
 You need Python 3.12 and Docker — the tests run against a real PostgreSQL in a container.
 
@@ -64,7 +66,7 @@ You need Python 3.12 and Docker — the tests run against a real PostgreSQL in a
 cd service
 uv venv --python 3.12 .venv && . .venv/bin/activate
 uv pip install -e ".[dev]"
-python -m pytest -q        # 179 tests
+python -m pytest -q        # every test, including the frozen v1 contract
 lint-imports               # the architecture walls
 ```
 
@@ -79,8 +81,6 @@ python -m uvicorn --factory wavemaker.platform.http.factory:create_app --port 80
 
 It migrates the database and creates the first administrator on start, and refuses to start
 without a signing key of at least 32 bytes. See [service/README.md](service/README.md).
-
-To build and test the Java engine you need JDK 21: `./mvnw verify`.
 
 ## Architecture
 
@@ -114,24 +114,22 @@ when:
 Each was tested by breaking it on purpose. The design, and the reasoning behind every choice, is in
 [docs/architecture/platform.md](docs/architecture/platform.md).
 
-The Java engine (`engine/`) is hexagonal too, enforced by the Maven enforcer and ArchUnit. See
-[docs/architecture/hexagonal.md](docs/architecture/hexagonal.md).
-
-| | Python service | Java reference |
-|---|---|---|
-| Language | Python 3.12 | Java 21 |
-| Web | FastAPI | Spring Boot |
-| Database | PostgreSQL 16, SQLAlchemy, Alembic | PostgreSQL 16, Flyway |
-| Auth | PyJWT, Argon2id | Spring Security |
-| Tests | pytest, Testcontainers | JUnit, ArchUnit |
-| Architecture checks | import-linter | Maven enforcer, ArchUnit |
-| Lint and types | ruff, mypy `--strict` | — |
+| | |
+|---|---|
+| Language | Python 3.12 |
+| Web | FastAPI, uvicorn |
+| Database | PostgreSQL 16, SQLAlchemy, Alembic |
+| Auth | PyJWT, Argon2id |
+| Tests | pytest, Testcontainers |
+| Architecture checks | import-linter |
+| Lint and types | ruff, mypy `--strict` |
+| Editor | Next.js, TypeScript, Vitest, Playwright |
 
 ## The content contract
 
 Content is JSON, validated against a JSON Schema that lives in exactly one place —
 [`contracts/schemas/wave/v1.json`](contracts/schemas/wave/v1.json) — and is shared by the
-engine, the editor and every client. There is no second copy to drift.
+service, the editor and every client. There is no second copy to drift.
 
 `samples/waves/` holds three worked examples, and they are validated against that schema on
 every build. If a sample and the contract disagree, CI fails.
@@ -140,27 +138,28 @@ every build. If a sample and the contract disagree, CI fails.
 
 ### WaveMaker — the Python platform
 
-Each release is a working service, and the frozen HTTP contract does not change during the
-rewrite: if the contract tests pass, the Python is correct.
+Each release was a working service, and the frozen HTTP contract did not change during the
+rewrite: the contract tests passing is what said the Python was correct.
 
 | | Release | |
 |---|---|---|
 | ✅ | R0 | The core boots, loads apps, and refuses the ones that must not run |
 | ✅ | R1 | Content read side, on PostgreSQL, with ETag caching |
 | ✅ | R2 | Identity, and authoring — **the editor runs on Python unchanged** |
-| 📋 | [R2c](https://github.com/MiladNalbandi/ludus-engine/issues/70) | Level authoring routes |
-| 📋 | [R3](https://github.com/MiladNalbandi/ludus-engine/issues/71) | Players and economy |
-| 📋 | [R4](https://github.com/MiladNalbandi/ludus-engine/issues/72) | Inventory, the first app built plugin-first |
-| 📋 | [R5](https://github.com/MiladNalbandi/ludus-engine/issues/73) | **Publish and install a plugin** — the release that makes this a platform |
-| 📋 | [R6](https://github.com/MiladNalbandi/ludus-engine/issues/74) | Leaderboards and progression |
-| 📋 | [R7](https://github.com/MiladNalbandi/ludus-engine/issues/75) | Media: audio and sprites |
-| 📋 | [R8](https://github.com/MiladNalbandi/ludus-engine/issues/76) | The editor as a shell plus app modules |
-| 📋 | [R9](https://github.com/MiladNalbandi/ludus-engine/issues/77) | Remove the Java |
+| ✅ | [R2c](https://github.com/MiladNalbandi/ludus-engine/issues/70) | Level authoring routes |
+| ✅ | [R3](https://github.com/MiladNalbandi/ludus-engine/issues/71) | Players and economy |
+| ✅ | [R4](https://github.com/MiladNalbandi/ludus-engine/issues/72) | Inventory, the first app built plugin-first |
+| ✅ | [R5](https://github.com/MiladNalbandi/ludus-engine/issues/73) | **Publish and install a plugin** — the release that makes this a platform |
+| ✅ | [R6](https://github.com/MiladNalbandi/ludus-engine/issues/74) | Leaderboards and progression |
+| ✅ | [R7](https://github.com/MiladNalbandi/ludus-engine/issues/75) | Media: audio and sprites |
+| 🚧 | [R8](https://github.com/MiladNalbandi/ludus-engine/issues/76) | The editor as a shell plus app modules |
+| ✅ | [R9](https://github.com/MiladNalbandi/ludus-engine/issues/77) | Remove the Java |
 
-### The Java engine, `v1.x`
+### Before WaveMaker, `v0.x` to `v1.0.0`
 
 Tracked in [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18). These releases shipped in
-Java; the features from `v1.1.0` on are now planned as WaveMaker apps instead.
+Java, and the engine they built was removed in R9 once the Python served the same contract; the
+features from `v1.1.0` on are planned as WaveMaker apps instead.
 
 | | Release | |
 |---|---|---|
@@ -184,11 +183,14 @@ by git URL and version it independently. It will be **Apache-2.0**, not AGPL: se
 
 ## The API contract
 
-The HTTP contract is committed at [`docs/api/openapi.json`](docs/api/openapi.json) and is **frozen
-from `1.0.0`**: a breaking change costs a major version, and `FrozenContractTest` fails the build if
-one lands without it. See [upgrading](docs/operations/upgrading.md) for what counts as breaking.
+The HTTP contract is committed at [`docs/api/openapi-v1.json`](docs/api/openapi-v1.json) and is
+**frozen from `1.0.0`**: a breaking change costs a major version, and
+[`test_frozen_contract.py`](service/tests/integration/test_frozen_contract.py) fails the build if one
+lands without it — it calls every operation of the frozen document against the service and holds
+every request and response to its schema. See [upgrading](docs/operations/upgrading.md) for what
+counts as breaking.
 
-Swagger UI is at `/docs` on a running engine, and the raw document at `/api-docs`.
+Swagger UI is at `/docs` on a running service, and the service's own document at `/openapi.json`.
 
 ## Documentation
 
@@ -198,7 +200,7 @@ Swagger UI is at `/docs` on a running engine, and the raw document at `/api-docs
 - [The content model](docs/concepts/content-model.md) — documents, schemas, drafts and publication
 - [Caching and change detection](docs/concepts/caching.md) — how clients know content changed
 - [Architecture overview](docs/architecture/overview.md) and the
-  [hexagonal rules](docs/architecture/hexagonal.md) that the build enforces
+  [platform design](docs/architecture/platform.md), with the walls the build enforces
 - [Deployment](docs/operations/deployment.md) and the
   [configuration reference](docs/operations/configuration.md)
 - [Decision records](docs/architecture/adr/) — including options that were rejected, and why
@@ -216,7 +218,7 @@ patches. Discussions are open for questions and ideas.
 
 | Part | Licence | Why |
 |---|---|---|
-| Engine and editor | **AGPL-3.0-or-later** | Improvements to the server come back to everyone |
+| Service and editor | **AGPL-3.0-or-later** | Improvements to the server come back to everyone |
 | `contracts/` | Apache-2.0 | Speaking a protocol should not require a licence |
 | `sdk/` (client SDKs) | Apache-2.0 | Linking a client into your game must not affect your game |
 | `samples/` | CC0-1.0 | Copy them |

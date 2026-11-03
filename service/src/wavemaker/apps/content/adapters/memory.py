@@ -18,10 +18,12 @@ class InMemoryWaveRepository:
         waves: Sequence[WaveSummary],
         documents: Mapping[str, bytes],
         level: PlayableLevel | None,
+        app_config: bytes | None = None,
     ) -> None:
         self._waves = list(waves)
         self._documents = dict(documents)
         self._level = level
+        self._app_config = app_config
 
     def published_catalogue(self) -> Sequence[WaveSummary]:
         return [wave for wave in sorted(self._waves, key=lambda w: w.order) if wave.published]
@@ -44,3 +46,6 @@ class InMemoryWaveRepository:
 
     def active_level(self) -> PlayableLevel | None:
         return self._level
+
+    def app_config(self) -> bytes | None:
+        return self._app_config

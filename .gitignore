@@ -1,9 +1,5 @@
-target/
 node_modules/
 *.log
-*.class
-*.jar
-*.war
 .env
 .env.local
 *.tsbuildinfo
@@ -12,11 +8,10 @@ node_modules/
 *.iml
 .vscode/
 
-# Anchored to the repository root on purpose. Unanchored, `out/` matches at any depth, and this
-# codebase puts outbound ports in packages named `port/out` — so the first outbound port written
-# was ignored, staged nothing, and committed a build that only compiled because the file was
-# still on disk. A web build directory belongs to whichever subproject produces it; when the
-# editor arrives it can ignore its own.
+# Anchored to the repository root on purpose. Unanchored, `out/` matches at any depth and
+# silently ignores any source directory that happens to share the name — which once kept a
+# whole package out of a commit while the build still passed from the copy on disk. A build
+# directory belongs to whichever subproject produces it, and that subproject ignores its own.
 /out/
 /dist/
 /.next/

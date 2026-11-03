@@ -13,6 +13,9 @@ concurrency:
 permissions:
   contents: read
 
+# The job names "Build and test", "Secret scan" and "Quickstart" are required status checks on
+# main, matched by name. Renaming one blocks every pull request until the branch protection is
+# edited to match, so they keep their names whatever they come to run.
 jobs:
   build:
     name: Build and test
@@ -20,31 +23,42 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
+          python-version: '3.12'
 
-      # Runs unit tests, the schema conformance tests, the architecture rules and the
-      # enforcer bans. The project this was extracted from never ran a test in CI; that is
-      # not repeated here.
-      - name: Verify
-        run: ./mvnw -B verify
+      - name: Install exactly what the project declares
+        working-directory: service
+        run: pip install -e ".[dev]"
 
-      # The snapshot is committed, so `verify` above already compared against it and a drift
-      # failed the build. This step exists for the reviewer: it prints the difference rather than
-      # leaving them to infer it from an assertion message.
-      - name: Show the contract diff if it moved
-        if: failure()
-        run: git --no-pager diff -- docs/api/openapi.json
+      # First, because it is the cheapest failure to read and the one that matters most: an app
+      # importing another app is the moment the plugin model stops being true, and no test
+      # further down this job would notice it.
+      - name: The architecture walls
+        working-directory: service
+        run: lint-imports
+
+      - name: Lint
+        working-directory: service
+        run: python -m ruff check .
+
+      - name: Types
+        working-directory: service
+        run: python -m mypy .
+
+      # Unit and integration tests, the latter against a real PostgreSQL in a container. This
+      # includes test_frozen_contract.py, which walks every operation and schema of the v1
+      # contract against the service: the check that keeps `1.0.0` a promise.
+      - name: Tests
+        working-directory: service
+        run: python -m pytest -q --junitxml=test-results.xml
 
       - name: Publish test results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: surefire-reports
-          path: '**/target/surefire-reports/**'
+          name: pytest-results
+          path: service/test-results.xml
           retention-days: 7
           if-no-files-found: ignore
 
@@ -76,7 +90,7 @@ jobs:
         run: npm ci
 
       # Before anything else: if the wave schema moved and the generated types did not, the rest
-      # of this job would be checking the editor against a contract the engine no longer has.
+      # of this job would be checking the editor against a contract the service no longer has.
       - name: The generated wave types match the schema
         working-directory: editor
         run: npm run verify:types
@@ -99,169 +113,164 @@ jobs:
           LUDUS_ENGINE_URL: http://localhost:8080
         run: npm run build
 
-  service:
-    name: Service
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-
-      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.12'
-
-      - name: Install exactly what the project declares
-        working-directory: service
-        run: pip install -e ".[dev]"
-
-      # First, because it is the cheapest failure to read and the one that matters most: an app
-      # importing another app is the moment the plugin model stops being true, and no test
-      # further down this job would notice it.
-      - name: The architecture walls
-        working-directory: service
-        run: lint-imports
-
-      - name: Lint
-        working-directory: service
-        run: python -m ruff check .
-
-      - name: Types
-        working-directory: service
-        run: python -m mypy .
-
-      - name: Tests
-        working-directory: service
-        run: python -m pytest -q
-
   stack:
     name: Quickstart
     runs-on: ubuntu-latest
+    env:
+      COMPOSE: docker compose -f deploy/docker-compose.yml
+      SERVICE: http://localhost:8080
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      # The README promises that a clone plus two commands gives a running engine. This job
-      # is what stops that promise from quietly becoming false.
+      # The README promises that a clone plus two commands gives a running service. This job is
+      # what stops that promise from quietly becoming false, and it is the only check that
+      # builds the real image and mounts a real volume.
       - name: Bring the stack up exactly as the README describes
         run: |
-          # The same three values the getting-started guide tells a reader to set, generated
-          # the same way. The signing secret has no default and the engine refuses to start
-          # without one, so a quickstart that did not set it would only ever prove that.
-          sed -e 's/^LUDUS_DB_PASSWORD=.*/LUDUS_DB_PASSWORD=ci-not-a-real-password/' \
-              -e "s|^LUDUS_JWT_SECRET=.*|LUDUS_JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')|" \
-              -e 's/^LUDUS_ADMIN_EMAIL=.*/LUDUS_ADMIN_EMAIL=ci@example.test/' \
-              -e 's/^LUDUS_ADMIN_PASSWORD=.*/LUDUS_ADMIN_PASSWORD=ci-not-a-real-password/' \
+          # The same values the getting-started guide tells a reader to set, generated the same
+          # way. The signing secret has no default and the service refuses to start without one,
+          # so a quickstart that did not set it would only ever prove that.
+          sed -e 's/^WAVEMAKER_DB_PASSWORD=.*/WAVEMAKER_DB_PASSWORD=ci-not-a-real-password/' \
+              -e "s|^WAVEMAKER_JWT_SECRET=.*|WAVEMAKER_JWT_SECRET=$(openssl rand -base64 48 | tr -d '\n')|" \
+              -e 's/^WAVEMAKER_ADMIN_EMAIL=.*/WAVEMAKER_ADMIN_EMAIL=ci@example.test/' \
+              -e 's/^WAVEMAKER_ADMIN_PASSWORD=.*/WAVEMAKER_ADMIN_PASSWORD=ci-not-a-real-password/' \
             deploy/.env.example > deploy/.env
-          docker compose -f deploy/docker-compose.yml up -d --build
+          $COMPOSE up -d --build
 
-      - name: Wait for the engine to report healthy
+      # /health answers only after the service has migrated the database and provisioned the
+      # project, because both happen before it serves anything.
+      - name: Wait for the service to report healthy
         run: |
           for i in $(seq 1 60); do
-            if curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"'; then
-              echo "engine is up after ${i}0s"; exit 0
+            if curl -fsS "$SERVICE/health" | grep -q '"status":"ok"'; then
+              echo "service is up after $((i * 5))s"; exit 0
             fi
-            sleep 10
+            sleep 5
           done
-          echo "engine did not become healthy"; exit 1
+          echo "service did not become healthy"; exit 1
 
-      - name: The API contract is served
-        run: curl -fsS http://localhost:8080/api-docs | grep -q 'Ludus Engine API'
+      - name: Every built-in app loaded, and the API document is served
+        run: |
+          health=$(curl -fsS "$SERVICE/health")
+          echo "$health"
+          for app in content economy inventory leaderboard media progression; do
+            echo "$health" | grep -q "\"name\":\"$app\"" || { echo "$app did not load"; exit 1; }
+          done
+          curl -fsS "$SERVICE/openapi.json" | grep -q '"title":"WaveMaker"'
 
       - name: Anything not deliberately open needs a credential
         run: |
-          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/anything)
-          test "$status" = "401" || { echo "expected 401, got $status"; exit 1; }
+          for path in /api/v1/admin/waves /api/v1/me /api/v1/player/me; do
+            status=$(curl -s -o /dev/null -w '%{http_code}' "$SERVICE$path")
+            test "$status" = "401" || { echo "$path: expected 401, got $status"; exit 1; }
+          done
 
-      # Signing in is the one flow a reader is promised will work after two commands, and it is
-      # the only one of these steps that touches the database, the migrations, the seeded
-      # administrator and the filter chains all at once.
+      # Signing in is the one flow a reader is promised will work after two commands, and it
+      # touches the database, the migrations and the seeded administrator all at once.
       - name: An administrator can sign in and is recognised
         run: |
-          token=$(curl -fsS http://localhost:8080/api/v1/auth/token \
+          token=$(curl -fsS "$SERVICE/api/v1/auth/token" \
             -H 'Content-Type: application/json' \
             -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
-            | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+            | sed -n 's/.*"accessToken": *"\([^"]*\)".*/\1/p')
           test -n "$token" || { echo "no access token in the response"; exit 1; }
-          curl -fsS http://localhost:8080/api/v1/me -H "Authorization: Bearer $token" \
+          curl -fsS "$SERVICE/api/v1/me" -H "Authorization: Bearer $token" \
             | grep -q '"role":"ADMIN"' || { echo "/api/v1/me did not report an admin"; exit 1; }
 
-      # The generated jsonb column is PostgreSQL-only, so H2 never creates it and no unit test can
-      # say anything true about it. This is the only place a claim about it is worth making.
-      - name: The generated jsonb column is derived from the stored bytes
+      # The generated jsonb columns are PostgreSQL's, and this is the real PostgreSQL the image
+      # migrated, not the test suite's.
+      - name: The generated jsonb columns are derived from the stored text
         run: |
-          docker compose -f deploy/docker-compose.yml exec -T postgres \
-            psql -U ludus -d ludus -tAc \
-            "select column_name, is_generated from information_schema.columns
-              where table_name = 'wave' and column_name in ('config_json','config')
-              order by column_name;" | tee /tmp/cols.txt
-          grep -q '^config|ALWAYS$'   /tmp/cols.txt || { echo "config is not generated"; exit 1; }
-          grep -q '^config_json|NEVER$' /tmp/cols.txt || { echo "config_json is generated"; exit 1; }
+          $COMPOSE exec -T postgres psql -U wavemaker -d wavemaker -tAc \
+            "select table_name || '.' || column_name || '|' || is_generated
+               from information_schema.columns
+              where table_name in ('wave', 'app_config')
+                and column_name in ('config_json', 'config')
+              order by 1;" | tee /tmp/cols.txt
+          for line in 'app_config.config|ALWAYS' 'app_config.config_json|NEVER' \
+                      'wave.config|ALWAYS' 'wave.config_json|NEVER'; do
+            grep -qx "$line" /tmp/cols.txt || { echo "expected $line"; exit 1; }
+          done
 
       # The client's whole story against the real database: author, publish, fetch with no
-      # credential, then re-fetch with the ETag and get nothing back. Every unit test around this
-      # runs on H2 and against a mocked clock; this is the only place it happens for real.
+      # credential, then re-fetch with the ETag and get nothing back.
       - name: A game client can fetch published content and cache it
         run: |
-          token=$(curl -fsS http://localhost:8080/api/v1/auth/token \
+          token=$(curl -fsS "$SERVICE/api/v1/auth/token" \
             -H 'Content-Type: application/json' \
             -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
-            | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+            | sed -n 's/.*"accessToken": *"\([^"]*\)".*/\1/p')
 
-          curl -fsS http://localhost:8080/api/v1/admin/waves \
+          curl -fsS "$SERVICE/api/v1/admin/waves" \
             -H "Authorization: Bearer $token" -H 'Content-Type: application/json' \
             --data-binary @samples/waves/demo_first_steps.json > /dev/null
-          curl -fsS -X POST http://localhost:8080/api/v1/admin/waves/demo_first_steps/publish \
+          curl -fsS -X POST "$SERVICE/api/v1/admin/waves/demo_first_steps/publish" \
             -H "Authorization: Bearer $token" > /dev/null
 
           # No credential from here on.
-          etag=$(curl -fsSi http://localhost:8080/api/v1/public/waves \
+          etag=$(curl -fsSi "$SERVICE/api/v1/public/waves" \
                  | tr -d '\r' | sed -n 's/^[Ee][Tt]ag: //p')
           test -n "$etag" || { echo "no ETag on the wave list"; exit 1; }
 
-          hash=$(curl -fsS http://localhost:8080/api/v1/public/status \
-                 | sed -n 's/.*"contentHash":"\([^"]*\)".*/\1/p')
+          hash=$(curl -fsS "$SERVICE/api/v1/public/status" \
+                 | sed -n 's/.*"contentHash": *"\([^"]*\)".*/\1/p')
           test "$etag" = "\"$hash\"" || {
             echo "the status hash and the list ETag disagree: $hash vs $etag"; exit 1; }
 
-          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/public/waves \
+          status=$(curl -s -o /dev/null -w '%{http_code}' "$SERVICE/api/v1/public/waves" \
                    -H "If-None-Match: $etag")
           test "$status" = "304" || { echo "expected 304, got $status"; exit 1; }
 
           # And the document comes back exactly as it was authored.
-          curl -fsS http://localhost:8080/api/v1/public/waves/demo_first_steps/raw \
+          curl -fsS "$SERVICE/api/v1/public/waves/demo_first_steps/raw" \
             | diff - samples/waves/demo_first_steps.json \
             || { echo "the served document is not the authored bytes"; exit 1; }
 
+          raw_etag=$(curl -fsSi "$SERVICE/api/v1/public/waves/demo_first_steps/raw" \
+                     | tr -d '\r' | sed -n 's/^[Ee][Tt]ag: //p')
+          status=$(curl -s -o /dev/null -w '%{http_code}' \
+                   "$SERVICE/api/v1/public/waves/demo_first_steps/raw" -H "If-None-Match: $raw_etag")
+          test "$status" = "304" || { echo "expected 304 on the document, got $status"; exit 1; }
+
+      # The reason uploads live on a named volume rather than in the container. A mount that
+      # silently wrote into the container's own filesystem would pass every test up to this line
+      # and lose every file on the next deploy.
       - name: An uploaded clip outlives the container that received it
         run: |
-          token=$(curl -fsS http://localhost:8080/api/v1/auth/token \
+          token=$(curl -fsS "$SERVICE/api/v1/auth/token" \
             -H 'Content-Type: application/json' \
             -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
-            | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+            | sed -n 's/.*"accessToken": *"\([^"]*\)".*/\1/p')
 
-          head -c 3000000 /dev/urandom > /tmp/clip.ogg
+          { printf 'OggS'; head -c 3000000 /dev/urandom; } > /tmp/clip.ogg
 
-          id=$(curl -fsS http://localhost:8080/api/v1/admin/audio \
+          id=$(curl -fsS "$SERVICE/api/v1/admin/audio" \
             -H "Authorization: Bearer $token" \
             -F 'file=@/tmp/clip.ogg;type=audio/ogg' \
-            | sed -n 's/.*"id":"\([^"]*\)".*/\1/p')
+            | sed -n 's/.*"id": *"\([^"]*\)".*/\1/p')
           test -n "$id" || { echo "no clip id came back from the upload"; exit 1; }
 
-          # The whole reason the bytes are on a volume rather than in the container. A bind
-          # mount that silently wrote into the container's own filesystem would pass every
-          # test up to this line and lose every clip on the next deploy.
-          docker compose -f deploy/docker-compose.yml restart engine
+          # Recreated, not restarted: a restart keeps the container and its own filesystem, so it
+          # would pass even if the bytes were never on the volume. A new container has nothing of
+          # the old one but what was mounted into it.
+          $COMPOSE up -d --force-recreate --no-deps service
           for i in $(seq 1 60); do
-            curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"' && break
-            sleep 5
+            curl -fsS "$SERVICE/health" 2>/dev/null | grep -q '"status":"ok"' && break
+            sleep 2
           done
-          curl -fsS http://localhost:8080/actuator/health | grep -q '"status":"UP"' \
-            || { echo "the engine did not come back after a restart"; exit 1; }
+          curl -fsS "$SERVICE/health" | grep -q '"status":"ok"' \
+            || { echo "the service did not come back after a restart"; exit 1; }
 
           # No credential: published audio is public, and the bytes must be the bytes.
-          curl -fsS "http://localhost:8080/api/v1/public/audio/$id" | diff - /tmp/clip.ogg \
+          curl -fsS "$SERVICE/api/v1/public/audio/$id" | cmp - /tmp/clip.ogg \
             || { echo "the served clip is not the uploaded bytes"; exit 1; }
 
+          # And they are on the volume, not somewhere else that happens to survive a restart.
+          $COMPOSE exec -T service sh -c 'find /var/lib/wavemaker/blobs -type f | wc -l' \
+            | grep -qv '^0$' || { echo "nothing was written to the blob volume"; exit 1; }
+
           code=$(curl -s -o /dev/null -w '%{http_code}' \
-                 "http://localhost:8080/api/v1/public/audio/00000000-0000-0000-0000-000000000000")
+                 "$SERVICE/api/v1/public/audio/00000000-0000-0000-0000-000000000000")
           test "$code" = "404" || { echo "expected 404 for an unknown clip, got $code"; exit 1; }
 
       - name: The editor comes up and serves its login page
@@ -272,7 +281,7 @@ jobs:
           done
           body=$(curl -fsS http://localhost:3000/login) || {
             echo "the editor did not serve its login page"
-            docker compose -f deploy/docker-compose.yml logs editor | tail -40
+            $COMPOSE logs editor | tail -40
             exit 1
           }
           echo "$body" | grep -q "Sign in" || {
@@ -300,9 +309,8 @@ jobs:
 
       # The journey from #9's acceptance criteria, in a real browser against this stack: log in,
       # build, preview, save, publish, and fetch the result from the public API. It runs here
-      # rather than in its own job because this is the only place the editor container, the engine,
-      # PostgreSQL and the volume are all up at once, and standing that up twice costs minutes for
-      # nothing.
+      # rather than in its own job because this is the only place the editor container, the
+      # service, PostgreSQL and the volume are all up at once.
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
@@ -327,6 +335,55 @@ jobs:
           LUDUS_E2E_PASSWORD: ci-not-a-real-password
         run: npm run e2e
 
+      # R8's second half, from #76: installing a plugin with a ui/ folder adds its screen to the
+      # editor with no change to the editor, and removing the plugin removes it. The spec
+      # installs and removes the plugin itself, and the service reads its plugins only when it
+      # starts, so the spec runs and restarts a service of its own rather than the compose one.
+      # It is given what that needs: a Python with the service installed, a PostgreSQL of its
+      # own, and an editor built from source and pointed at the address the spec serves on.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: A plugin brings its own screen, in a browser
+        env:
+          CI: 'true'
+          PLUGIN_SERVICE: http://127.0.0.1:8000
+          PLUGIN_EDITOR: http://localhost:3001
+        run: |
+          python -m venv /tmp/wavemaker
+          /tmp/wavemaker/bin/pip install -q -e service
+
+          docker run -d --name plugin-ui-db -e POSTGRES_PASSWORD=ci-not-a-real-password \
+            -p 127.0.0.1:5433:5432 postgres:16-alpine > /dev/null
+          # Over TCP, inside the container: during its first start PostgreSQL listens on a
+          # socket only, so a socket check would pass before the service could connect.
+          for i in $(seq 1 60); do
+            docker exec plugin-ui-db pg_isready -q -h 127.0.0.1 -U postgres && break
+            sleep 1
+          done
+
+          cd editor
+          LUDUS_ENGINE_URL="$PLUGIN_SERVICE" npm run build
+          LUDUS_ENGINE_URL="$PLUGIN_SERVICE" nohup npx next start -p 3001 > /tmp/plugin-editor.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS "$PLUGIN_EDITOR/login" > /dev/null 2>&1 && break
+            sleep 1
+          done
+
+          LUDUS_E2E_SERVICE_PYTHON=/tmp/wavemaker/bin/python \
+          WAVEMAKER_DATABASE_URL=postgresql+psycopg://postgres:ci-not-a-real-password@127.0.0.1:5433/postgres \
+          WAVEMAKER_JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')" \
+          LUDUS_EDITOR_URL="$PLUGIN_EDITOR" \
+          LUDUS_ENGINE_URL="$PLUGIN_SERVICE" \
+          LUDUS_E2E_EMAIL=ci@example.test \
+          LUDUS_E2E_PASSWORD=ci-not-a-real-password \
+            npx playwright test e2e/plugin-ui.spec.ts
+
+      - name: The plugin editor's log, when it failed
+        if: failure()
+        run: cat /tmp/plugin-editor.log || true
+
       - name: The browser trace, when it failed
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -335,9 +392,8 @@ jobs:
           path: editor/playwright-report/
           retention-days: 7
 
-      # The import CLI, against the running engine. An acceptance criterion of v1.0.0, and the
-      # only way to know the script still works: it talks to the bulk endpoint, which is the one
-      # place a malformed document is refused all-or-nothing rather than half-applied.
+      # The import CLI, against the running service. It talks to the bulk endpoint, which is the
+      # one place a malformed document is refused all-or-nothing rather than half-applied.
       - name: The import CLI round-trips the demo content
         run: |
           # The demo waves are already imported by an earlier step, so re-importing them would be
@@ -351,19 +407,19 @@ jobs:
           done
 
           node scripts/import-waves.mjs \
-            --url http://localhost:8080 \
+            --url "$SERVICE" \
             --email ci@example.test --password ci-not-a-real-password \
             /tmp/import/*.json
 
-          # And the engine has them, as drafts: the importer must not publish anything.
-          token=$(curl -fsS http://localhost:8080/api/v1/auth/token \
+          # And the service has them, as drafts: the importer must not publish anything.
+          token=$(curl -fsS "$SERVICE/api/v1/auth/token" \
             -H 'Content-Type: application/json' \
             -d '{"email":"ci@example.test","password":"ci-not-a-real-password"}' \
-            | sed -n 's/.*"accessToken":"\([^"]*\)".*/\1/p')
+            | sed -n 's/.*"accessToken": *"\([^"]*\)".*/\1/p')
 
           for f in /tmp/import/*.json; do
             id=$(basename "$f" .json)
-            curl -fsS "http://localhost:8080/api/v1/admin/waves/$id" \
+            curl -fsS "$SERVICE/api/v1/admin/waves/$id" \
               -H "Authorization: Bearer $token" > /tmp/roundtrip.json \
               || { echo "the importer did not create $id"; exit 1; }
 
@@ -375,7 +431,7 @@ jobs:
             diff /tmp/sent.json /tmp/back.json || {
               echo "$id came back different from what was imported"; exit 1; }
 
-            curl -fsS "http://localhost:8080/api/v1/public/waves/$id/raw" >/dev/null 2>&1 && {
+            curl -fsS "$SERVICE/api/v1/public/waves/$id/raw" >/dev/null 2>&1 && {
               echo "$id was published by the importer; it must leave everything as a draft"
               exit 1
             }
@@ -384,27 +440,29 @@ jobs:
           # A bad document must reject the whole batch and write nothing.
           echo '{"id":"cli_broken","name":"no schema version or anything else"}' > /tmp/import-bad.json
           if node scripts/import-waves.mjs \
-               --url http://localhost:8080 \
+               --url "$SERVICE" \
                --email ci@example.test --password ci-not-a-real-password \
                /tmp/import/cli_demo_first_steps.json /tmp/import-bad.json; then
             echo "the importer accepted an invalid document"; exit 1
           fi
-          curl -fsS "http://localhost:8080/api/v1/admin/waves/cli_broken" \
+          curl -fsS "$SERVICE/api/v1/admin/waves/cli_broken" \
             -H "Authorization: Bearer $token" >/dev/null 2>&1 && {
             echo "a refused import still wrote something"; exit 1; }
           echo "the import CLI round-trips, and refuses all-or-nothing"
 
       - name: A wrong password is refused
         run: |
-          status=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/v1/auth/token \
+          status=$(curl -s -o /dev/null -w '%{http_code}' "$SERVICE/api/v1/auth/token" \
             -H 'Content-Type: application/json' \
             -d '{"email":"ci@example.test","password":"wrong"}')
           test "$status" = "401" || { echo "expected 401, got $status"; exit 1; }
 
-      - name: Engine logs
+      - name: Service logs
         if: failure()
-        run: docker compose -f deploy/docker-compose.yml logs --no-color engine
+        run: $COMPOSE logs --no-color service
 
       - name: Tear down
         if: always()
-        run: docker compose -f deploy/docker-compose.yml down -v
+        run: |
+          docker rm -f plugin-ui-db > /dev/null 2>&1 || true
+          $COMPOSE down -v

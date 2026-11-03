@@ -1,0 +1,85 @@
+# syntax=docker/dockerfile:1
+
+# WaveMaker, the Python service. Built in the image so that a clone plus Docker is the only
+# prerequisite, as for the editor.
+#
+#     docker build -f deploy/Dockerfile.service -t wavemaker:local .
+#
+# Mixing audio needs FFmpeg, which this image does not carry unless asked: it is a large
+# dependency with its own vulnerability history, and nobody should need a media toolchain to
+# get a working service. Uploading and serving clips works either way; only the mix is refused.
+#
+#     docker build -f deploy/Dockerfile.service --build-arg WITH_FFMPEG=true -t wavemaker:ffmpeg .
+#
+# and set WAVEMAKER_MEDIA_FFMPEG_BINARY=/usr/bin/ffmpeg.
+
+ARG PYTHON_IMAGE=python:3.12-slim
+
+FROM ${PYTHON_IMAGE} AS build
+ENV PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+RUN python -m venv /opt/wavemaker
+WORKDIR /app/service
+
+# Dependencies first, from pyproject.toml alone, so an ordinary source change does not
+# re-resolve them. The placeholder package is only there so the project can be installed at
+# all; the real source replaces it below.
+COPY service/pyproject.toml ./
+RUN mkdir -p src/wavemaker && touch src/wavemaker/__init__.py \
+ && /opt/wavemaker/bin/pip install . \
+ && /opt/wavemaker/bin/pip uninstall -y wavemaker
+
+# Installed in place rather than as a wheel. The apps' manifest.toml files and the migration
+# histories are read from the package directory at run time, and are not Python modules a
+# wheel would pick up; running from the source tree is what the tests prove.
+COPY service/src ./src
+RUN /opt/wavemaker/bin/pip install --no-deps -e . \
+ && /opt/wavemaker/bin/python -m compileall -q src
+
+FROM ${PYTHON_IMAGE} AS runtime
+
+ARG WITH_FFMPEG=false
+RUN if [ "$WITH_FFMPEG" = "true" ]; then \
+      apt-get update \
+      && apt-get install -y --no-install-recommends ffmpeg \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi \
+ && groupadd --system --gid 1001 wavemaker \
+ && useradd --system --uid 1001 --gid wavemaker --home-dir /app --no-create-home wavemaker
+
+# The same paths as the build stage: an in-place install records where its source is.
+COPY --from=build /opt/wavemaker /opt/wavemaker
+COPY --from=build /app/service /app/service
+# The wave schema is the repository's, shared with the editor's type generator. The content
+# app is told where it is rather than finding it by walking out of its own directory.
+COPY contracts/schemas /app/contracts/schemas
+
+# Both directories must exist in the image, owned by the user that writes to them, even though
+# compose mounts a volume over each. Docker seeds an empty named volume from whatever is at the
+# mount point in the image -- contents, ownership and mode -- and when the path does not exist
+# it creates it root-owned instead. The service then runs as uid 1001, cannot write, and
+# refuses to start. Deleting this line looks safe and is not.
+RUN mkdir -p /var/lib/wavemaker/blobs /var/lib/wavemaker/plugins \
+ && chown -R wavemaker:wavemaker /var/lib/wavemaker
+
+ENV PATH=/opt/wavemaker/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    WAVEMAKER_WAVE_SCHEMA=/app/contracts/schemas/wave/v1.json \
+    WAVEMAKER_BLOB_DIRECTORY=/var/lib/wavemaker/blobs \
+    WAVEMAKER_PLUGINS_DIRECTORY=/var/lib/wavemaker/plugins
+
+USER wavemaker
+WORKDIR /app
+EXPOSE 8080
+
+# A healthcheck that calls the service. One that only opened a socket would report healthy
+# while the app was failing to start; /health answers only once migrations have run, because
+# the service migrates before it serves anything.
+HEALTHCHECK --interval=10s --timeout=3s --start-period=30s --retries=6 \
+  CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=2)"]
+
+# One process. The service migrates the database as it starts, and two processes starting at
+# the same moment would both try to.
+CMD ["uvicorn", "--factory", "wavemaker.platform.http.factory:create_app", \
+     "--host", "0.0.0.0", "--port", "8080", "--no-server-header"]

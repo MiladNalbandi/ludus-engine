@@ -391,7 +391,8 @@ def test_a_wave_of_another_project_cannot_be_batch_deleted(client: TestClient) -
 @pytest.mark.parametrize("body", [{"ids": []}, {"ids": ["a", "a"]}, {}, {"ids": "a"}])
 def test_a_batch_that_is_not_a_known_set_is_a_422(client: TestClient, body: Any) -> None:
     seed(client, "a")
-    assert client.post(BATCH_DELETE, json=body, headers=account(client)).status_code == 422
+    answer = client.post(BATCH_DELETE, json=body, headers=account(client))
+    assert answer.status_code == 422
     assert wave_ids(client) == ["a"]
 
 
@@ -417,9 +418,12 @@ def test_an_unknown_or_malformed_level_is_a_404_on_every_route(
     headers = account(client)
     body = {"name": "Act One", "waves": []}
     assert client.get(f"{LEVELS}/{level_id}", headers=headers).status_code == 404
-    assert client.put(f"{LEVELS}/{level_id}", json=body, headers=headers).status_code == 404
-    assert client.delete(f"{LEVELS}/{level_id}", headers=headers).status_code == 404
-    assert client.post(f"{LEVELS}/{level_id}/activate", headers=headers).status_code == 404
+    answer = client.put(f"{LEVELS}/{level_id}", json=body, headers=headers)
+    assert answer.status_code == 404
+    answer = client.delete(f"{LEVELS}/{level_id}", headers=headers)
+    assert answer.status_code == 404
+    answer = client.post(f"{LEVELS}/{level_id}/activate", headers=headers)
+    assert answer.status_code == 404
 
 
 @pytest.mark.ac("AC-7")
@@ -433,11 +437,15 @@ def test_an_update_to_a_level_that_is_not_there_creates_nothing(client: TestClie
 
 @pytest.mark.ac("AC-8")
 def test_level_authoring_is_closed_without_a_token(client: TestClient) -> None:
-    assert client.post(LEVELS, json={"name": "x", "waves": []}).status_code == 401
+    answer = client.post(LEVELS, json={"name": "x", "waves": []})
+    assert answer.status_code == 401
     assert client.get(f"{LEVELS}/{UNKNOWN}").status_code == 401
-    assert client.put(f"{LEVELS}/{UNKNOWN}", json={"name": "x", "waves": []}).status_code == 401
-    assert client.delete(f"{LEVELS}/{UNKNOWN}").status_code == 401
-    assert client.post(BATCH_DELETE, json={"ids": ["a"]}).status_code == 401
+    answer = client.put(f"{LEVELS}/{UNKNOWN}", json={"name": "x", "waves": []})
+    assert answer.status_code == 401
+    answer = client.delete(f"{LEVELS}/{UNKNOWN}")
+    assert answer.status_code == 401
+    answer = client.post(BATCH_DELETE, json={"ids": ["a"]})
+    assert answer.status_code == 401
 
 
 @pytest.mark.ac("AC-8")
@@ -448,10 +456,14 @@ def test_a_viewer_may_read_a_level_but_not_change_it(client: TestClient) -> None
 
     assert client.get(f"{LEVELS}/{created['id']}", headers=viewer).status_code == 200
     body = {"name": "Mine now", "waves": []}
-    assert client.post(LEVELS, json=body, headers=viewer).status_code == 403
-    assert client.put(f"{LEVELS}/{created['id']}", json=body, headers=viewer).status_code == 403
-    assert client.delete(f"{LEVELS}/{created['id']}", headers=viewer).status_code == 403
-    assert client.post(BATCH_DELETE, json={"ids": ["first"]}, headers=viewer).status_code == 403
+    answer = client.post(LEVELS, json=body, headers=viewer)
+    assert answer.status_code == 403
+    answer = client.put(f"{LEVELS}/{created['id']}", json=body, headers=viewer)
+    assert answer.status_code == 403
+    answer = client.delete(f"{LEVELS}/{created['id']}", headers=viewer)
+    assert answer.status_code == 403
+    answer = client.post(BATCH_DELETE, json={"ids": ["first"]}, headers=viewer)
+    assert answer.status_code == 403
     assert wave_ids(client) == ["first"]
 
 
@@ -466,8 +478,10 @@ def test_an_editor_may_author_levels(client: TestClient) -> None:
         f"{LEVELS}/{level_id}", json={"name": "Act Two", "waves": []}, headers=editor
     )
     assert renamed.status_code == 200
-    assert client.delete(f"{LEVELS}/{level_id}", headers=editor).status_code == 204
-    assert client.post(BATCH_DELETE, json={"ids": ["first"]}, headers=editor).status_code == 200
+    answer = client.delete(f"{LEVELS}/{level_id}", headers=editor)
+    assert answer.status_code == 204
+    answer = client.post(BATCH_DELETE, json={"ids": ["first"]}, headers=editor)
+    assert answer.status_code == 200
 
 
 # --- the frozen contract ----------------------------------------------------------------------

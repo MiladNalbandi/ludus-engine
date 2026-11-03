@@ -11,6 +11,7 @@ import threading
 import uuid
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
+from typing import TypeVar
 
 import pytest
 from sqlalchemy import Engine, create_engine
@@ -46,7 +47,12 @@ def project(factory: sessionmaker[Session]) -> uuid.UUID:
         return ensure_project(session, "concurrency", "Concurrency")
 
 
-def all_at_once[T](
+# A classic TypeVar rather than `def all_at_once[T]`: CodeQL does not read the 3.12 syntax and
+# reports `T` in the nested function as an uninitialised local.
+T = TypeVar("T")
+
+
+def all_at_once(  # noqa: UP047 - the TypeVar above, kept for CodeQL
     factory: sessionmaker[Session],
     project: uuid.UUID,
     work: Callable[[int, PostgresProgression], T],

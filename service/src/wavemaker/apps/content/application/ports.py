@@ -38,6 +38,9 @@ class WaveRepository(Protocol):
     def active_level(self) -> PlayableLevel | None:
         """The level being played, or nothing when none is active."""
 
+    def app_config(self) -> bytes | None:
+        """The stored configuration bytes, or nothing when the project was never configured."""
+
 
 class WaveStore(Protocol):
     """Authoring. Separate from `WaveRepository` because reading and writing content are
@@ -89,6 +92,12 @@ class WaveStore(Protocol):
 
         An import is one decision by an author, not a sequence of them. Half a catalogue is
         worse than none: nobody can tell which half arrived without reading the whole thing."""
+
+    def app_config(self) -> bytes | None:
+        """The stored configuration bytes, or nothing when the project was never configured."""
+
+    def replace_app_config(self, document: bytes) -> bytes:
+        """Store a whole configuration document in place of the last one, and return it."""
 
     def delete_all(self, wave_ids: Sequence[str]) -> int:
         """Delete every one of these waves or none of them, and say how many went.

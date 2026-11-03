@@ -9,7 +9,7 @@ A piece of content — today a *wave*, later also a map or a level — is a JSON
 against a published JSON Schema. The database indexes what it needs to query (identifier, name,
 order, publication state) and stores the document itself **verbatim**.
 
-The schema, not a Java class, is the contract.
+The schema, not a class in the service, is the contract.
 
 This is what lets the content model grow without a migration every time a behaviour gains a
 parameter, and what lets an editor and a game client agree on a shape without either importing
@@ -22,10 +22,10 @@ rewrite.
 `contracts/schemas/wave/v1.json` lives in exactly one place and is used by three parties that are
 built and deployed separately:
 
-- the **engine** copies it into its jar at build time and validates every document before storing
+- the **service** validates every document against it before storing, and its image carries a copy
 - the **editor** consumes it as an npm workspace package and generates its TypeScript types from
   it, so the types cannot disagree with the contract
-- **`samples/waves/`** is validated against it on every build, in both Java and JavaScript, which
+- **`samples/waves/`** is validated against it on every build, in both Python and JavaScript, which
   is what keeps the two validators honest about the same file
 
 There is no second copy to drift. `contracts/` is Apache-2.0, separately from the AGPL engine —

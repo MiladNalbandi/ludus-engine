@@ -1,7 +1,7 @@
 version: 2
 updates:
-  - package-ecosystem: maven
-    directory: "/"
+  - package-ecosystem: pip
+    directory: "/service"
     schedule: { interval: weekly, day: monday }
     open-pull-requests-limit: 5
     groups:

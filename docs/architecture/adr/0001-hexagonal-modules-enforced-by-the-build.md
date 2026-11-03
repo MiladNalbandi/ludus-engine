@@ -1,6 +1,9 @@
 # 1. Hexagonal modules, enforced by the build
 
-- **Status:** accepted
+- **Status:** superseded in R9 ([#77](https://github.com/MiladNalbandi/ludus-engine/issues/77)).
+  The Java engine and its Maven modules are gone. The decision survives in the Python service:
+  hexagonal apps whose walls are checks, enforced by `lint-imports` on every build — see
+  [platform.md](../platform.md). Kept as the record of why.
 - **Date:** 2026-08-21
 
 ## Context

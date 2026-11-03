@@ -1,16 +1,11 @@
 # Getting started
 
-<p align="center">
-  <img src="../assets/engine-overview.png" alt="Ludus at a glance: the project table with its single row, what the foundation already enforces, and what arrives in later releases" width="900">
-</p>
-
-What follows works today, on `main`. Anything not yet built is called out as such. The picture
-above is the same claim in one frame: a green tick is something you can run now, and anything
-marked *coming soon* is not in the box yet.
+What follows works today, on `main`, and is what CI's Quickstart job runs on every change.
 
 ## Requirements
 
-Docker, and nothing else. To build from source instead, JDK 21.
+Docker, and nothing else. To run the service from source instead, Python 3.12 and
+[uv](https://docs.astral.sh/uv/); the tests also need Docker, for a real PostgreSQL.
 
 ## Run it
 
@@ -20,48 +15,50 @@ cd ludus-engine
 cp deploy/.env.example deploy/.env
 ```
 
-Open `deploy/.env` and change `LUDUS_DB_PASSWORD`. Compose refuses to start without it, on
-purpose — a default database password in a public quickstart is a default database password in
-production three months later.
+Open `deploy/.env` and set three things:
+
+- `WAVEMAKER_DB_PASSWORD`. Compose refuses to start without it, on purpose: a default database
+  password in a public quickstart is a default database password in production three months
+  later. `openssl rand -hex 24` makes one that is safe inside a URL.
+- `WAVEMAKER_JWT_SECRET`, from `openssl rand -base64 48`. The service refuses to start without a
+  signing secret, and without one of at least 32 bytes.
+- `WAVEMAKER_ADMIN_EMAIL` and `WAVEMAKER_ADMIN_PASSWORD`, the administrator to create on first
+  start. Without one nobody can sign in.
 
 ```bash
 docker compose -f deploy/docker-compose.yml up
 ```
 
-First run builds the image, which takes a few minutes. After that it is seconds.
+The first run builds the service and editor images, which takes a few minutes. After that it is
+seconds. The service migrates the database before it serves anything.
 
 ## Confirm it works
 
 ```bash
-curl -s localhost:8080/actuator/health
-# {"status":"UP", ...}
+curl -s localhost:8080/health
+# {"status":"ok","version":"0.1.0","apps":[{"name":"content","version":"1.0.0"}, ...]}
 ```
+
+`apps` is every app that loaded: content, economy, inventory, leaderboard, media and progression
+are built in, and installed plugins appear beside them.
 
 | | |
 |---|---|
+| The editor | <http://localhost:3000> |
 | API documentation | <http://localhost:8080/docs> |
-| OpenAPI document | <http://localhost:8080/api-docs> |
-| Health | <http://localhost:8080/actuator/health> |
-| Metrics | <http://localhost:8080/actuator/prometheus> |
+| OpenAPI document | <http://localhost:8080/openapi.json> |
+| Health | <http://localhost:8080/health> |
 
-Everything else needs a credential:
+Authoring needs a credential:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/api/v1/anything
+curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/api/v1/admin/waves
 # 401
 ```
 
 ## Sign in
 
-Set `LUDUS_JWT_SECRET` and the two administrator variables in `deploy/.env` before the first
-start; the engine refuses to start without a signing secret, and without an administrator nobody
-can sign in.
-
-```bash
-openssl rand -base64 48   # put this in LUDUS_JWT_SECRET
-```
-
-Then exchange the password for a pair of tokens:
+Exchange the administrator's password for a pair of tokens:
 
 ```bash
 curl -s localhost:8080/api/v1/auth/token \
@@ -73,55 +70,56 @@ curl -s localhost:8080/api/v1/auth/token \
 {
   "accessToken": "<a signed JWT>",
   "tokenType": "Bearer",
-  "accessTokenExpiresAt": "2026-08-28T09:15:00Z",
-  "refreshToken": "<an opaque random string>",
-  "refreshTokenExpiresAt": "2026-09-27T09:00:00Z"
+  "accessTokenExpiresAt": "2026-11-03T22:29:37.349189Z",
+  "refreshToken": "<a signed JWT>",
+  "refreshTokenExpiresAt": "2026-12-03T22:14:37.349189Z"
 }
 ```
 
-The two are different kinds of thing, which the placeholders say better than a sample would. The
-access token is a signed JWT: anything holding the signing key can read the project and role out
-of it and check it without asking the database. The refresh token is 256 random bits with no
-structure at all — the engine keeps only a digest of it, so it is meaningless to anyone who has
-the database and useful only to whoever was handed it.
-
 The access token lasts fifteen minutes and cannot be revoked; the refresh token lasts thirty days
-and can. Use the access token, and when it expires, exchange the refresh token at
-`/api/v1/auth/refresh` for a new pair — which also revokes the one you presented.
+and can, because only its digest is stored. Use the access token, and when it expires, exchange
+the refresh token at `/api/v1/auth/refresh` for a new pair, which also revokes the one you
+presented. The two carry different `typ` claims and neither is accepted where the other is
+expected.
 
 ```bash
 curl -s localhost:8080/api/v1/me -H "Authorization: Bearer $ACCESS_TOKEN"
 # {"kind":"USER","subject":"...","project":"...","role":"ADMIN"}
 ```
 
-## A key for your game client
+## A key for your game, and a session for each player
 
-Game clients get an API key rather than a password. It is read-only, scoped to the project, shown
-once, and revocable.
+A game build carries an API key rather than a password. It is shown once, only its digest is
+stored, and it buys exactly one thing: a player session.
 
 ```bash
 curl -s localhost:8080/api/v1/admin/api-keys \
   -H "Authorization: Bearer $ACCESS_TOKEN" \
   -H 'Content-Type: application/json' \
   -d '{"name":"android-client"}'
+# {"id":"...","name":"android-client","prefix":"wm_...","role":"VIEWER","createdAt":"...","key":"wm_..."}
 ```
 
-The `key` field in that response is the only copy. Only a digest is stored, so nobody — including
-whoever runs the database — can show it to you again. Clients send it as a header:
+The game exchanges it for a player session with its own identifier for the player:
 
 ```bash
-curl -s localhost:8080/api/v1/me -H "X-API-Key: ludus_..."
-# {"kind":"API_KEY","subject":"...","project":"...","role":"VIEWER"}
+curl -s localhost:8080/api/v1/public/players/session \
+  -H "X-API-Key: wm_..." -H 'Content-Type: application/json' \
+  -d '{"externalId":"device-0001"}'
+# {"playerId":"...","externalId":"device-0001","displayName":null,"token":"...","expiresAt":"..."}
 ```
 
-## What a game client does
+The session token lasts an hour and reaches that one player's state under `/api/v1/player/me`:
+the wallet, the inventory, progress and leaderboard scores.
 
-Published content needs no credential — it is what every copy of the game downloads, so requiring a
-secret that ships inside the binary would be one in name only.
+## What a game client reads
+
+Published content needs no credential. It is what every copy of the game downloads, so a secret
+that ships inside the binary would be one in name only.
 
 ```bash
 curl -s localhost:8080/api/v1/public/status
-# {"contentHash":"sha256:..."}
+# {"contentHash": "35ea7b2a8f7dbb07ecf4cb7a96375819"}
 ```
 
 Compare that with the hash you cached. Unchanged means play from cache and make no further
@@ -129,63 +127,59 @@ requests. Changed means fetch the list, then the documents you need:
 
 ```bash
 curl -si localhost:8080/api/v1/public/waves | grep -i '^etag'
-# ETag: "sha256:..."
+# etag: "35ea7b2a8f7dbb07ecf4cb7a96375819"
 
 curl -s localhost:8080/api/v1/public/waves/demo_first_steps/raw
-# the document, byte-for-byte as it was authored
+# the document, byte for byte as it was authored
 ```
 
 Send the ETag back and you get nothing, which is the point:
 
 ```bash
 curl -s -o /dev/null -w '%{http_code}\n' localhost:8080/api/v1/public/waves \
-  -H 'If-None-Match: "sha256:..."'
+  -H 'If-None-Match: "35ea7b2a8f7dbb07ecf4cb7a96375819"'
 # 304
 ```
 
-Store the raw bytes and the ETag together — an ETag is only useful beside the bytes it validates.
-The content hash from `/status` and the ETag of `/waves` are the same value for the same data, on
+Store the raw bytes and the ETag together; an ETag is only useful beside the bytes it validates.
+The hash from `/status` and the ETag of `/waves` are the same value for the same data, on
 purpose: two signals computed separately can disagree, and a client caught between them is very
-hard to debug.
+hard to debug. The settings the game should launch with are at `/api/v1/public/app-config`,
+`{}` until somebody sets them, cached the same way.
 
 ## Build and test from source
 
 ```bash
-./mvnw verify
+cd service
+uv venv --python 3.12 .venv && . .venv/bin/activate
+uv pip install -e ".[dev]"
+python -m pytest -q     # every test, against a real PostgreSQL in a container
+python -m ruff check .  # lint
+python -m mypy .        # types, strict
+lint-imports            # the architecture walls
 ```
 
-That runs the unit tests, the JSON Schema conformance tests, the architecture rules and the
-dependency bans. It takes well under a minute on a warm cache.
-
-To run one module or one test:
+`tests/integration/test_frozen_contract.py` is the one that walks the whole v1 contract. To run
+the service against a database of your own:
 
 ```bash
-./mvnw -pl engine/engine-domain test
-./mvnw -Dtest=SlugTest test
+export WAVEMAKER_DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/wavemaker
+export WAVEMAKER_JWT_SECRET="$(openssl rand -base64 48)"
+export WAVEMAKER_ADMIN_EMAIL=you@example.com WAVEMAKER_ADMIN_PASSWORD=change-me
+python -m uvicorn --factory wavemaker.platform.http.factory:create_app --port 8080
 ```
-
-## What you can't do yet
-
-Waves are the only content type, and there is no editor — you author by sending documents to the
-API. Audio upload, wave-levels and bulk operations are the remainder of
-[#8](https://github.com/MiladNalbandi/ludus-engine/issues/8).
-- The visual editor arrives in `v0.3.0` — [#9](https://github.com/MiladNalbandi/ludus-engine/issues/9)
-
-What *does* exist and is worth looking at now: the [content contract](../concepts/content-model.md)
-in `contracts/schemas/wave/v1.json`, and three worked examples in `samples/waves/` that are
-validated against it on every build.
 
 ## Troubleshooting
 
-**Compose exits immediately complaining about `LUDUS_DB_PASSWORD`.** You skipped editing
-`deploy/.env`. That is the intended behaviour.
+**Compose exits immediately naming `WAVEMAKER_DB_PASSWORD` or `WAVEMAKER_JWT_SECRET`.** You
+skipped editing `deploy/.env`. That is the intended behaviour.
 
-**The engine container restarts.** Almost always the database not being ready. Compose waits on a
-health check, so this should be rare; if it persists, `docker compose -f deploy/docker-compose.yml logs engine`
-will say why.
+**The service container restarts.** `docker compose -f deploy/docker-compose.yml logs service`
+says why. The usual reasons are a signing secret under 32 bytes, an optional setting left as an
+empty value rather than commented out, and a database password with a character that means
+something in a URL.
 
-**`/actuator/prometheus` returns 404 rather than metrics.** Metrics export is opt-in from Spring
-Boot 3.5 onwards and is enabled explicitly in `application.yml`. If you have overridden that
-configuration, put it back.
+**Mixing audio answers 503.** The standard image has no FFmpeg. See
+[configuration](../operations/configuration.md#media).
 
-**Port 8080 is taken.** Set `LUDUS_PORT` in `deploy/.env`.
+**Port 8080 or 3000 is taken.** Set `WAVEMAKER_PORT` or `WAVEMAKER_EDITOR_PORT` in `deploy/.env`.
