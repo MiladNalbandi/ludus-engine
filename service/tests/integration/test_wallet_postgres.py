@@ -142,6 +142,13 @@ def test_ac7_a_player_from_another_project_is_not_there(
             PostgresWallets(session, mine).grant(someone.id, "coins", 1)
         assert PostgresWallets(session, mine).balances(someone.id) == []
 
+        # And once they hold some there, a grant from here must not add to it. The upsert
+        # conflicts on (player, currency), which is their row, not ours.
+        PostgresWallets(session, theirs).grant(someone.id, "coins", 10)
+        with pytest.raises(NoSuchPlayer):
+            PostgresWallets(session, mine).grant(someone.id, "coins", 1_000)
+        assert [b.amount for b in PostgresWallets(session, theirs).balances(someone.id)] == [10]
+
 
 def test_ac7_removing_a_player_takes_their_balances_with_them(
     world: tuple[Session, uuid.UUID, uuid.UUID],

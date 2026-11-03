@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     jwt_secret: str = ""
     access_token_minutes: int = 15
     refresh_token_days: int = 30
+    # An hour: long enough for a play session, short enough that a token lifted off a device
+    # stops being useful soon. It authorises writes and cannot be revoked, so it is short.
+    player_token_minutes: int = 60
 
     # The first account, created on first start. Left unset, no account exists and nobody can
     # sign in — which is the right state for a service nobody has configured yet.
@@ -44,3 +47,6 @@ class Settings(BaseSettings):
 
     def refresh_lifetime(self) -> timedelta:
         return timedelta(days=self.refresh_token_days)
+
+    def player_lifetime(self) -> timedelta:
+        return timedelta(minutes=self.player_token_minutes)

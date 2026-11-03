@@ -7,10 +7,13 @@ scoped to one player, and that token is the only thing that reaches a player's s
 
 from __future__ import annotations
 
+import json
 import threading
 import uuid
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -116,8 +119,8 @@ def test_ac2_a_session_moves_last_seen(client: TestClient) -> None:
     start_session(client, key, "device-1")
     again = client.get("/api/v1/player/me", headers=headers).json()
 
-    assert again["lastSeenAt"] > seen
-    assert again["createdAt"] <= seen
+    assert datetime.fromisoformat(again["lastSeenAt"]) > datetime.fromisoformat(seen)
+    assert datetime.fromisoformat(again["createdAt"]) <= datetime.fromisoformat(seen)
 
 
 def test_ac2_concurrent_first_sessions_for_one_identifier_make_one_player(
@@ -283,10 +286,47 @@ def test_ac4_no_player_route_takes_a_player_id(client: TestClient) -> None:
     """A route shaped /players/{id} authorised by "is a player" is a route on which any player
     can act as any other, and the check that stops it is one somebody must remember to write in
     every handler. With no id in the path there is nothing to forget."""
-    player_paths = [
-        route.path  # type: ignore[attr-defined]
-        for route in client.app.routes  # type: ignore[attr-defined]
-        if getattr(route, "path", "").startswith("/api/v1/player")
-    ]
+    served = client.get("/openapi.json").json()["paths"]
+    player_paths = [path for path in served if path.startswith("/api/v1/player")]
     assert player_paths, "the player routes must be mounted"
     assert all("{" not in path for path in player_paths), player_paths
+
+
+# --- the frozen contract ----------------------------------------------------------------------
+
+CONTRACT = Path(__file__).resolve().parents[3] / "docs" / "api" / "openapi-v1.json"
+
+
+def fields_of(schema: str) -> set[str]:
+    document: dict[str, Any] = json.loads(CONTRACT.read_text())
+    return set(document["components"]["schemas"][schema]["properties"])
+
+
+def test_every_player_and_key_body_spells_its_fields_the_way_the_contract_does(
+    client: TestClient,
+) -> None:
+    """Generated clients are built from the frozen document. A field added, dropped or renamed
+    here is a client broken in the field, with nothing on this side failing."""
+    created = mint_key(client)
+    session = start_session(client, created["key"])
+    headers = {"Authorization": f"Bearer {session['token']}"}
+    admin = account(client)
+    client.post(
+        f"/api/v1/admin/players/{session['playerId']}/wallet/grant",
+        json={"currency": "coins", "amount": 5},
+        headers=admin,
+    )
+    spent = client.post(
+        "/api/v1/player/me/wallet/spend", json={"currency": "coins", "amount": 1}, headers=headers
+    ).json()
+    wallet = client.get("/api/v1/player/me/wallet", headers=headers).json()
+    profile = client.get("/api/v1/player/me", headers=headers).json()
+    listed = client.get("/api/v1/admin/api-keys", headers=admin).json()
+
+    assert set(created) == fields_of("ApiKeyCreated")
+    assert set(listed[0]) == fields_of("ApiKeySummary")
+    assert set(session) == fields_of("PlayerSession")
+    assert set(profile) == fields_of("PlayerProfile")
+    assert set(wallet) == fields_of("PlayerWallet")
+    assert set(wallet["balances"][0]) == fields_of("PlayerBalance")
+    assert set(spent) == fields_of("PlayerBalance")

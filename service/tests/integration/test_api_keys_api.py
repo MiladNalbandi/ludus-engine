@@ -32,6 +32,7 @@ def test_ac1_an_administrator_mints_a_key_and_sees_it_once(client: TestClient) -
     assert created["role"] == "VIEWER"
     assert created["key"].startswith(created["prefix"])
     assert created["createdAt"].endswith("Z")
+    assert set(created) == {"id", "name", "prefix", "role", "createdAt", "key"}, "ApiKeyCreated"
     uuid.UUID(created["id"])
 
     listed = client.get("/api/v1/admin/api-keys", headers=account(client)).json()
