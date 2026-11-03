@@ -20,25 +20,21 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [java-kotlin, actions]
+        # The service and the workflows. Neither needs building to be analysed: CodeQL reads
+        # Python and workflow files from source, so there is no toolchain to set up and no
+        # autobuild step to guess at one.
+        language: [python, actions]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
       - uses: github/codeql-action/init@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
-          # `languages`, plural. This said `language`, which the action does not recognise -- it
-          # warned, ignored it, and auto-detected every language in the repository instead. So each
-          # matrix job quietly analysed Java AND the workflows, both jobs uploaded overlapping
-          # results for the same commit, and whichever upload was processed second was rejected.
-          # It was green for weeks while doing that, and failed only intermittently once the
-          # uploads started colliding.
+          # `languages`, plural. This once said `language`, which the action does not recognise
+          # -- it warned, ignored it, and auto-detected every language in the repository instead.
+          # So each matrix job quietly analysed everything, both jobs uploaded overlapping results
+          # for the same commit, and whichever upload was processed second was rejected.
           languages: ${{ matrix.language }}
+          build-mode: none
           queries: security-and-quality
-      - uses: github/codeql-action/autobuild@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
       - uses: github/codeql-action/analyze@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
         with:
           category: /language:${{ matrix.language }}

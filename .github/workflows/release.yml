@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: The existing tag to release, for example v0.0.1
+        description: The existing tag to release, for example v2.0.0
         required: true
         type: string
 
@@ -30,9 +30,11 @@ jobs:
           REF="${{ inputs.tag || github.ref_name }}"
           echo "ref=$REF" >> "$GITHUB_OUTPUT"
           echo "version=${REF#v}" >> "$GITHUB_OUTPUT"
-          # Container registries reject uppercase repository names, and github.repository
-          # carries the owner's login exactly as they typed it when they signed up.
-          echo "image=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" \
+          # Container registries reject uppercase repository names, and github.repository_owner
+          # carries the owner's login exactly as they typed it when they signed up. The service
+          # is published as `wavemaker`, not under the repository's name, so a deployment that
+          # still holds the Java engine's image can never pick it up by mistake.
+          echo "image=ghcr.io/$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')/wavemaker" \
             >> "$GITHUB_OUTPUT"
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -40,22 +42,20 @@ jobs:
           ref: ${{ steps.target.outputs.ref }}
           fetch-depth: 0
 
-      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
+          python-version: '3.12'
 
-      # A tag never becomes a release without a green build. Publishing something that was
-      # not tested is how a broken version ends up permanently in a registry.
+      # A tag never becomes a release without a green build. Publishing something that was not
+      # tested is how a broken version ends up permanently in a registry.
       - name: Verify
-        run: ./mvnw -B verify
-
-      - name: Set the release version
-        run: ./mvnw -B versions:set -DnewVersion="${{ steps.target.outputs.version }}" -DgenerateBackupPoms=false
-
-      - name: Package
-        run: ./mvnw -B -DskipTests package
+        working-directory: service
+        run: |
+          pip install -e ".[dev]"
+          lint-imports
+          python -m ruff check .
+          python -m mypy .
+          python -m pytest -q
 
       - uses: docker/setup-qemu-action@99012661954931238ded8c8b007157a8430204e1 # v4
       - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4
@@ -69,7 +69,7 @@ jobs:
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7
         with:
           context: .
-          file: deploy/Dockerfile.engine
+          file: deploy/Dockerfile.service
           # arm64 as well as amd64: plenty of contributors and small deployments are arm.
           platforms: linux/amd64,linux/arm64
           push: true
@@ -85,4 +85,3 @@ jobs:
           # Explicit, because a dispatched run's ref is the branch it was dispatched from.
           tag_name: ${{ steps.target.outputs.ref }}
           generate_release_notes: true
-          files: engine/engine-bootstrap/target/ludus-engine.jar
