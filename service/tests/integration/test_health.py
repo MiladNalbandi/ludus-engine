@@ -30,9 +30,11 @@ def test_ac1_the_service_boots_and_health_is_green() -> None:
     assert body["version"], "health must report the platform version"
 
 
-def test_ac2_with_no_plugins_configured_health_reports_no_apps() -> None:
+def test_ac2_with_no_plugins_configured_only_the_built_in_apps_are_loaded() -> None:
+    """No plugins directory means no *installed* apps. The apps that ship are still there,
+    because they are read by the same loader from the package's own apps directory."""
     with TestClient(create_app(Settings(plugins_directory=None))) as client:
-        assert client.get("/health").json()["apps"] == []
+        assert client.get("/health").json()["apps"] == [{"name": "content", "version": "1.0.0"}]
 
 
 def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> None:
@@ -43,9 +45,10 @@ def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> N
         apps = client.get("/health").json()["apps"]
 
     assert apps == [
+        {"name": "content", "version": "1.0.0"},
         {"name": "economy", "version": "2.1.0"},
         {"name": "inventory", "version": "1.0.0"},
-    ]
+    ], "installed plugins and built-in apps are one list, in name order"
 
 
 def test_ac4_two_apps_with_the_same_name_stop_the_service_starting(tmp_path: Path) -> None:

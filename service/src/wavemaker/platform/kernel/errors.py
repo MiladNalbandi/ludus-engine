@@ -20,3 +20,7 @@ class DuplicateAppError(PlatformError):
 
 class IncompatiblePlatformError(PlatformError):
     """An app needs a platform version this one is not, or names a range that is not one."""
+
+
+class ConfigurationError(PlatformError):
+    """The service was asked to start in a state it cannot safely run in."""

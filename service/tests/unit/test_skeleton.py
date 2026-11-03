@@ -7,6 +7,7 @@ exactly how the previous Python attempt stalled.
 
 import importlib
 import pkgutil
+from pathlib import Path
 
 import wavemaker
 import wavemaker.apps
@@ -22,7 +23,12 @@ def test_the_platform_core_is_importable_on_its_own() -> None:
     assert module.__doc__
 
 
-def test_no_apps_are_registered_yet() -> None:
-    """The first app arrives with R1. Until then an empty `apps` package is the correct state."""
-    found = [module.name for module in pkgutil.iter_modules(wavemaker.apps.__path__)]
-    assert found == []
+def test_every_app_that_ships_is_a_package_with_a_manifest() -> None:
+    """An app is a directory with a manifest. The platform reads built-ins and installed
+    plugins through the same loader, so a built-in missing its manifest would simply never
+    load, with nothing to say so."""
+    root = Path(wavemaker.apps.__path__[0])
+    found = sorted(module.name for module in pkgutil.iter_modules(wavemaker.apps.__path__))
+    assert found == ["content"]
+    for name in found:
+        assert (root / name / "manifest.toml").is_file(), f"{name} ships no manifest.toml"
