@@ -172,8 +172,13 @@ def requires(*allowed: Role):  # type: ignore[no-untyped-def]
 
 @router.get("/me")
 def who_am_i(caller: CurrentCaller) -> dict[str, str]:
+    """`kind` is `USER`, the value v1 clients were given for a signed-in account. The Java also
+    answered `API_KEY` for a key, which here buys a player session and is never a caller. The
+    token's own kind (`access`) is an internal word; a client that checked for `USER` would
+    break on it, and the contract types the field as a plain string, so no test of the document
+    would notice."""
     return {
-        "kind": caller.kind.value,
+        "kind": "USER",
         "subject": str(caller.subject),
         "project": str(caller.project),
         "role": caller.role.value,

@@ -383,7 +383,7 @@ def test_the_whole_contract_is_served_and_every_schema_is_kept(walk: Walk) -> No
     w.call("refreshSession", json={"refreshToken": tokens["refreshToken"]})
     admin = {"Authorization": f"Bearer {tokens['accessToken']}"}
     caller = w.call("currentCaller", headers=admin).json()
-    assert caller["role"] == "ADMIN"
+    assert (caller["kind"], caller["role"]) == ("USER", "ADMIN"), "the values v1 clients got"
     editor_tokens = w.client.post(
         "/api/v1/auth/token", json={"email": EDITOR, "password": PASSWORD}
     ).json()

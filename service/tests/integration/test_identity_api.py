@@ -78,7 +78,8 @@ def test_me_says_who_the_access_token_proves_you_are(client: TestClient) -> None
     token = sign_in(client)["accessToken"]
     body = client.get("/api/v1/me", headers={"Authorization": f"Bearer {token}"}).json()
     assert body["role"] == "ADMIN"
-    assert body["kind"] == "access"
+    # What v1 answered for a signed-in account, not the token's internal kind.
+    assert body["kind"] == "USER"
 
 
 def test_me_without_a_token_is_401(client: TestClient) -> None:
