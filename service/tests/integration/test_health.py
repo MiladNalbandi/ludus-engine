@@ -15,9 +15,19 @@ from wavemaker.platform.kernel.errors import DuplicateAppError, IncompatiblePlat
 
 
 def write_plugin(root: Path, name: str, body: str) -> None:
+    """An installed plugin as `plugin install` leaves one: a manifest, and its code. Since R5 an
+    installed plugin is mounted, so one with no code would be refused at startup."""
     directory = root / name
-    directory.mkdir(parents=True)
+    (directory / "backend").mkdir(parents=True)
     (directory / "manifest.toml").write_text(body)
+    app_name = body.split('name = "', 1)[1].split('"', 1)[0]
+    (directory / "backend" / "__init__.py").write_text(
+        "from fastapi import APIRouter\n\n"
+        f'router = APIRouter(prefix="/api/v1/{app_name}")\n\n\n'
+        '@router.get("/hello")\n'
+        "def hello() -> dict[str, str]:\n"
+        f'    return {{"app": "{app_name}"}}\n'
+    )
 
 
 def test_ac1_the_service_boots_and_health_is_green() -> None:
@@ -52,6 +62,9 @@ def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> N
 
     with TestClient(create_app(Settings(plugins_directory=tmp_path))) as client:
         apps = client.get("/health").json()["apps"]
+        # R1 left installed plugins registered with no routes. Since R5 they are mounted.
+        assert client.get("/api/v1/achievements/hello").json() == {"app": "achievements"}
+        assert client.get("/api/v1/leaderboard/hello").json() == {"app": "leaderboard"}
 
     assert apps == [
         {"name": "achievements", "version": "1.0.0"},
