@@ -106,6 +106,22 @@ def test_ac3_a_path_that_could_resolve_outside_the_package_is_refused(
     assert not list(tmp_path.rglob("escaped.py"))
 
 
+def test_ac3_unpacking_checks_every_path_again_on_its_own(tmp_path: Path) -> None:
+    """The second line: a package that somehow skipped `read`'s checks still cannot write
+    outside its directory, because `unpack` resolves every target and refuses one outside."""
+    data = raw_archive([*minimal_entries("maps"), ("backend/../../escaped.py", b"x = 1")])
+    with zipfile.ZipFile(io.BytesIO(data)) as opened:
+        unchecked = package.Package(
+            manifest=package.read(raw_archive(minimal_entries("maps"))).manifest,
+            entries=tuple(opened.infolist()),
+            data=data,
+        )
+    with pytest.raises(PackageError) as refused:
+        package.unpack(unchecked, tmp_path / "maps")
+    assert "outside" in str(refused.value)
+    assert not list(tmp_path.rglob("escaped.py"))
+
+
 def test_ac3_a_symbolic_link_is_refused(tmp_path: Path) -> None:
     """A link to /etc unpacked first, and a file written through it second, is the classic
     way an archive writes outside its directory without a single '..' in it."""
