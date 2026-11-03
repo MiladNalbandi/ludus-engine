@@ -24,13 +24,17 @@ function isLoadedApp(value: unknown): value is LoadedApp {
   return typeof candidate.name === 'string' && typeof candidate.version === 'string';
 }
 
+const pick = ({ name, version }: LoadedApp): LoadedApp => ({ name, version });
+
 export async function readAppReport(): Promise<AppReport> {
   const response = await fetch(HEALTH, { cache: 'no-store' });
   if (NOT_REPORTED.has(response.status)) {
     return { kind: 'unreported' };
   }
   if (!response.ok) {
-    throw new Error(`the engine could not say which apps it runs (GET /health: ${response.status})`);
+    throw new Error(
+      `the engine could not say which apps it runs (GET /health: ${response.status})`,
+    );
   }
 
   let body: unknown;
@@ -45,6 +49,11 @@ export async function readAppReport(): Promise<AppReport> {
   }
   return {
     kind: 'reported',
-    apps: apps.filter(isLoadedApp).map(({ name, version }) => ({ name, version })),
+    apps: apps.filter(isLoadedApp).map((app) => {
+      // `ui` is passed on as sent, and read by the plugin loader alone: a malformed one is a
+      // failure to report against that plugin, not a reason to drop the app from the list.
+      const ui = (app as { ui?: unknown }).ui;
+      return ui === undefined ? pick(app) : { ...pick(app), ui };
+    }),
   };
 }

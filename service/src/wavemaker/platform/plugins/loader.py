@@ -76,7 +76,7 @@ def parse_manifest(content: bytes, *, source: str) -> AppManifest:
         )
 
     return AppManifest.from_mapping(
-        plugin, permissions=document.get("permissions"), source=source
+        plugin, permissions=document.get("permissions"), ui=document.get("ui"), source=source
     )
 
 

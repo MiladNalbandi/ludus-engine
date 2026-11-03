@@ -61,7 +61,8 @@ def test_ac1_the_same_folder_always_builds_the_same_bytes(tmp_path: Path) -> Non
 
 
 def test_ac1_a_ui_folder_travels_with_the_package(tmp_path: Path) -> None:
-    folder = write_app(tmp_path / "src", "maps")
+    # Since R8 a ui/ folder must be declared, or the build refuses it (test_plugin_ui.py).
+    folder = write_app(tmp_path / "src", "maps", permissions='[ui]\nentry = "index.js"\napi = 2')
     (folder / "ui").mkdir()
     (folder / "ui" / "index.js").write_text("export default {}")
     assert "ui/index.js" in names_in(package.build(folder, tmp_path / "out"))

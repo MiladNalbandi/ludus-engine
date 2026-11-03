@@ -8,8 +8,11 @@ import { useSession } from '@/stores/session';
 import { builtInModules } from '@/modules';
 import { currentCaller, type CurrentCaller } from '@/shell/caller';
 import { readAppReport } from '@/shell/health';
+import { moduleHost } from '@/shell/host';
+import { browserLoaderDeps, loadShellModules, type ShellModules } from '@/shell/plugins';
 import { createModuleRegistry, type AppReport } from '@/shell/registry';
 import { ShellContext } from '@/shell/ShellContext';
+import { scopeStyles } from '@/shell/styles';
 
 /**
  * The editor shell: the session, the navigation, and the frame every module renders inside.
@@ -20,15 +23,23 @@ import { ShellContext } from '@/shell/ShellContext';
  * perfectly signed-in editor to sign in again on every refresh. Modules render only after it, so
  * none of them has to restore a session of its own.
  *
- * The navigation is computed from `/health` on every start. There is no cached list of enabled
- * modules to fall out of step with the service: switch an app off, reload, and its screen is gone.
+ * The navigation is computed from `/health` on every start, and so is the registry: the built-in
+ * modules plus whatever installed plugins brought in their `ui/` folders. There is no cached list
+ * of enabled modules to fall out of step with the service: install a plugin or switch an app off,
+ * reload, and the screen is there or gone. A plugin whose screen cannot be shown is listed in the
+ * rail with the reason, and nothing else is affected.
  */
-const registry = createModuleRegistry(builtInModules);
+
+// The built-in modules are checked once, at import, and a bad one throws: it shipped with the
+// editor, and the first test run is the moment to hear about it.
+createModuleRegistry(builtInModules);
+
+const loaderDeps = browserLoaderDeps(moduleHost, scopeStyles);
 
 type Started =
   | { phase: 'starting' }
   | { phase: 'failed'; message: string }
-  | { phase: 'ready'; report: AppReport; caller: CurrentCaller | null };
+  | { phase: 'ready'; report: AppReport; caller: CurrentCaller | null; modules: ShellModules };
 
 export function ShellFrame({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -46,7 +57,9 @@ export function ShellFrame({ children }: { children: React.ReactNode }) {
         return;
       }
       const [report, caller] = await Promise.all([readAppReport(), currentCaller()]);
-      setStarted({ phase: 'ready', report, caller });
+      // Never throws for a plugin's sake: each plugin's failure is in `modules.failures`.
+      const modules = await loadShellModules(report, builtInModules, loaderDeps);
+      setStarted({ phase: 'ready', report, caller, modules });
     } catch (thrown) {
       if (thrown instanceof NotSignedIn) {
         router.push('/login');
@@ -63,13 +76,28 @@ export function ShellFrame({ children }: { children: React.ReactNode }) {
     void start();
   }, [start]);
 
+  const modules = started.phase === 'ready' ? started.modules : null;
   const state = useMemo(
     () =>
       started.phase === 'ready'
-        ? { registry, report: started.report, caller: started.caller }
+        ? { registry: started.modules.registry, report: started.report, caller: started.caller }
         : null,
     [started],
   );
+
+  // Plugin modules' scoped styles apply while their registry is the current one, and go with it.
+  useEffect(() => {
+    const sheets = modules?.sheets ?? [];
+    if (sheets.length === 0) {
+      return undefined;
+    }
+    document.adoptedStyleSheets = [...document.adoptedStyleSheets, ...sheets];
+    return () => {
+      document.adoptedStyleSheets = document.adoptedStyleSheets.filter(
+        (sheet) => !sheets.includes(sheet),
+      );
+    };
+  }, [modules]);
 
   if (started.phase === 'failed') {
     return (
@@ -95,8 +123,13 @@ export function ShellFrame({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const { registry } = state;
+  const failures = modules?.failures ?? [];
+  const installed = modules?.installed ?? new Set<string>();
+  const failed = new Set(failures.map((failure) => failure.app));
   const visible = registry.visible(state.report);
-  const unclaimed = registry.unclaimed(state.report);
+  // A plugin whose screen failed is listed with the reason, not as running without one.
+  const unclaimed = registry.unclaimed(state.report).filter((app) => !failed.has(app.name));
   const current = pathname.split('/')[1] ?? '';
 
   return (
@@ -112,7 +145,9 @@ export function ShellFrame({ children }: { children: React.ReactNode }) {
 
           <nav aria-label="Apps" className="rail-nav">
             {visible.length === 0 ? (
-              <p className="muted rail-note">This engine runs no app the editor has a screen for.</p>
+              <p className="muted rail-note">
+                This engine runs no app the editor has a screen for.
+              </p>
             ) : (
               <ul>
                 {visible.map(({ module, version }) => {
@@ -127,6 +162,9 @@ export function ShellFrame({ children }: { children: React.ReactNode }) {
                         <span className="rail-link-label">{module.label}</span>
                         {version ? <span className="rail-version">{version}</span> : null}
                         <span className="rail-summary">{module.summary}</span>
+                        {installed.has(module.app) ? (
+                          <span className="rail-origin">Installed plugin</span>
+                        ) : null}
                       </Link>
                     </li>
                   );
@@ -134,6 +172,23 @@ export function ShellFrame({ children }: { children: React.ReactNode }) {
               </ul>
             )}
           </nav>
+
+          {failures.length > 0 ? (
+            <section className="rail-failed" aria-labelledby="rail-failed-title">
+              <h2 id="rail-failed-title">Screens that could not load</h2>
+              <ul>
+                {failures.map((failure) => (
+                  <li key={failure.app}>
+                    <span className="rail-failed-app">
+                      <span>{failure.app}</span>
+                      <span className="rail-version">{failure.version}</span>
+                    </span>
+                    <span className="rail-failed-reason">{failure.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ) : null}
 
           {unclaimed.length > 0 ? (
             <section className="rail-unclaimed" aria-labelledby="rail-unclaimed-title">

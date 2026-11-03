@@ -33,7 +33,7 @@ import io
 import re
 import stat
 import zipfile
-from collections.abc import Iterator
+from collections.abc import Collection, Iterator
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -88,6 +88,9 @@ def build(app_directory: Path, out_directory: Path) -> Path:
         raise PackageError(f"{app_directory} has no __init__.py: its code is not a package.")
 
     entries = sorted(_entries(app_directory), key=lambda pair: pair[0])
+    refuse_inconsistent_ui(
+        manifest, [name for name, _ in entries], undeclared_folder_allowed=False
+    )
     out_directory.mkdir(parents=True, exist_ok=True)
     target = out_directory / file_name(manifest)
 
@@ -131,6 +134,30 @@ def read(data: bytes) -> Package:
         entries=entries,
         data=data,
     )
+
+
+def refuse_inconsistent_ui(
+    manifest: AppManifest, names: Collection[str], *, undeclared_folder_allowed: bool
+) -> None:
+    """`[ui]` names a file the package carries; and, when building, a `ui/` folder is declared.
+
+    A folder with no `[ui]` is refused when an author builds — it is a screen that would never
+    appear, with nothing to say why — but accepted at install, because packages built before R8
+    carry one and must keep installing. Such a folder is carried and never served.
+    """
+    has_ui_files = any(name.startswith(f"{UI}/") and not name.endswith("/") for name in names)
+    if manifest.ui is None:
+        if has_ui_files and not undeclared_folder_allowed:
+            raise PackageError(
+                f"'{manifest.name}' has a {UI}/ folder but its manifest has no [ui] table. "
+                'Declare its entry and interface version: [ui] entry = "module.js", api = 2.'
+            )
+        return
+    if manifest.ui.path not in names:
+        raise PackageError(
+            f"'{manifest.name}' declares [ui] entry = {manifest.ui.entry!r}, and the package "
+            f"carries no {manifest.ui.path}."
+        )
 
 
 def unpack(package: Package, destination: Path) -> None:

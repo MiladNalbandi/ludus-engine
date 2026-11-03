@@ -17,6 +17,7 @@ from packaging.requirements import InvalidRequirement, Requirement
 
 from wavemaker.platform.kernel.errors import ManifestError
 from wavemaker.platform.kernel.permissions import Permissions, table_prefix
+from wavemaker.platform.kernel.ui import UiDeclaration
 
 # The name becomes a route prefix (`/api/v1/<name>`) and a table prefix, so it has to survive
 # both without quoting. A leading letter keeps it a valid Python identifier stem as well.
@@ -39,6 +40,8 @@ class AppManifest:
     # Distributions the app imports that the platform does not promise, as requirement
     # strings. Checked against what is installed; never installed by the platform.
     python_dependencies: tuple[str, ...] = ()
+    # Its editor screen, from `[ui]`, or None for an app that has none.
+    ui: UiDeclaration | None = None
 
     @property
     def import_name(self) -> str:
@@ -55,6 +58,7 @@ class AppManifest:
         data: Mapping[str, Any],
         *,
         permissions: Mapping[str, Any] | None = None,
+        ui: Any = None,
         source: str = "",
     ) -> AppManifest:
         name = cls._required(data, "name", source)
@@ -80,6 +84,7 @@ class AppManifest:
             source=source,
             permissions=Permissions.from_mapping(permissions, source=source),
             python_dependencies=cls._dependencies(data, source),
+            ui=UiDeclaration.from_mapping(ui, source=source),
         )
 
     @classmethod

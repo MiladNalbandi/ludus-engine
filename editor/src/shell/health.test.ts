@@ -76,11 +76,34 @@ describe('readAppReport', () => {
   });
 
   it('skips entries that are not apps rather than inventing a screen for them', async () => {
-    respond(200, { apps: [{ name: 'content', version: '1.0.0' }, { version: '1' }, 'media', null] });
+    respond(200, {
+      apps: [{ name: 'content', version: '1.0.0' }, { version: '1' }, 'media', null],
+    });
 
     await expect(readAppReport()).resolves.toEqual({
       kind: 'reported',
       apps: [{ name: 'content', version: '1.0.0' }],
+    });
+  });
+
+  it("passes on an installed plugin's ui entry as sent, for the plugin loader to judge", async () => {
+    const ui = { entry: '/plugins/bulletin/1.0.0/ui/module.js', api: 2, integrity: 'sha384-x' };
+    respond(200, {
+      apps: [
+        { name: 'bulletin', version: '1.0.0', ui },
+        { name: 'quests', version: '2.0.0', ui: 'not an object' },
+        { name: 'content', version: '1.0.0', extra: 'dropped' },
+      ],
+    });
+
+    await expect(readAppReport()).resolves.toEqual({
+      kind: 'reported',
+      apps: [
+        { name: 'bulletin', version: '1.0.0', ui },
+        // Malformed, and still listed: the loader reports it against the plugin.
+        { name: 'quests', version: '2.0.0', ui: 'not an object' },
+        { name: 'content', version: '1.0.0' },
+      ],
     });
   });
 

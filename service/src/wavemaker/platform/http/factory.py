@@ -30,6 +30,7 @@ from wavemaker.platform.persistence.engine import (
 from wavemaker.platform.plugins.loader import directory_of, load_manifests
 from wavemaker.platform.plugins.migrations import migrate_app, migrations_of
 from wavemaker.platform.plugins.mounting import builtin_manifests, mount
+from wavemaker.platform.plugins.ui import ServedUi, served_ui, ui_router
 from wavemaker.platform.storage.blobs import ensure_writable
 from wavemaker.platform.tenancy import ensure_project
 
@@ -61,6 +62,17 @@ def installed_directories(settings: Settings) -> dict[str, Path]:
     }
 
 
+def served_screens(registry: AppRegistry, installed: dict[str, Path]) -> dict[str, ServedUi]:
+    """The installed plugins whose editor screen this service serves. Never a built-in: those
+    are compiled into the editor."""
+    screens: dict[str, ServedUi] = {}
+    for manifest in registry.apps:
+        directory = installed.get(manifest.name)
+        if directory is not None and (screen := served_ui(manifest, directory)) is not None:
+            screens[manifest.name] = screen
+    return screens
+
+
 def migrate_apps(database_url: str, registry: AppRegistry) -> None:
     """Every app that carries its own history, built-in or installed, in name order."""
     for manifest in registry.apps:
@@ -85,7 +97,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # database first.
     app.include_router(identity_router)
     app.include_router(player_router)
-    mount(app, registry, builtin_names(), installed_directories(settings))
+    installed = installed_directories(settings)
+    mount(app, registry, builtin_names(), installed)
+
+    # A plugin's editor screen, from its ui/ folder: served read-only, and only for a plugin that
+    # was mounted above, so one refused for its code has no screen either.
+    screens = served_screens(registry, installed)
+    app.include_router(ui_router(screens))
 
     # Checked here, before anything is served: a directory that cannot be written is a
     # deployment mistake, and the moment to say so is while somebody is watching the deploy —
@@ -140,15 +158,18 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         """What is actually running: the platform version, and every app that loaded.
 
         The app list is the only evidence from outside that the loader ran at all, which is
-        why it is here rather than behind a credential.
+        why it is here rather than behind a credential. An installed plugin with an editor
+        screen carries `ui`: where its bundle is, the module interface it was written for, and
+        the hash recorded when it was installed, which the editor checks before running it.
+        This is a platform operations route, outside the frozen v1 contract; its shape is
+        written down in docs/platform/r8.md.
         """
-        return {
-            "status": "ok",
-            "version": PLATFORM_VERSION,
-            "apps": [
-                {"name": app_manifest.name, "version": app_manifest.version}
-                for app_manifest in registry.apps
-            ],
-        }
+        apps: list[dict[str, Any]] = []
+        for app_manifest in registry.apps:
+            entry: dict[str, Any] = {"name": app_manifest.name, "version": app_manifest.version}
+            if app_manifest.name in screens:
+                entry["ui"] = screens[app_manifest.name].report()
+            apps.append(entry)
+        return {"status": "ok", "version": PLATFORM_VERSION, "apps": apps}
 
     return app

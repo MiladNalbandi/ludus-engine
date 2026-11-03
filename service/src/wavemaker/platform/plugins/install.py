@@ -9,10 +9,11 @@ The order is the security, so it is written out:
   4  signature  verifies with a trusted key -- or refuse   nothing unpacked, nothing imported
      ── from here on, these are the bytes the publisher signed ──
   5  every entry checked; manifest read from memory        traversal, links, sizes
-  6  the manifest is the name and version that was signed
+  6  the manifest is the name and version that was signed, and its [ui] names a file it carries
   7  it fits: platform range, no clash with a built-in or an installed app, a module name
      nobody else has, the Python packages it needs are here
-  8  unpacked into a hidden staging directory
+  8  unpacked into a hidden staging directory, with an install record: the archive's checksum,
+     the key, and the hash of its ui entry taken from the verified bytes, not from the disk
   9  its code imported, and every route it serves held to its permissions
  10  its own migrations run, judged, and kept or rolled back      (when a database is set)
  11  moved into place in one rename
@@ -40,7 +41,7 @@ from wavemaker.platform.kernel.manifest import AppManifest
 from wavemaker.platform.kernel.registry import AppRegistry
 from wavemaker.platform.kernel.version import PLATFORM_VERSION
 from wavemaker.platform.persistence.engine import migrate
-from wavemaker.platform.plugins import code, index, package, signing
+from wavemaker.platform.plugins import code, index, package, signing, ui
 from wavemaker.platform.plugins.loader import MANIFEST_FILE, load_manifests, read_manifest
 from wavemaker.platform.plugins.migrations import migrate_app, migrations_of
 from wavemaker.platform.plugins.mounting import (
@@ -88,6 +89,9 @@ def install(
             f"The package signed as {name}@{version} declares itself "
             f"{manifest.name}@{manifest.version}."
         )
+    package.refuse_inconsistent_ui(
+        manifest, [e.filename for e in checked.entries], undeclared_folder_allowed=True
+    )
 
     final = plugins_directory / manifest.name
     _refuse_conflicts(manifest, plugins_directory)
@@ -99,6 +103,7 @@ def install(
     staging = plugins_directory / f".installing-{manifest.name}-{secrets.token_hex(4)}"
     try:
         package.unpack(checked, staging)
+        ui.write_receipt(staging, checked, sha256=entry.sha256, key=entry.key)
         staged = replace(manifest, source=str(staging / MANIFEST_FILE))
         router = installed_router(staged, staging)
         refuse_collisions(staged, router.routes, _platform_routes())

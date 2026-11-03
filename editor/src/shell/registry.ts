@@ -1,16 +1,28 @@
-import { MODULE_API_VERSION, type EditorModule, type ModuleRoute } from '@/shell/module';
+import { SUPPORTED_MODULE_API_VERSIONS, type EditorModule, type ModuleRoute } from '@/shell/module';
 
 /**
  * Which modules exist, and which of them the service has the app for.
  *
- * The registry is built once from a fixed list and checked as it is built. Visibility is then a
+ * The registry is built from a list of modules and checked as it is built: the built-in ones, and
+ * since R8 the ones installed plugins brought, so the shell builds a new registry from each
+ * `/health` report (see `plugins.ts`). A plugin's module meets exactly the checks a built-in one
+ * does, because it goes through this same function. Visibility is then a
  * pure function of what `/health` said, recomputed whenever it is read: there is no "enabled" flag
  * to fall out of step with the service, so removing an app removes its screen the next time the
  * shell asks, and nothing else has to be told.
  */
 
 /** One app as the service reports it. */
-export type LoadedApp = { name: string; version: string };
+export type LoadedApp = {
+  name: string;
+  version: string;
+  /**
+   * An installed plugin's screen, as `/health` described it: `{entry, api, integrity}`. Kept as
+   * the service sent it; the plugin loader is the one place that reads it, and a malformed one is
+   * reported against that plugin rather than dropped here.
+   */
+  ui?: unknown;
+};
 
 /**
  * What `/health` said.
@@ -71,11 +83,62 @@ function shapeOf(compiled: CompiledRoute): string {
   return compiled.segments.map((s) => ('literal' in s ? s.literal : ':')).join('/');
 }
 
+const isText = (value: unknown): value is string => typeof value === 'string';
+
+/**
+ * The shape, checked at runtime. A built-in module is held to it by the compiler; a plugin's is a
+ * value some bundle returned, and a field that is missing must be a refusal naming it — not a
+ * `TypeError` from deep inside the registry, or worse, a screen that renders `undefined`.
+ */
+function checkShape(candidate: unknown): asserts candidate is EditorModule {
+  if (typeof candidate !== 'object' || candidate === null) {
+    throw new Error(
+      `a module must be an object, not ${candidate === null ? 'null' : typeof candidate}`,
+    );
+  }
+  const shape = candidate as Record<string, unknown>;
+  const name = isText(shape.slug) ? `module '${shape.slug}'` : 'a module';
+  if (typeof shape.api !== 'number') {
+    throw new Error(`${name} does not say which module interface version it was written for`);
+  }
+  for (const field of ['app', 'slug', 'label', 'summary'] as const) {
+    if (!isText(shape[field])) {
+      throw new Error(`${name} has no ${field}; it must be text`);
+    }
+  }
+  if (!Array.isArray(shape.routes)) {
+    throw new Error(`${name} has no list of routes`);
+  }
+  for (const route of shape.routes as unknown[]) {
+    const entry = (typeof route === 'object' && route !== null ? route : {}) as Record<
+      string,
+      unknown
+    >;
+    const screen = entry.screen;
+    if (
+      !isText(entry.path) ||
+      !isText(entry.title) ||
+      !(typeof screen === 'function' || (typeof screen === 'object' && screen !== null))
+    ) {
+      throw new Error(`${name} has a route without a path, a title and a screen component`);
+    }
+  }
+  if (shape.styles !== undefined && !isText(shape.styles)) {
+    throw new Error(`${name} has styles that are not CSS text`);
+  }
+}
+
 function check(module: EditorModule): CompiledRoute[] {
-  if (module.api !== MODULE_API_VERSION) {
+  checkShape(module);
+  if (!SUPPORTED_MODULE_API_VERSIONS.includes(module.api)) {
     throw new Error(
       `module '${module.slug}' was written for module interface version ${String(module.api)}; ` +
-        `this shell implements interface version ${MODULE_API_VERSION}`,
+        `this shell implements interface versions ${SUPPORTED_MODULE_API_VERSIONS.join(' and ')}`,
+    );
+  }
+  if (module.api < 2 && module.styles !== undefined) {
+    throw new Error(
+      `module '${module.slug}' carries styles, which need module interface version 2`,
     );
   }
   if (RESERVED_SLUGS.has(module.slug)) {
