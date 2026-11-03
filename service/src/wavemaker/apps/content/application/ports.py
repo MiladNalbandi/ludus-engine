@@ -14,6 +14,7 @@ from collections.abc import Mapping, Sequence
 from typing import Protocol
 
 from wavemaker.apps.content.domain.document import WaveDocument
+from wavemaker.apps.content.domain.level import LevelDraft
 from wavemaker.apps.content.domain.wave import (
     LevelSummary,
     PlayableLevel,
@@ -64,6 +65,22 @@ class WaveStore(Protocol):
     def all_levels(self) -> Sequence[LevelSummary]:
         """Every level, with each wave's publication state."""
 
+    def level(self, level_id: str) -> LevelSummary | None:
+        """One level; nothing when it does not exist or the id is not one."""
+
+    def create_level(self, draft: LevelDraft) -> LevelSummary:
+        """Store a new, inactive level. Raises `MissingWaves` when a wave is not in this
+        project, and `Rejected` when the database refuses the membership for any other
+        reason; neither leaves anything stored."""
+
+    def update_level(self, level_id: str, draft: LevelDraft) -> LevelSummary | None:
+        """Replace a level's name, description and waves wholesale, keeping its id, its
+        creation time and whether it is active. It ends with exactly the new list or exactly
+        the old one. Nothing when the level does not exist."""
+
+    def delete_level(self, level_id: str) -> bool:
+        """Remove a level and its membership, never its waves. False when it was not there."""
+
     def activate_level(self, level_id: str) -> LevelSummary | None:
         """Make one level the active one; nothing when it does not exist."""
 
@@ -72,3 +89,9 @@ class WaveStore(Protocol):
 
         An import is one decision by an author, not a sequence of them. Half a catalogue is
         worse than none: nobody can tell which half arrived without reading the whole thing."""
+
+    def delete_all(self, wave_ids: Sequence[str]) -> int:
+        """Delete every one of these waves or none of them, and say how many went.
+
+        Raises `MissingWaves`, naming each id that is not in this project by its position,
+        and deletes nothing when it does."""

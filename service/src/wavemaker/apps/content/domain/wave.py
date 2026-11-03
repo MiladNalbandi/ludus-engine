@@ -7,8 +7,36 @@ only pulls a document when its tag moved.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
+
+from wavemaker.platform.kernel.errors import PlatformError
+
+
+class Rejected(PlatformError):
+    """A request that was read and is not acceptable.
+
+    The message starts with a JSON Pointer to the field an author has to change — `/name`,
+    `/waves/2` — because "the request is invalid" is not something anybody can fix.
+    """
+
+
+class MissingWaves(Rejected):
+    """Waves named in a request that this project does not have, each with its position.
+
+    Every one of them, not the first: an author fixing a list of twenty should not learn about
+    the problems one round trip at a time.
+    """
+
+    def __init__(self, root: str, missing: Sequence[tuple[int, str]]) -> None:
+        self.missing = list(missing)
+        super().__init__(
+            "; ".join(
+                f"{root}/{index}: there is no wave '{wave_id}' in this project"
+                for index, wave_id in self.missing
+            )
+        )
 
 
 @dataclass(frozen=True, slots=True)

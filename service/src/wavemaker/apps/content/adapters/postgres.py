@@ -21,10 +21,13 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from wavemaker.apps.content.domain.document import OrderTaken, WaveDocument
+from wavemaker.apps.content.domain.level import LevelDraft
 from wavemaker.apps.content.domain.wave import (
     LevelMember,
     LevelSummary,
+    MissingWaves,
     PlayableLevel,
+    Rejected,
     WaveSummary,
 )
 
@@ -219,12 +222,175 @@ class PostgresWaveRepository:
         return 0 if highest is None else int(highest) + 1
 
     def all_levels(self) -> Sequence[LevelSummary]:
+        return self._levels(None)
+
+    def level(self, level_id: str) -> LevelSummary | None:
+        key = _level_key(level_id)
+        if key is None:
+            return None
+        return next(iter(self._levels(key)), None)
+
+    def create_level(self, draft: LevelDraft) -> LevelSummary:
+        """A new level, inactive: making a level and choosing what players receive are two
+        decisions, and an author building next week's level must not ship it by saving it."""
+        key = uuid.uuid4()
+        now = datetime.now(UTC)
+        try:
+            self._require_waves(draft.wave_ids)
+            self._session.execute(
+                text("""
+                    insert into wave_level (id, project_id, name, description, active,
+                                            created_at, updated_at)
+                    values (:id, :p, :n, :d, false, :now, :now)
+                """),
+                {
+                    "id": key,
+                    "p": self._project,
+                    "n": draft.name,
+                    "d": draft.description,
+                    "now": now,
+                },
+            )
+            self._write_members(key, draft.wave_ids)
+            # Read inside the transaction that wrote it, so the answer is this write and not
+            # whatever somebody else did in the moment after it committed.
+            created = self._levels(key)[0]
+            self._session.commit()
+        except IntegrityError as clash:
+            raise self._refused(clash, draft.wave_ids) from clash
+        except BaseException:
+            self._session.rollback()
+            raise
+        return created
+
+    def update_level(self, level_id: str, draft: LevelDraft) -> LevelSummary | None:
+        """Rename and resequence in one transaction: the level ends with exactly the new list
+        or exactly the old one.
+
+        The level's own row is updated first, and that order is the behaviour. The update takes
+        the row's lock, so a second replacement of the same level waits there until the first
+        has committed, and its delete then sees the first one's members. Deleting members first
+        instead lets two replacements both delete the old rows, both insert from position 0,
+        and collide on the unique position: a 500 for an author whose request was fine.
+        """
+        key = _level_key(level_id)
+        if key is None:
+            return None
+        try:
+            touched = self._session.execute(
+                text("""
+                    update wave_level set name = :n, description = :d, updated_at = :now
+                    where project_id = :p and id = :id
+                    returning id
+                """),
+                {
+                    "n": draft.name,
+                    "d": draft.description,
+                    "now": datetime.now(UTC),
+                    "p": self._project,
+                    "id": key,
+                },
+            ).one_or_none()
+            if touched is None:
+                self._session.rollback()
+                return None
+
+            self._require_waves(draft.wave_ids)
+            # Replaced wholesale rather than diffed. Rewriting positions in place collides with
+            # the unique position halfway through any reorder, which is how the Java's first
+            # version of this broke.
+            self._session.execute(
+                text("delete from wave_level_wave where project_id = :p and wave_level_id = :id"),
+                {"p": self._project, "id": key},
+            )
+            self._write_members(key, draft.wave_ids)
+            updated = self._levels(key)[0]
+            self._session.commit()
+        except IntegrityError as clash:
+            raise self._refused(clash, draft.wave_ids) from clash
+        except BaseException:
+            self._session.rollback()
+            raise
+        return updated
+
+    def delete_level(self, level_id: str) -> bool:
+        """The membership rows go with the level by foreign key, and the waves stay.
+
+        Deleting the active level leaves none active, because "active" is a column on the row
+        that went. Nothing promotes another level in its place: which one would be a guess, and
+        a wrong guess ships a level to every player.
+        """
+        key = _level_key(level_id)
+        if key is None:
+            return False
+        result = cast(
+            "CursorResult[Any]",
+            self._session.execute(
+                text("delete from wave_level where project_id = :p and id = :id"),
+                {"p": self._project, "id": key},
+            ),
+        )
+        self._session.commit()
+        return bool(result.rowcount)
+
+    def activate_level(self, level_id: str) -> LevelSummary | None:
+        key = _level_key(level_id)
+        if key is None:
+            return None
+        # Stand every level down first. The partial unique index allows exactly one active
+        # level, so setting the new one while the old is still active would be refused — the
+        # constraint makes the order of these two statements part of the behaviour.
+        self._session.execute(
+            text("update wave_level set active = false where project_id = :p and active"),
+            {"p": self._project},
+        )
+        changed = cast("CursorResult[Any]", self._session.execute(
+            text("""
+                update wave_level set active = true, updated_at = :now
+                where project_id = :p and id = :id
+            """),
+            {"now": datetime.now(UTC), "p": self._project, "id": key},
+        ))
+        if not changed.rowcount:
+            self._session.rollback()
+            return None
+        self._session.commit()
+        return self.level(level_id)
+
+    def delete_all(self, wave_ids: Sequence[str]) -> int:
+        """One statement, then a look at what it removed: if any id named nothing, the whole
+        delete is rolled back. The waves leave every level they were in, by foreign key."""
+        try:
+            gone = set(
+                self._session.execute(
+                    text("""
+                        delete from wave where project_id = :p and wave_id = any(:w)
+                        returning wave_id
+                    """),
+                    {"p": self._project, "w": list(wave_ids)},
+                ).scalars()
+            )
+            missing = [(index, w) for index, w in enumerate(wave_ids) if w not in gone]
+            if missing:
+                raise MissingWaves("/ids", missing)
+            self._session.commit()
+        except BaseException:
+            self._session.rollback()
+            raise
+        return len(gone)
+
+    # --- levels, below the port ---------------------------------------------------------------
+
+    def _levels(self, only: uuid.UUID | None) -> list[LevelSummary]:
+        """Every level, or the one with this key, each with its members in order and whether
+        each member is published now — read with the level, never copied into it."""
         levels = self._session.execute(
             text("""
                 select id, name, description, active, created_at, updated_at from wave_level
-                where project_id = :p order by name
+                where project_id = :p and (cast(:id as uuid) is null or id = :id)
+                order by name
             """),
-            {"p": self._project},
+            {"p": self._project, "id": only},
         ).all()
 
         members = self._session.execute(
@@ -233,9 +399,10 @@ class PostgresWaveRepository:
                 from wave_level_wave m
                 join wave w on w.project_id = m.project_id and w.wave_id = m.wave_id
                 where m.project_id = :p
+                  and (cast(:id as uuid) is null or m.wave_level_id = :id)
                 order by m.position
             """),
-            {"p": self._project},
+            {"p": self._project, "id": only},
         ).all()
 
         by_level: dict[str, list[LevelMember]] = {}
@@ -257,26 +424,63 @@ class PostgresWaveRepository:
             for level in levels
         ]
 
-    def activate_level(self, level_id: str) -> LevelSummary | None:
-        # Stand every level down first. The partial unique index allows exactly one active
-        # level, so setting the new one while the old is still active would be refused — the
-        # constraint makes the order of these two statements part of the behaviour.
-        self._session.execute(
-            text("update wave_level set active = false where project_id = :p and active"),
-            {"p": self._project},
+    def _missing_waves(self, wave_ids: Sequence[str]) -> list[tuple[int, str]]:
+        """Each listed id with no wave in this project, with its position.
+
+        `for share` holds the waves that were found until the transaction ends, so none of them
+        can be deleted between this check and the insert that relies on it. The composite
+        foreign key would refuse that insert either way; the lock makes the refusal something
+        that does not happen rather than something that is merely handled.
+        """
+        if not wave_ids:
+            return []
+        found = set(
+            self._session.execute(
+                text("""
+                    select wave_id from wave
+                    where project_id = :p and wave_id = any(:w)
+                    for share
+                """),
+                {"p": self._project, "w": list(wave_ids)},
+            ).scalars()
         )
-        changed = cast("CursorResult[Any]", self._session.execute(
+        return [(index, w) for index, w in enumerate(wave_ids) if w not in found]
+
+    def _require_waves(self, wave_ids: Sequence[str]) -> None:
+        missing = self._missing_waves(wave_ids)
+        if missing:
+            raise MissingWaves("/waves", missing)
+
+    def _write_members(self, key: uuid.UUID, wave_ids: Sequence[str]) -> None:
+        """Every member in one statement, each at its index in the list."""
+        if not wave_ids:
+            return
+        self._session.execute(
             text("""
-                update wave_level set active = true, updated_at = :now
-                where project_id = :p and id = :id
+                insert into wave_level_wave (project_id, wave_level_id, wave_id, position)
+                select :p, :l, listed.wave_id, listed.position - 1
+                from unnest(cast(:w as varchar[])) with ordinality as listed(wave_id, position)
             """),
-            {"now": datetime.now(UTC), "p": self._project, "id": level_id},
-        ))
-        if not changed.rowcount:
+            {"p": self._project, "l": key, "w": list(wave_ids)},
+        )
+
+    def _refused(self, clash: IntegrityError, wave_ids: Sequence[str]) -> Exception:
+        """What to tell an author when the database refused a level's membership.
+
+        Reached only when the checks in front of the database were missed. A foreign-key
+        refusal names the missing waves when they can still be found; a violation that is not
+        a membership rule is a real fault and goes up as it came.
+        """
+        self._session.rollback()
+        rejection = membership_rejection(clash)
+        if rejection is None:
+            return clash
+        if _constraint(clash) == "fk_wave_level_wave_wave":
+            missing = self._missing_waves(wave_ids)
             self._session.rollback()
-            return None
-        self._session.commit()
-        return next((lv for lv in self.all_levels() if lv.id == level_id), None)
+            if missing:
+                return MissingWaves("/waves", missing)
+        return rejection
 
     def save_all(self, documents: Sequence[WaveDocument]) -> Sequence[WaveSummary]:
         """Every document in one transaction, so a bad one leaves the catalogue untouched.
@@ -341,3 +545,42 @@ def _summary(row: Any) -> WaveSummary:
         created_at=row.created_at,
         updated_at=row.updated_at,
     )
+
+
+def _level_key(level_id: str) -> uuid.UUID | None:
+    """A level id as the database holds it, or nothing for a string that cannot be one.
+
+    A malformed id gets the answer an unknown one gets. Telling them apart says which ids are
+    well formed, which nobody can act on; and passing it to the database fails the cast to
+    uuid, which surfaced as a 500 on the activate route before this check existed.
+    """
+    try:
+        return uuid.UUID(level_id)
+    except ValueError:
+        return None
+
+
+def _constraint(clash: IntegrityError) -> str | None:
+    """The constraint PostgreSQL refused with, read from the error's diagnostics rather than
+    its message, so rewording or another server locale cannot change the answer."""
+    diagnostics = getattr(clash.orig, "diag", None)
+    name = getattr(diagnostics, "constraint_name", None)
+    return name if isinstance(name, str) else None
+
+
+# The membership rules the schema keeps, and what each means to an author.
+MEMBERSHIP_RULES = {
+    "pk_wave_level_wave": "/waves: a level plays each wave once, and this list names one twice.",
+    "uq_wave_level_wave_position": (
+        "/waves: two waves cannot share a position in a level. Somebody else changed this "
+        "level at the same moment; read it again and resend."
+    ),
+    "fk_wave_level_wave_wave": "/waves: a wave in this list is not in this project.",
+}
+
+
+def membership_rejection(clash: IntegrityError) -> Rejected | None:
+    """A refusal by one of the membership rules, as a rejection an author can act on; nothing
+    for any other violation, which is a fault rather than an author's mistake."""
+    rule = MEMBERSHIP_RULES.get(_constraint(clash) or "")
+    return None if rule is None else Rejected(rule)

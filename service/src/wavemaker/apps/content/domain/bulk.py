@@ -1,4 +1,4 @@
-"""Splitting a JSON array back into the exact bytes of each document it holds.
+"""Batches: splitting an import back into its documents, and reading a list of ids to delete.
 
 An import arrives as `[{…},{…},{…}]` — the documents joined with commas, untouched. Each one
 has to be stored exactly as it was written, so the array cannot simply be parsed: parsing and
@@ -12,10 +12,16 @@ So the array is walked instead, and each element's byte range is sliced out of t
 from __future__ import annotations
 
 import json
+from typing import Any
 
+from wavemaker.apps.content.domain.wave import Rejected
 from wavemaker.platform.kernel.errors import PlatformError
 
 DECODER = json.JSONDecoder()
+
+# The most ids one batch delete may name. Enough for any real cleanup, and few enough that a
+# refusal naming every missing one is still something a person can read.
+MAX_BATCH = 50
 
 
 class BulkError(PlatformError):
@@ -74,3 +80,33 @@ def _skip_space(text: str, at: int) -> int:
     while at < len(text) and text[at] in " \t\r\n":
         at += 1
     return at
+
+
+def read_batch_ids(body: Any) -> tuple[str, ...]:
+    """The ids a batch delete names, refused unless they are a known set.
+
+    "Delete these six" is a statement about six particular waves. An empty list says nothing,
+    and an id given twice means the caller's idea of the set is not the set they sent — both
+    are refused rather than read generously, since the cost of a generous reading is deleted
+    content.
+    """
+    if not isinstance(body, dict):
+        raise Rejected("/: a batch delete is a JSON object with a list of ids.")
+    ids = body.get("ids")
+    if not isinstance(ids, list):
+        raise Rejected("/ids: name the waves to delete as a list of ids.")
+    if not ids:
+        raise Rejected("/ids: name at least one wave to delete.")
+    if len(ids) > MAX_BATCH:
+        raise Rejected(f"/ids: at most {MAX_BATCH} waves may be deleted at once.")
+
+    first_seen: dict[str, int] = {}
+    for index, wave_id in enumerate(ids):
+        if not isinstance(wave_id, str):
+            raise Rejected(f"/ids/{index}: a wave is named by its id, as a string.")
+        if wave_id in first_seen:
+            raise Rejected(
+                f"/ids/{index}: '{wave_id}' is already named at /ids/{first_seen[wave_id]}."
+            )
+        first_seen[wave_id] = index
+    return tuple(ids)
