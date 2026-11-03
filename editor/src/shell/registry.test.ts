@@ -248,8 +248,26 @@ describe('the modules this editor ships', () => {
     }
   });
 
-  it('has a screen for content, where Light Wave Maker lives', () => {
-    expect(builtInModules.map((entry) => entry.app)).toContain('content');
+  it('has a screen for content, inventory, economy, media and leaderboard', () => {
+    expect(builtInModules.map((entry) => entry.app).sort()).toEqual([
+      'content',
+      'economy',
+      'inventory',
+      'leaderboard',
+      'media',
+    ]);
+  });
+
+  it('gives content the level authoring addresses', () => {
+    const registry = createModuleRegistry(builtInModules);
+    const at = (...segments: string[]) => {
+      const found = registry.resolve(reported('content'), 'content', segments);
+      return found.kind === 'screen' ? found.route.title : found.kind;
+    };
+
+    expect(at('levels', 'new')).toBe('New level');
+    expect(at('levels', 'lvl_1')).toBe('Level');
+    expect(at('waves', 'w1')).toBe('Wave');
   });
 
   it('puts content first, so signing in lands on the catalogue', () => {
