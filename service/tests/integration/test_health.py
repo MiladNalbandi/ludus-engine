@@ -38,13 +38,17 @@ def test_ac2_with_no_plugins_configured_only_the_built_in_apps_are_loaded() -> N
             {"name": "content", "version": "1.0.0"},
             {"name": "economy", "version": "1.0.0"},
             {"name": "inventory", "version": "1.0.0"},
+            {"name": "leaderboard", "version": "1.0.0"},
             {"name": "media", "version": "1.0.0"},
+            {"name": "progression", "version": "1.0.0"},
         ]
 
 
 def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> None:
+    # Two installed plugins, named so they cannot collide with any built-in: an installed
+    # plugin may not take a built-in's name, and the built-in set grows with every release.
     write_plugin(tmp_path, "achievements", '[plugin]\nname = "achievements"\nversion = "1.0.0"\n')
-    write_plugin(tmp_path, "leaderboard", '[plugin]\nname = "leaderboard"\nversion = "2.1.0"\n')
+    write_plugin(tmp_path, "quests", '[plugin]\nname = "quests"\nversion = "2.1.0"\n')
 
     with TestClient(create_app(Settings(plugins_directory=tmp_path))) as client:
         apps = client.get("/health").json()["apps"]
@@ -54,8 +58,10 @@ def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> N
         {"name": "content", "version": "1.0.0"},
         {"name": "economy", "version": "1.0.0"},
         {"name": "inventory", "version": "1.0.0"},
-        {"name": "leaderboard", "version": "2.1.0"},
+        {"name": "leaderboard", "version": "1.0.0"},
         {"name": "media", "version": "1.0.0"},
+        {"name": "progression", "version": "1.0.0"},
+        {"name": "quests", "version": "2.1.0"},
     ], "installed plugins and built-in apps are one list, in name order"
 
 

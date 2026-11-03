@@ -103,6 +103,47 @@ def find(session: Session, project: uuid.UUID, player: uuid.UUID) -> Player | No
     return None if row is None else _player(row)
 
 
+def page(
+    session: Session,
+    project: uuid.UUID,
+    after: tuple[datetime, uuid.UUID] | None,
+    limit: int,
+) -> list[Player]:
+    """Players most recently seen first, starting after the `(last_seen_at, id)` given.
+
+    Keyset, never offset. `last_seen_at` moves on every session, so under any traffic at all an
+    offset would repeat and skip players between pages. The id is the tie-break: two players
+    seen in the same microsecond would otherwise both be on two pages, or on neither.
+
+    A player whose `last_seen_at` does not change during a walk is returned exactly once. One
+    who starts a session moves to the front, which a walk has already passed — that is what
+    "most recently seen first" means while people are playing, not a flaw in the cursor.
+    """
+    keyset = "" if after is None else "and (last_seen_at, id) < (:seen, :id)"
+    rows = session.execute(
+        text(f"""
+            select {COLUMNS} from player
+            where project_id = :project {keyset}
+            order by last_seen_at desc, id desc
+            limit :limit
+        """),
+        {
+            "project": project,
+            "seen": None if after is None else after[0],
+            "id": None if after is None else after[1],
+            "limit": limit,
+        },
+    ).all()
+    return [_player(row) for row in rows]
+
+
+def count(session: Session, project: uuid.UUID) -> int:
+    found = session.execute(
+        text("select count(*) from player where project_id = :project"), {"project": project}
+    ).scalar_one()
+    return int(found)
+
+
 def rename(
     session: Session, project: uuid.UUID, player: uuid.UUID, display_name: str | None
 ) -> Player | None:

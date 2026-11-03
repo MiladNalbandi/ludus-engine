@@ -8,6 +8,7 @@ scoped to one player, and that token is the only thing that reaches a player's s
 from __future__ import annotations
 
 import json
+import re
 import threading
 import uuid
 from collections.abc import Iterator
@@ -289,7 +290,10 @@ def test_ac4_no_player_route_takes_a_player_id(client: TestClient) -> None:
     served = client.get("/openapi.json").json()["paths"]
     player_paths = [path for path in served if path.startswith("/api/v1/player")]
     assert player_paths, "the player routes must be mounted"
-    assert all("{" not in path for path in player_paths), player_paths
+    # R6 put the first parameter under /api/v1/player: a leaderboard's id, which names a board
+    # and never a player. Anything else in braces is a route somebody has to justify here.
+    parameters = {part for path in player_paths for part in re.findall(r"\{[^}]*\}", path)}
+    assert parameters <= {"{boardId}"}, player_paths
 
 
 # --- the frozen contract ----------------------------------------------------------------------
