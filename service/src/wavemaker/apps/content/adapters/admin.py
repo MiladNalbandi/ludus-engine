@@ -110,9 +110,12 @@ def list_waves(store: Store) -> list[dict[str, Any]]:
 
 
 @router.get("/waves/next-order", dependencies=[READER])
-def next_order(store: Store) -> dict[str, int]:
-    """So an author is not asked to guess a free position and collide with somebody else."""
-    return {"order": store.next_order()}
+def next_order(store: Store) -> int:
+    """So an author is not asked to guess a free position and collide with somebody else.
+
+    A bare integer, as the contract and the Java have it: `nextWaveOrder` answers `7`, not an
+    object holding it, and a generated client decodes exactly that."""
+    return store.next_order()
 
 
 @router.post("/waves", dependencies=[WRITER], status_code=201)

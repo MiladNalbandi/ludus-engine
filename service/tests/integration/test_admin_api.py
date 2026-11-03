@@ -164,13 +164,10 @@ def test_two_waves_cannot_claim_the_same_position(client: TestClient) -> None:
 
 
 def test_next_order_is_one_past_the_last(client: TestClient) -> None:
-    assert client.get("/api/v1/admin/waves/next-order", headers=admin(client)).json() == {
-        "order": 0
-    }
+    """A bare integer, as the frozen contract types `nextWaveOrder` and the Java answered."""
+    assert client.get("/api/v1/admin/waves/next-order", headers=admin(client)).json() == 0
     client.post("/api/v1/admin/waves", content=a_document("first", order=7), headers=admin(client))
-    assert client.get("/api/v1/admin/waves/next-order", headers=admin(client)).json() == {
-        "order": 8
-    }
+    assert client.get("/api/v1/admin/waves/next-order", headers=admin(client)).json() == 8
 
 
 def test_a_wave_can_be_deleted(client: TestClient) -> None:
