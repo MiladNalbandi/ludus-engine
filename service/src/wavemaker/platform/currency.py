@@ -8,8 +8,8 @@ platform because only the platform can be imported by both.
 The app that holds currency *provides* a ledger. Any app may then credit it, inside the
 caller's own transaction, so a refusal anywhere in a reward rolls back every part of it.
 
-When nothing has provided a ledger — the economy app is switched off, or has not been wired to
-this port yet — `provided()` is `None`, and a caller must say so rather than drop the coins.
+The economy app provides one when it is loaded. When nothing has — no app holding currency is
+loaded — `provided()` is `None`, and a caller must say so rather than drop the coins.
 """
 
 from __future__ import annotations
