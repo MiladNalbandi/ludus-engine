@@ -10,7 +10,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 
 from wavemaker.platform.config import Settings
 from wavemaker.platform.identity.accounts import ensure_account
@@ -19,6 +20,7 @@ from wavemaker.platform.identity.player_http import router as player_router
 from wavemaker.platform.identity.tokens import MINIMUM_SECRET_BYTES, Role
 from wavemaker.platform.kernel.errors import ConfigurationError
 from wavemaker.platform.kernel.registry import AppRegistry
+from wavemaker.platform.kernel.storable import UnstorableText
 from wavemaker.platform.kernel.version import PLATFORM_VERSION
 from wavemaker.platform.persistence.engine import (
     create_database_engine,
@@ -125,6 +127,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     settings.admin_password,
                     Role.ADMIN,
                 )
+
+    @app.exception_handler(UnstorableText)
+    def unstorable_text(_: Request, refused: UnstorableText) -> JSONResponse:
+        """Text PostgreSQL cannot hold, refused by the platform's one check wherever it was
+        found — by a route, naming the field, or by the database boundary for one that forgot.
+        Either way the caller sent it, and the answer is theirs."""
+        return JSONResponse(status_code=422, content={"detail": str(refused)})
 
     @app.get("/health")
     def health() -> dict[str, Any]:

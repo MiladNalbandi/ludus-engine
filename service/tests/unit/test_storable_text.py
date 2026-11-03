@@ -35,7 +35,7 @@ def test_ordinary_text_is_storable(value: str) -> None:
         ("\udfff", "surrogate"),
         # A pair written as two escapes is joined by a JSON reader; held apart in a Python
         # string, each half is lone.
-        ("🗡", "surrogate"),
+        ("\ud83d\udde1", "surrogate"),
     ],
 )
 def test_a_nul_or_a_lone_surrogate_is_not(value: str, reason: str) -> None:

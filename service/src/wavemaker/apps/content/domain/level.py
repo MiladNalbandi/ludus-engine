@@ -16,6 +16,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from wavemaker.apps.content.domain.wave import Rejected
+from wavemaker.platform.kernel.storable import storable
 
 # The width of `wave_level.name`. Longer is refused here rather than truncated by the database
 # or failed by it as a 500.
@@ -39,12 +40,15 @@ class LevelDraft:
         name = body.get("name")
         if not isinstance(name, str) or not name.strip():
             raise Rejected("/name: a level needs a name.")
+        storable("/name", name)
         if len(name) > MAX_NAME_LENGTH:
             raise Rejected(f"/name: a level's name is at most {MAX_NAME_LENGTH} characters.")
 
         description = body.get("description")
         if description is not None and not isinstance(description, str):
             raise Rejected("/description: a description is text, or left out.")
+        if description is not None:
+            storable("/description", description)
 
         # Absent is not empty. A client that forgot the field would otherwise empty a level it
         # only meant to rename.
@@ -56,6 +60,7 @@ class LevelDraft:
         for index, wave_id in enumerate(waves):
             if not isinstance(wave_id, str):
                 raise Rejected(f"/waves/{index}: a wave is named by its id, as a string.")
+            storable(f"/waves/{index}", wave_id)
             if wave_id in first_seen:
                 # Refused rather than deduplicated: two slots that advance together and a
                 # progress count that can never be right, and quietly dropping one of an

@@ -28,6 +28,7 @@ from wavemaker.platform.identity.api_keys import ApiKey
 from wavemaker.platform.identity.http import CurrentPlayer, Database, moment, requires
 from wavemaker.platform.identity.players import Player, PlayerError
 from wavemaker.platform.identity.tokens import Role, issue_player
+from wavemaker.platform.kernel.storable import storable
 
 router = APIRouter(prefix="/api/v1", tags=["players"])
 
@@ -223,6 +224,7 @@ def create_api_key(body: dict[str, Any], db: Database) -> dict[str, Any]:
     name = body.get("name")
     if not isinstance(name, str) or not name.strip():
         raise HTTPException(status_code=422, detail="/name: a key needs a name a person can read")
+    storable("/name", name)
     if len(name.strip()) > api_keys.MAX_NAME_LENGTH:
         raise HTTPException(
             status_code=422,

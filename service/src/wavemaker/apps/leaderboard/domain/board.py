@@ -12,6 +12,8 @@ import uuid
 from dataclasses import dataclass
 from datetime import datetime
 
+from wavemaker.platform.kernel.storable import unstorable
+
 # The project's own word, safe in a URL without escaping. The same shape the schema checks.
 BOARD_ID = re.compile(r"^[a-z0-9_]+$")
 MAX_BOARD_ID_LENGTH = 64
@@ -97,6 +99,9 @@ def board_name(value: object) -> str:
     if not isinstance(value, str) or not value.strip():
         raise InvalidRequest("/name", "a board needs a name a person can read")
     trimmed = value.strip()
+    unusable = unstorable(trimmed)
+    if unusable:
+        raise InvalidRequest("/name", unusable)
     if len(trimmed) > MAX_NAME_LENGTH:
         raise InvalidRequest("/name", f"a board's name is at most {MAX_NAME_LENGTH} characters")
     return trimmed

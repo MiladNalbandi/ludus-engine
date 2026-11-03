@@ -17,6 +17,8 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, TypeGuard, cast
 
+from wavemaker.platform.kernel import storable
+
 from . import documents
 from .errors import Rejected, Violation, rejected
 
@@ -126,7 +128,7 @@ def _collect[T](found: list[Violation], read: Callable[[], T]) -> T | None:
 
 
 def _text(where: str, value: str, longest: int) -> str:
-    reason = documents.unstorable_text(value)
+    reason = storable.unstorable(value)
     if reason:
         raise rejected(where, reason)
     if len(value) > longest:

@@ -10,6 +10,8 @@ import itertools
 from collections.abc import Sequence
 from dataclasses import dataclass
 
+from wavemaker.platform.kernel.storable import unstorable
+
 MAX_XP = 2**63 - 1  # a bigint
 MAX_STAGE = 2**31 - 1  # an integer
 MAX_LABEL_LENGTH = 120
@@ -116,6 +118,9 @@ def curve_of(stages: object) -> list[Stage]:
             valid = False
         if label is not None and not isinstance(label, str):
             problems.append(f"{where}/label: a label is text")
+            valid = False
+        elif isinstance(label, str) and (unusable := unstorable(label)):
+            problems.append(f"{where}/label: {unusable}")
             valid = False
         elif isinstance(label, str) and len(label.strip()) > MAX_LABEL_LENGTH:
             problems.append(f"{where}/label: a label is at most {MAX_LABEL_LENGTH} characters")

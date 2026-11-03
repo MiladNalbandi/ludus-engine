@@ -25,6 +25,7 @@ from wavemaker.platform.identity.tokens import (
     read,
     read_player,
 )
+from wavemaker.platform.kernel.storable import storable
 
 router = APIRouter(prefix="/api/v1", tags=["identity"])
 
@@ -63,12 +64,16 @@ def moment(value: datetime) -> str:
 @router.post("/auth/token")
 def sign_in(body: dict[str, Any], db: Database) -> dict[str, Any]:
     session, project, settings = db
+    # Refused by name rather than as wrong credentials: neither could be anybody's, and the
+    # password would otherwise reach the hasher, which cannot encode a lone surrogate.
+    email = storable("/email", str(body.get("email", "")))
+    password = storable("/password", str(body.get("password", "")))
     try:
         pair = sessions.sign_in(
             session,
             project,
-            str(body.get("email", "")),
-            str(body.get("password", "")),
+            email,
+            password,
             secret=settings.jwt_secret,
             access_lifetime=settings.access_lifetime(),
             refresh_lifetime=settings.refresh_lifetime(),

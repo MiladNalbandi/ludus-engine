@@ -172,6 +172,10 @@ def read_player(token: str, *, secret: str) -> PlayerCaller:
 
 
 def _claims(token: str, secret: str, expect: TokenKind) -> dict[str, Any]:
+    if not token.isascii():
+        # A token this service issued is ASCII. Anything else cannot be one, and the decoder
+        # would fail on a lone surrogate while encoding it, before it could say so itself.
+        raise TokenError("This token could not be read.")
     try:
         claims: dict[str, Any] = jwt.decode(token, secret, algorithms=[ALGORITHM])
     except jwt.ExpiredSignatureError as expired:

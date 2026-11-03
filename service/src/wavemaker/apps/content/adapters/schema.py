@@ -23,6 +23,7 @@ from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
 from wavemaker.apps.content.domain.document import DocumentError
+from wavemaker.platform.kernel.storable import UnstorableText, refuse_unstorable_in
 
 # contracts/ is the project's, shared with the Java engine and the editor's type generator.
 # Reached by walking out of service/src/wavemaker/apps/content/adapters/ to the repository root.
@@ -51,9 +52,14 @@ def check(document: Any) -> None:
     runs over the same document report the same thing.
     """
     problems = sorted(validator().iter_errors(document), key=lambda error: list(error.path))
-    if not problems:
-        return
-    raise DocumentError(_describe(problems[0]))
+    if problems:
+        raise DocumentError(_describe(problems[0]))
+    # The document is stored as the text that arrived and a `jsonb` column is generated from
+    # it, so any string in it — not only the fields lifted out — must be one PostgreSQL holds.
+    try:
+        refuse_unstorable_in(document)
+    except UnstorableText as unusable:
+        raise DocumentError(str(unusable)) from unusable
 
 
 def _describe(problem: ValidationError) -> str:

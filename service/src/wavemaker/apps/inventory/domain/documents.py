@@ -22,6 +22,8 @@ import math
 from collections.abc import Iterator
 from typing import Any
 
+from wavemaker.platform.kernel import storable
+
 from .errors import Violation, escape, rejected
 
 # Deep enough for any real item; shallow enough that validating one cannot exhaust the stack,
@@ -35,7 +37,7 @@ def _not_json(constant: str) -> Any:
 
 def parse(where: str, text: str) -> Any:
     """The document `text` holds, or a refusal at `where`."""
-    unstorable = unstorable_text(text)
+    unstorable = storable.unstorable(text)
     if unstorable:
         raise rejected(where, unstorable)
     try:
@@ -44,17 +46,6 @@ def parse(where: str, text: str) -> Any:
         raise rejected(where, f"nested more than {MAX_DEPTH} levels deep") from deep
     except ValueError as broken:  # JSONDecodeError is a ValueError
         raise rejected(where, f"this is not JSON: {broken}") from broken
-
-
-def unstorable_text(text: str) -> str | None:
-    """Why `text` cannot be stored or sent, or None when it can."""
-    if "\x00" in text:
-        return "text cannot contain the NUL character"
-    try:
-        text.encode("utf-8")
-    except UnicodeEncodeError:
-        return "text must be valid Unicode; this contains a lone surrogate"
-    return None
 
 
 def nodes(document: Any) -> Iterator[tuple[str, int, Any]]:
@@ -93,7 +84,7 @@ def problems(document: Any, prefix: str) -> list[Violation]:
         if isinstance(node, dict):
             texts.extend(node.keys())
         for value in texts:
-            reason = unstorable_text(value)
+            reason = storable.unstorable(value)
             if reason:
                 found.append(Violation(prefix + where, reason))
                 break
