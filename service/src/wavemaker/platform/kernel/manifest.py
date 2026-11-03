@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import re
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
+from packaging.requirements import InvalidRequirement, Requirement
+
 from wavemaker.platform.kernel.errors import ManifestError
+from wavemaker.platform.kernel.permissions import Permissions, table_prefix
 
 # The name becomes a route prefix (`/api/v1/<name>`) and a table prefix, so it has to survive
 # both without quoting. A leading letter keeps it a valid Python identifier stem as well.
@@ -32,9 +35,28 @@ class AppManifest:
     version: str
     requires_platform: str = ANY_PLATFORM
     source: str = ""
+    permissions: Permissions = field(default_factory=Permissions)
+    # Distributions the app imports that the platform does not promise, as requirement
+    # strings. Checked against what is installed; never installed by the platform.
+    python_dependencies: tuple[str, ...] = ()
+
+    @property
+    def import_name(self) -> str:
+        """The Python module an installed copy is imported as: `map-editor` is `map_editor`."""
+        return self.name.replace("-", "_")
+
+    @property
+    def table_prefix(self) -> str:
+        return table_prefix(self.name)
 
     @classmethod
-    def from_mapping(cls, data: Mapping[str, Any], *, source: str = "") -> AppManifest:
+    def from_mapping(
+        cls,
+        data: Mapping[str, Any],
+        *,
+        permissions: Mapping[str, Any] | None = None,
+        source: str = "",
+    ) -> AppManifest:
         name = cls._required(data, "name", source)
         version = cls._required(data, "version", source)
 
@@ -51,7 +73,31 @@ class AppManifest:
                 f"'>=1.2,<2', or be left out entirely."
             )
 
-        return cls(name=name, version=version, requires_platform=requires.strip(), source=source)
+        return cls(
+            name=name,
+            version=version,
+            requires_platform=requires.strip(),
+            source=source,
+            permissions=Permissions.from_mapping(permissions, source=source),
+            python_dependencies=cls._dependencies(data, source),
+        )
+
+    @classmethod
+    def _dependencies(cls, data: Mapping[str, Any], source: str) -> tuple[str, ...]:
+        value = data.get("python_dependencies", [])
+        if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
+            raise ManifestError(
+                f"{cls._where(source)}: python_dependencies must be a list of requirements "
+                "such as \"jsonschema>=4.23\"."
+            )
+        for requirement in value:
+            try:
+                Requirement(requirement)
+            except InvalidRequirement as broken:
+                raise ManifestError(
+                    f"{cls._where(source)}: {requirement!r} is not a requirement ({broken})."
+                ) from broken
+        return tuple(value)
 
     @staticmethod
     def _where(source: str) -> str:
