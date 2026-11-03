@@ -8,6 +8,7 @@ the contract file and checks the service answers each inventory operation where 
 from __future__ import annotations
 
 import json
+import re
 import socket
 import urllib.request
 import uuid
@@ -631,7 +632,13 @@ def test_ac7_neither_a_key_nor_nothing_reads_an_inventory(client: TestClient) ->
 def test_ac7_no_player_route_takes_a_player_id(client: TestClient) -> None:
     paths = client.get("/openapi.json").json()["paths"]
     assert "/api/v1/player/me/inventory" in paths
-    assert [path for path in paths if path.startswith("/api/v1/player") and "{" in path] == []
+    # The rule is "no *player* id in a player path": the player is always the token's. The
+    # contract's leaderboard route carries `{boardId}`, which names a board, and is the one
+    # parameter allowed — the same allowance the player API test makes. Anything else in braces
+    # is a route that would let one player name another.
+    player_paths = [path for path in paths if path.startswith("/api/v1/player")]
+    parameters = {part for path in player_paths for part in re.findall(r"\{[^}]*\}", path)}
+    assert parameters <= {"{boardId}"}, player_paths
 
 
 # --- AC-10: whatever is sent, never a 500 ---------------------------------------------------------
