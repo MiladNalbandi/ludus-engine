@@ -17,10 +17,12 @@ every player-facing app needs a player, and apps may not import each other.
 from __future__ import annotations
 
 import uuid
+from datetime import datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Path
 
+from wavemaker.platform import paging
 from wavemaker.platform.identity import api_keys, players
 from wavemaker.platform.identity.api_keys import ApiKey
 from wavemaker.platform.identity.http import CurrentPlayer, Database, moment, requires
@@ -32,6 +34,13 @@ router = APIRouter(prefix="/api/v1", tags=["players"])
 # Issuing credentials is an administrator's job, not an editor's. An editor decides what players
 # receive; deciding who may call the service at all is a different power.
 ADMINISTRATOR = Depends(requires(Role.ADMIN))
+
+# Reading players is an editor's job, as every /admin/players route is: the editor decides what
+# players receive, and needs to see who they are to do it.
+EDITOR = Depends(requires(Role.EDITOR, Role.ADMIN))
+
+PLAYERS_PER_PAGE = 50
+MOST_PLAYERS_PER_PAGE = 200
 
 ApiKeyHeader = Annotated[str | None, Header(alias="X-API-Key")]
 
@@ -135,6 +144,66 @@ def rename_player_self(
     if renamed is None:
         raise HTTPException(status_code=404, detail="This player no longer exists.")
     return _profile(renamed)
+
+
+# --- an editor, about players ----------------------------------------------------------------
+
+
+def _player_cursor(cursor: str | None) -> tuple[datetime, uuid.UUID] | None:
+    """The key of the last player on the previous page.
+
+    The time travels at full precision. The Java sent epoch milliseconds while PostgreSQL keeps
+    microseconds, so of two players seen in the same millisecond either side of a page boundary,
+    the second sorted after a truncated cursor it should have sorted before, and was skipped.
+    """
+    if cursor is None or not cursor.strip():
+        return None
+    try:
+        seen, player_id = paging.decode_cursor(cursor.strip(), 2)
+        last_seen = datetime.fromisoformat(seen)
+        if last_seen.tzinfo is None:
+            raise ValueError("a cursor's time carries its zone")
+        return last_seen, uuid.UUID(player_id)
+    except (paging.BadCursor, ValueError) as broken:
+        raise HTTPException(
+            status_code=422, detail="/cursor: not a cursor this service issued"
+        ) from broken
+
+
+@router.get("/admin/players", dependencies=[EDITOR], operation_id="listPlayers")
+def list_players(
+    db: Database, cursor: str | None = None, limit: int | None = None
+) -> dict[str, Any]:
+    """Most recently seen first, a keyset page at a time. No offsets: the ordering column moves
+    every time somebody plays."""
+    session, project, _ = db
+    after = _player_cursor(cursor)
+    size = paging.page_size(limit, default=PLAYERS_PER_PAGE, maximum=MOST_PLAYERS_PER_PAGE)
+    # One more than asked for, so whether there is a next page needs no second query.
+    found = players.page(session, project, after, size + 1)
+    shown = found[:size]
+    last = shown[-1] if len(found) > size else None
+    return {
+        "players": [_profile(player) for player in shown],
+        "total": players.count(session, project),
+        "nextCursor": None
+        if last is None
+        else paging.encode_cursor(last.last_seen_at.isoformat(), str(last.id)),
+    }
+
+
+@router.get("/admin/players/{id}", dependencies=[EDITOR], operation_id="getPlayer")
+def get_player(player_id: Annotated[str, Path(alias="id")], db: Database) -> dict[str, Any]:
+    session, project, _ = db
+    try:
+        parsed: uuid.UUID | None = uuid.UUID(player_id)
+    except ValueError:
+        parsed = None
+    found = None if parsed is None else players.find(session, project, parsed)
+    if found is None:
+        # "Not an id" and "not in this project" are one answer, as they are for keys.
+        raise HTTPException(status_code=404, detail="No such player.")
+    return _profile(found)
 
 
 # --- an administrator, about keys -------------------------------------------------------------
