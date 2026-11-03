@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
 from wavemaker.apps.content.adapters import schema
 from wavemaker.apps.content.adapters.postgres import PostgresWaveRepository
 from wavemaker.apps.content.application.ports import WaveStore
+from wavemaker.apps.content.domain import app_config
 from wavemaker.apps.content.domain.bulk import BulkError, read_batch_ids, split_documents
 from wavemaker.apps.content.domain.document import DocumentError, OrderTaken, WaveDocument
 from wavemaker.apps.content.domain.level import LevelDraft
@@ -230,6 +231,40 @@ async def batch_delete_waves(request: Request, store: Store) -> dict[str, int]:
         return {"deleted": store.delete_all(ids)}
     except Rejected as refused:
         raise HTTPException(status_code=422, detail=str(refused)) from refused
+
+
+# --- application configuration ----------------------------------------------------------------
+
+# Edited by the people who edit content, and read by them too: unlike a wave, there is no draft
+# of a configuration for a viewer to look at, only the document every client is about to get.
+
+
+@router.get("/app-config", dependencies=[WRITER], operation_id="getAppConfig")
+def get_app_config(store: Store) -> Response:
+    """The current configuration document, `{}` when the project was never configured."""
+    return Response(content=store.app_config() or app_config.EMPTY, media_type="application/json")
+
+
+@router.put(
+    "/app-config",
+    dependencies=[WRITER],
+    operation_id="replaceAppConfig",
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": {"type": "string"}}},
+        }
+    },
+)
+async def replace_app_config(request: Request, store: Store) -> Response:
+    """The whole document, not a patch. Taken and returned as bytes: binding it to a model and
+    writing it back out would move the bytes, and with them the tag every client checks."""
+    try:
+        document = app_config.accept(await request.body())
+    except DocumentError as invalid:
+        # 422, as the Java answered: the request was read and is not acceptable.
+        raise HTTPException(status_code=422, detail=str(invalid)) from invalid
+    return Response(content=store.replace_app_config(document), media_type="application/json")
 
 
 # --- levels -----------------------------------------------------------------------------------

@@ -379,6 +379,30 @@ class PostgresWaveRepository:
             raise
         return len(gone)
 
+    # --- application configuration ------------------------------------------------------------
+
+    def app_config(self) -> bytes | None:
+        """Read out of `config_json`, as a wave is: the generated column reorders keys."""
+        found = self._session.execute(
+            text("select config_json from app_config where project_id = :p"),
+            {"p": self._project},
+        ).scalar_one_or_none()
+        return None if found is None else str(found).encode()
+
+    def replace_app_config(self, document: bytes) -> bytes:
+        self._session.execute(
+            text("""
+                insert into app_config (project_id, config_json, updated_at)
+                values (:p, :doc, :now)
+                on conflict (project_id) do update set
+                    config_json = excluded.config_json,
+                    updated_at  = excluded.updated_at
+            """),
+            {"p": self._project, "doc": document.decode(), "now": datetime.now(UTC)},
+        )
+        self._session.commit()
+        return document
+
     # --- levels, below the port ---------------------------------------------------------------
 
     def _levels(self, only: uuid.UUID | None) -> list[LevelSummary]:
