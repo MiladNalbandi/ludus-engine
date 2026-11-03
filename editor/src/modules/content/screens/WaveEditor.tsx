@@ -1,9 +1,10 @@
 'use client';
 
-import { use, useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { NotSignedIn, apiFetch, restoreSession } from '@/lib/api';
+import { NotSignedIn, apiFetch } from '@/lib/api';
+import type { ModuleScreenProps } from '@/shell/module';
 import type { MovementType, Wave } from '@/lib/wave-schema';
 import { registerBuiltInMovements } from '@/modules/content/simulator/movements';
 import { simulatorRegistry } from '@/modules/content/simulator/registry';
@@ -43,8 +44,8 @@ const MOVEMENT_TYPES: MovementType[] = [
   'despawn',
 ];
 
-export default function WaveEditorPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+export default function WaveEditorScreen({ params, href }: ModuleScreenProps) {
+  const id = params.id ?? '';
   const router = useRouter();
 
   const wave = useEditor((state) => state.wave);
@@ -82,15 +83,10 @@ export default function WaveEditorPage({ params }: { params: Promise<{ id: strin
     }
   }, [id, load, router]);
 
+  // The shell has restored the session before this screen renders.
   useEffect(() => {
-    void (async () => {
-      if (!(await restoreSession())) {
-        router.push('/login');
-        return;
-      }
-      await open();
-    })();
-  }, [open, router]);
+    void open();
+  }, [open]);
 
   async function save() {
     const document = useEditor.getState().document();
@@ -119,15 +115,15 @@ export default function WaveEditorPage({ params }: { params: Promise<{ id: strin
 
   if (!wave) {
     return (
-      <main style={{ padding: '3rem' }}>
+      <main className="screen">
         {error ? <p className="error">{error}</p> : <p className="muted">Loading…</p>}
-        <Link href="/">Back to the catalogue</Link>
+        <Link href={href()}>Back to the catalogue</Link>
       </main>
     );
   }
 
   return (
-    <main style={{ maxWidth: '72rem', margin: '2rem auto', padding: '0 1rem' }}>
+    <main className="screen" style={{ maxWidth: '72rem' }}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
         <div>
           <h1 style={{ marginBottom: 0 }}>{wave.name}</h1>
@@ -138,7 +134,7 @@ export default function WaveEditorPage({ params }: { params: Promise<{ id: strin
           </p>
         </div>
         <div style={{ display: 'flex', gap: '0.5rem' }}>
-          <Link href="/" style={{ alignSelf: 'center' }}>
+          <Link href={href()} style={{ alignSelf: 'center' }}>
             Catalogue
           </Link>
           <button type="button" onClick={() => void save()} disabled={saving || !dirty}>

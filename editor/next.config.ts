@@ -12,6 +12,11 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   poweredByHeader: false,
+  // The wave editor moved inside the content module. An address someone bookmarked before the
+  // shell existed still opens the same wave.
+  async redirects() {
+    return [{ source: '/waves/:id', destination: '/content/waves/:id', permanent: false }];
+  },
 };
 
 export default nextConfig;

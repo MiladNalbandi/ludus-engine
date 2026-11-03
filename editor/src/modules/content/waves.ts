@@ -33,16 +33,7 @@ export type WaveLevelSummary = {
   updatedAt: string;
 };
 
-export type CurrentCaller = {
-  kind: string;
-  subject: string;
-  project: string;
-  role: string;
-};
-
 export const engine = {
-  me: (): Promise<CurrentCaller> => apiJson<CurrentCaller>('/api/v1/me'),
-
   waves: (): Promise<WaveSummary[]> => apiJson<WaveSummary[]>('/api/v1/admin/waves'),
 
   waveLevels: (): Promise<WaveLevelSummary[]> =>

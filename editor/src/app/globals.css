@@ -2,6 +2,8 @@
 :root {
   --navy: #111f3a;
   --navy-raised: #1b2c4e;
+  /* The shell's rail: the brand navy, one step deeper, so the screens read as the lit surface. */
+  --rail: #0c1830;
   --blue: #1ca9f0;
   --slate: #8fa6c4;
   --danger: #e06c5a;
@@ -80,4 +82,364 @@ label {
 
 .muted {
   color: var(--slate);
+}
+
+/* --- forms beyond the login page ------------------------------------------------------------ */
+
+select,
+textarea {
+  font: inherit;
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--slate);
+  background: var(--navy-raised);
+  color: var(--text);
+}
+
+textarea {
+  font-family: Menlo, Monaco, 'DejaVu Sans Mono', monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+input[type='checkbox'] {
+  width: auto;
+  accent-color: var(--blue);
+}
+
+input[type='file'] {
+  border-style: dashed;
+}
+
+:focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+}
+
+button.quiet {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid rgba(143, 166, 196, 0.55);
+}
+
+button.danger {
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+}
+
+button.small {
+  font-size: 13px;
+  padding: 0.3rem 0.65rem;
+}
+
+/* --- the shell ------------------------------------------------------------------------------ */
+
+.shell {
+  display: grid;
+  grid-template-columns: 15.5rem minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.rail {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem 0.9rem 1.25rem;
+  background: var(--rail);
+  border-right: 1px solid rgba(143, 166, 196, 0.18);
+}
+
+.rail-brand {
+  display: flex;
+  flex-direction: column;
+  padding: 0 0.6rem;
+}
+
+.rail-wordmark {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.rail-project {
+  color: var(--slate);
+  font-size: 13px;
+}
+
+.rail-nav ul,
+.rail-unclaimed ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.rail-link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  column-gap: 0.5rem;
+  padding: 0.55rem 0.6rem 0.6rem 0.75rem;
+  border-radius: 8px;
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: inset 3px 0 0 transparent;
+}
+
+.rail-link:hover {
+  background: rgba(27, 44, 78, 0.6);
+}
+
+.rail-link[aria-current='page'] {
+  background: var(--navy-raised);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.rail-link-label {
+  font-weight: 600;
+}
+
+.rail-summary {
+  grid-column: 1 / -1;
+  color: var(--slate);
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+.rail-version {
+  color: var(--slate);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  align-self: center;
+}
+
+.rail-unclaimed {
+  padding: 0 0.6rem;
+}
+
+.rail-unclaimed h2 {
+  margin: 0 0 0.4rem;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--slate);
+}
+
+.rail-unclaimed li {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--slate);
+  padding: 0.15rem 0;
+}
+
+.rail-note {
+  margin: 0;
+  padding: 0 0.6rem;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.rail-account {
+  margin-top: auto;
+  padding: 0 0.6rem;
+}
+
+.rail-caller {
+  margin: 0 0 0.6rem;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.rail-caller .muted {
+  display: block;
+}
+
+.rail-account button {
+  width: 100%;
+}
+
+.shell-main {
+  min-width: 0;
+}
+
+.shell-message {
+  max-width: 34rem;
+  margin: 18vh auto;
+  padding: 0 1rem;
+}
+
+.screen {
+  max-width: 60rem;
+  margin: 2.25rem auto 4rem;
+  padding: 0 1.5rem;
+}
+
+@media (max-width: 760px) {
+  .shell {
+    grid-template-columns: 1fr;
+  }
+
+  .rail {
+    position: static;
+    height: auto;
+    gap: 0.9rem;
+    padding: 1rem;
+    border-right: 0;
+    border-bottom: 1px solid rgba(143, 166, 196, 0.18);
+  }
+
+  .rail-nav ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+  }
+
+  .rail-summary {
+    display: none;
+  }
+
+  .rail-account {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .rail-account button {
+    width: auto;
+  }
+
+  .screen {
+    padding: 0 1rem;
+  }
+}
+
+/* --- shared pieces for module screens ------------------------------------------------------- */
+
+.screen-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+.screen-header h1 {
+  margin: 0;
+}
+
+.screen-lede {
+  margin: 0.35rem 0 0;
+  color: var(--slate);
+  max-width: 40rem;
+}
+
+.subnav {
+  display: flex;
+  gap: 0.25rem;
+  margin: 1.25rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-bottom: 1px solid rgba(143, 166, 196, 0.25);
+}
+
+.subnav a {
+  display: block;
+  padding: 0.45rem 0.8rem;
+  color: var(--slate);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+}
+
+.subnav a[aria-current='page'] {
+  color: var(--text);
+  border-bottom-color: var(--blue);
+}
+
+.split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 22rem);
+  gap: 1.5rem;
+  align-items: start;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 960px) {
+  .split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.data th {
+  text-align: left;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--slate);
+  padding: 0 0.75rem 0.5rem 0;
+  border-bottom: 1px solid rgba(143, 166, 196, 0.3);
+}
+
+.data td {
+  padding: 0.55rem 0.75rem 0.55rem 0;
+  border-bottom: 1px solid rgba(143, 166, 196, 0.12);
+  vertical-align: middle;
+}
+
+.data .number {
+  text-align: right;
+}
+
+.data tr.selected td {
+  background: rgba(28, 169, 240, 0.08);
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+.form-stack > * + * {
+  margin-top: 1rem;
+}
+
+.form-stack label {
+  margin-bottom: 0.35rem;
+}
+
+label.check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 15px;
+  color: var(--text);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.notice {
+  color: var(--slate);
+  font-size: 13px;
+}
+
+.panel h2 {
+  margin-top: 0;
+  font-size: 17px;
 }

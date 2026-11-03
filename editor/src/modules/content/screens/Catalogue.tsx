@@ -3,34 +3,26 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { NotSignedIn, restoreSession, signOut } from '@/lib/api';
-import { engine, type CurrentCaller, type WaveLevelSummary, type WaveSummary } from '@/modules/content/waves';
-import { useSession } from '@/stores/session';
+import { NotSignedIn } from '@/lib/api';
+import type { ModuleScreenProps } from '@/shell/module';
+import { engine, type WaveLevelSummary, type WaveSummary } from '@/modules/content/waves';
 
 /**
  * The catalogue: what exists, what is published, and which level players receive.
  *
- * Restoring the session on mount is the visible cost of holding the access token in memory only.
- * There is no token after a reload until the refresh cookie has been exchanged, so this renders a
- * loading state rather than bouncing to the login page — a redirect here would send a perfectly
- * signed-in editor to sign in again on every refresh.
+ * The shell restores the session before any module renders, so this screen starts signed in and
+ * only has to handle the session expiring while it is open. Who is signed in, and signing out,
+ * moved to the shell with it.
  */
-export default function CataloguePage() {
+export default function CatalogueScreen({ href }: ModuleScreenProps) {
   const router = useRouter();
-  const status = useSession((state) => state.status);
-  const [caller, setCaller] = useState<CurrentCaller | null>(null);
   const [waves, setWaves] = useState<WaveSummary[]>([]);
   const [levels, setLevels] = useState<WaveLevelSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [me, waveList, levelList] = await Promise.all([
-        engine.me(),
-        engine.waves(),
-        engine.waveLevels(),
-      ]);
-      setCaller(me);
+      const [waveList, levelList] = await Promise.all([engine.waves(), engine.waveLevels()]);
       setWaves(waveList);
       setLevels(levelList);
       setError(null);
@@ -44,44 +36,13 @@ export default function CataloguePage() {
   }, [router]);
 
   useEffect(() => {
-    void (async () => {
-      if (!(await restoreSession())) {
-        router.push('/login');
-        return;
-      }
-      await load();
-    })();
-  }, [load, router]);
-
-  if (status === 'unknown') {
-    return (
-      <main style={{ padding: '3rem' }}>
-        <p className="muted">Restoring your session…</p>
-      </main>
-    );
-  }
+    void load();
+  }, [load]);
 
   return (
-    <main style={{ maxWidth: '58rem', margin: '3rem auto', padding: '0 1rem' }}>
-      <header
-        style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}
-      >
-        <div>
-          <h1 style={{ marginBottom: 0 }}>Catalogue</h1>
-          {caller ? (
-            <p className="muted" style={{ marginTop: '0.25rem' }}>
-              {caller.subject} · {caller.role} · project {caller.project}
-            </p>
-          ) : null}
-        </div>
-        <button
-          type="button"
-          onClick={() => {
-            void signOut().then(() => router.push('/login'));
-          }}
-        >
-          Sign out
-        </button>
+    <main className="screen" style={{ maxWidth: '58rem' }}>
+      <header>
+        <h1 style={{ marginBottom: 0 }}>Catalogue</h1>
       </header>
 
       {error ? <p className="error">{error}</p> : null}
@@ -103,7 +64,7 @@ export default function CataloguePage() {
                 }}
               >
                 <span>
-                  <Link href={`/waves/${encodeURIComponent(wave.id)}`}>
+                  <Link href={href('waves', wave.id)}>
                     <code>{wave.id}</code>
                   </Link>{' '}
                   <span className="muted">
