@@ -37,18 +37,20 @@ def test_ac2_with_no_plugins_configured_only_the_built_in_apps_are_loaded() -> N
         assert client.get("/health").json()["apps"] == [
             {"name": "content", "version": "1.0.0"},
             {"name": "economy", "version": "1.0.0"},
+            {"name": "inventory", "version": "1.0.0"},
             {"name": "media", "version": "1.0.0"},
         ]
 
 
 def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> None:
-    write_plugin(tmp_path, "inventory", '[plugin]\nname = "inventory"\nversion = "1.0.0"\n')
+    write_plugin(tmp_path, "achievements", '[plugin]\nname = "achievements"\nversion = "1.0.0"\n')
     write_plugin(tmp_path, "leaderboard", '[plugin]\nname = "leaderboard"\nversion = "2.1.0"\n')
 
     with TestClient(create_app(Settings(plugins_directory=tmp_path))) as client:
         apps = client.get("/health").json()["apps"]
 
     assert apps == [
+        {"name": "achievements", "version": "1.0.0"},
         {"name": "content", "version": "1.0.0"},
         {"name": "economy", "version": "1.0.0"},
         {"name": "inventory", "version": "1.0.0"},
@@ -59,8 +61,8 @@ def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> N
 
 def test_ac4_two_apps_with_the_same_name_stop_the_service_starting(tmp_path: Path) -> None:
     """A refusal at startup, not a 500 later: the broken state never serves a request."""
-    write_plugin(tmp_path, "first", '[plugin]\nname = "inventory"\nversion = "1.0.0"\n')
-    write_plugin(tmp_path, "second", '[plugin]\nname = "inventory"\nversion = "9.9.9"\n')
+    write_plugin(tmp_path, "first", '[plugin]\nname = "achievements"\nversion = "1.0.0"\n')
+    write_plugin(tmp_path, "second", '[plugin]\nname = "achievements"\nversion = "9.9.9"\n')
 
     with pytest.raises(DuplicateAppError):
         create_app(Settings(plugins_directory=tmp_path))
