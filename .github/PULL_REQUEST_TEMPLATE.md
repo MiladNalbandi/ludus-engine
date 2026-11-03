@@ -8,7 +8,8 @@ Closes #
 
 <!-- Which tests, and anything you checked by hand. -->
 
-- [ ] `./mvnw verify` passes
+- [ ] In `service/`: `python -m pytest -q`, `python -m ruff check .`, `python -m mypy .` and `lint-imports` pass
+- [ ] In `editor/`, if it changed: `npm run typecheck`, `npm run lint`, `npm test` and `npm run verify:types` pass
 - [ ] New behaviour has a test, or a bug fix has a test that fails without it
 
 ## Checklist

@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # The editor. Built in the image so that a clone plus Docker is the only prerequisite, matching
-# Dockerfile.engine.
+# Dockerfile.service.
 FROM node:26-alpine AS build
 WORKDIR /src
 
@@ -17,7 +17,7 @@ RUN npm run verify:types && npm run build
 
 FROM node:26-alpine AS runtime
 
-# A non-root user, as on the engine image. Next's standalone output needs nothing else.
+# A non-root user, as on the service image. Next's standalone output needs nothing else.
 RUN addgroup --system --gid 1001 ludus \
  && adduser --system --uid 1001 --ingroup ludus --home /app ludus
 WORKDIR /app

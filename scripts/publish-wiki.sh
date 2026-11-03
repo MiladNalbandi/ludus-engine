@@ -29,7 +29,6 @@ PAGES=(
   "docs/concepts/content-model.md|Content-Model.md"
   "docs/concepts/caching.md|Caching-and-Change-Detection.md"
   "docs/architecture/overview.md|Architecture-Overview.md"
-  "docs/architecture/hexagonal.md|Hexagonal-Rules.md"
   "docs/operations/configuration.md|Configuration.md"
   "docs/operations/deployment.md|Deployment.md"
 )

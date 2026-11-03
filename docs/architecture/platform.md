@@ -1,7 +1,8 @@
 # WaveMaker: a modular game backend
 
-**Status: proposal.** Nothing here is built yet. This document is the design to agree on before
-code is written.
+**Status: built.** R0 to R9 are done: the service in `service/` serves the whole v1 contract, and
+the Java engine was removed in R9 ([docs/platform/r9.md](../platform/r9.md)). This document was
+the design agreed before the code was written, and is kept as the reasoning behind it.
 
 ## What we are building
 
@@ -104,7 +105,6 @@ _Releases_.
 
 ```
 ludus-engine/
-  engine/                  the Java. Stays until Python replaces it.
   editor/                  today's Next.js editor
   service/                 NEW: the Python platform
     platform/              the core. No game words in here.

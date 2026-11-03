@@ -9,7 +9,35 @@ Versions before `1.0.0` do not promise a stable HTTP contract. The contract is f
 
 ## [Unreleased]
 
-Nothing yet.
+### Removed
+
+- **The Java engine** (`engine/`, Maven, Spring Boot), its Dockerfiles and its docs. The Python
+  service in `service/` (WaveMaker) serves the whole v1 contract and replaces it. See
+  `docs/platform/r9.md`.
+- Every `LUDUS_*` setting of the Java engine. The service reads `WAVEMAKER_*`; the editor keeps
+  `LUDUS_ENGINE_URL` and `LUDUS_EDITOR_HTTPS`.
+
+### Added
+
+- Application configuration on the Python service: `GET`/`PUT /api/v1/admin/app-config` and
+  `GET /api/v1/public/app-config`, the last v1 operations no release had carried over.
+- `service/tests/integration/test_frozen_contract.py`, which walks every operation and schema of
+  the frozen v1 contract against the service, in place of the Java's `FrozenContractTest`.
+- `deploy/Dockerfile.service`, and a Quickstart that deploys the service with PostgreSQL and named
+  volumes for uploads and plugins.
+
+### Fixed
+
+- `GET /api/v1/admin/waves/next-order` answers a bare integer, as the contract types it, rather
+  than `{"order": n}`.
+- `GET /api/v1/me` reports a signed-in account's `kind` as `USER`, as v1 did, rather than
+  `access`.
+
+### Changed
+
+- The compose stack, its volumes (`wavemaker-db`, `wavemaker-blobs`, `wavemaker-plugins`) and the
+  published image (`ghcr.io/miladnalbandi/wavemaker`). Data in a Java install's database is not
+  migrated; see `docs/operations/upgrading.md`.
 
 ## [1.0.0] - 2026-09-12
 

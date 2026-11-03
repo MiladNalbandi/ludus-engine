@@ -39,7 +39,7 @@ body:
       options:
         - docker compose (the quickstart)
         - A container image, deployed some other way
-        - From source (./mvnw)
+        - From source (uvicorn)
         - Other
     validations: { required: true }
 

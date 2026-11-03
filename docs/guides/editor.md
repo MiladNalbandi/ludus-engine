@@ -1,15 +1,18 @@
 # The editor
 
-A visual editor for waves, levels and application configuration, served beside the engine by
+A visual editor for waves, levels and application configuration, served beside the service by
 `docker compose up`. It is a Next.js application under `editor/`, and it holds no content of its
-own: everything it shows comes from the engine's HTTP API, and everything it saves goes back there.
+own: everything it shows comes from the service's HTTP API, and everything it saves goes back there.
 
 ```bash
 cd deploy && docker compose up -d --build
 open http://127.0.0.1:3000
 ```
 
-Sign in with the administrator seeded from `LUDUS_ADMIN_EMAIL` and `LUDUS_ADMIN_PASSWORD`.
+Sign in with the administrator seeded from `WAVEMAKER_ADMIN_EMAIL` and `WAVEMAKER_ADMIN_PASSWORD`.
+
+The editor's own settings keep the names it has always read, `LUDUS_ENGINE_URL` and
+`LUDUS_EDITOR_HTTPS`; "engine" in this page means the WaveMaker service it talks to.
 
 ## The browser never talks to the engine
 
@@ -26,7 +29,7 @@ The visible cost is that a hard refresh has no access token until the refresh co
 exchanged for one. That is a spinner on first paint, and it is the right trade.
 
 The second thing it buys is that **the engine does not have to be published at all**. In the compose
-file the editor reaches it at `http://engine:8080` on the internal network. A deployment can expose
+file the editor reaches it at `http://service:8080` on the internal network. A deployment can expose
 the editor only, and there is then no engine API on the internet to get a CORS policy wrong on.
 
 ## `apiFetch` refreshes once, and shares the refresh
@@ -137,8 +140,8 @@ shape would be worse than a JSON field.
 log in, open a wave, add a movement, scrub the preview, save, publish, and fetch the result from the
 public API — then re-fetch with the `ETag` and require a `304`.
 
-It runs inside CI's Quickstart job, because that is the only place the editor container, the engine,
-PostgreSQL and the audio volume are all up at once.
+It runs inside CI's Quickstart job, because that is the only place the editor container, the service,
+PostgreSQL and the blob volume are all up at once.
 
 ```bash
 cd deploy && docker compose up -d --build

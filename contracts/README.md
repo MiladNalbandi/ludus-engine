@@ -10,11 +10,11 @@ that validates and serves it, and the game client that reads it.
 It lives here rather than in any of them because the alternative is three copies, and three
 copies drift. Specifically:
 
-- the engine copies it into its jar at build time (`engine-contracts`) and validates every
-  document against it before storing;
+- the WaveMaker service validates every document against it before storing, and its image
+  carries a copy;
 - the editor consumes it as the npm workspace package `@ludus/contracts` and generates its
   TypeScript types from it, so the types cannot disagree with the contract;
-- `samples/waves/` is validated against it on every build, in both Java and JavaScript, which
+- `samples/waves/` is validated against it on every build, in both Python and JavaScript, which
   is what keeps the two validators honest about the same file.
 
 Licensed **Apache-2.0**, separately from the engine. Speaking a protocol should not require a

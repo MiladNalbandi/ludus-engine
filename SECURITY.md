@@ -23,13 +23,13 @@ at `1.0.0`.
 
 ## Scope
 
-In scope: the engine, the editor, the deployment manifests in `deploy/`, and the default
+In scope: the WaveMaker service, the editor, the deployment manifests in `deploy/`, and the default
 configuration a self-hoster gets from the quickstart.
 
 Out of scope: findings that require a configuration the documentation explicitly warns
 against, vulnerabilities in third-party dependencies with no exploitable path through Ludus
 (report those upstream), and any deployment where an endpoint the documentation says to keep
-internal — `/actuator/prometheus`, for instance — has been exposed publicly.
+behind a proxy — the service port itself, for instance — has been exposed publicly.
 
 ## What we ask of self-hosters
 
