@@ -64,7 +64,7 @@ def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> N
         apps = client.get("/health").json()["apps"]
         # R1 left installed plugins registered with no routes. Since R5 they are mounted.
         assert client.get("/api/v1/achievements/hello").json() == {"app": "achievements"}
-        assert client.get("/api/v1/leaderboard/hello").json() == {"app": "leaderboard"}
+        assert client.get("/api/v1/quests/hello").json() == {"app": "quests"}
 
     assert apps == [
         {"name": "achievements", "version": "1.0.0"},
