@@ -11,6 +11,7 @@ cheaper than a container per test and more honest than tests that depend on each
 from __future__ import annotations
 
 import os
+import uuid
 from collections.abc import Iterator
 
 import pytest
@@ -55,6 +56,34 @@ def database_url(postgres: PostgresContainer) -> Iterator[str]:
 
     migrate(url)
     yield url
+
+
+@pytest.fixture
+def isolated_database_url(postgres: PostgresContainer) -> Iterator[str]:
+    """A migrated database of its own, created for one test and dropped after it.
+
+    For tests whose rows are committed by other threads, which nothing can roll back. The
+    Java's wallet concurrency test shared its module's database, its committed rows collided
+    with another test's, and it passed locally and failed on CI depending on ordering. A
+    database nobody else connects to makes that isolation structural rather than a matter of
+    who happens to run first.
+    """
+    from sqlalchemy import create_engine, make_url, text
+
+    shared = postgres.get_connection_url()
+    name = f"isolated_{uuid.uuid4().hex}"
+    server = create_engine(shared, isolation_level="AUTOCOMMIT")
+    with server.connect() as connection:
+        connection.execute(text(f'create database "{name}"'))
+
+    url = make_url(shared).set(database=name).render_as_string(hide_password=False)
+    migrate(url)
+    try:
+        yield url
+    finally:
+        with server.connect() as connection:
+            connection.execute(text(f'drop database if exists "{name}" with (force)'))
+        server.dispose()
 
 
 @pytest.fixture

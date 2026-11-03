@@ -14,6 +14,7 @@ from fastapi import FastAPI
 from wavemaker.platform.config import Settings
 from wavemaker.platform.identity.accounts import ensure_account
 from wavemaker.platform.identity.http import router as identity_router
+from wavemaker.platform.identity.player_http import router as player_router
 from wavemaker.platform.identity.tokens import MINIMUM_SECRET_BYTES, Role
 from wavemaker.platform.kernel.errors import ConfigurationError
 from wavemaker.platform.kernel.registry import AppRegistry
@@ -92,6 +93,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 )
 
     app.include_router(identity_router)
+    app.include_router(player_router)
     mount(app, registry, builtin_names())
 
     @app.get("/health")

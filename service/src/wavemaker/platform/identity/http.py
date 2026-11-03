@@ -16,7 +16,15 @@ from sqlalchemy.orm import Session
 
 from wavemaker.platform.identity import sessions
 from wavemaker.platform.identity.sessions import TokenPair
-from wavemaker.platform.identity.tokens import Caller, Role, TokenError, TokenKind, read
+from wavemaker.platform.identity.tokens import (
+    Caller,
+    PlayerCaller,
+    Role,
+    TokenError,
+    TokenKind,
+    read,
+    read_player,
+)
 
 router = APIRouter(prefix="/api/v1", tags=["identity"])
 
@@ -41,13 +49,14 @@ def _pair(pair: TokenPair) -> dict[str, Any]:
     return {
         "accessToken": pair.access_token,
         "tokenType": "Bearer",
-        "accessTokenExpiresAt": _moment(pair.access_expires_at),
+        "accessTokenExpiresAt": moment(pair.access_expires_at),
         "refreshToken": pair.refresh_token,
-        "refreshTokenExpiresAt": _moment(pair.refresh_expires_at),
+        "refreshTokenExpiresAt": moment(pair.refresh_expires_at),
     }
 
 
-def _moment(value: datetime) -> str:
+def moment(value: datetime) -> str:
+    """`...Z`, the way the frozen contract writes a date-time."""
     return value.astimezone(UTC).isoformat().replace("+00:00", "Z")
 
 
@@ -109,6 +118,37 @@ def current_caller(request: Request, authorization: Authorization = None) -> Cal
 
 
 CurrentCaller = Annotated[Caller, Depends(current_caller)]
+
+
+def current_player(request: Request, authorization: Authorization = None) -> PlayerCaller:
+    """The player this request acts as, or a 401.
+
+    The only way a route reaches a player's state. The player comes from a verified player
+    token and from nothing in the request, which is why no player route takes a player id: a
+    route shaped `/players/{id}` and authorised by "is a player" lets any player act as any
+    other, and the check that stops it is one somebody must remember to write in every handler.
+
+    An administrator's token is refused here, not translated. An administrator acting on a
+    player does it through an admin route, which records that it was an administrator.
+    """
+    settings = getattr(request.app.state, "settings", None)
+    if settings is None or not settings.jwt_secret:
+        raise HTTPException(status_code=503, detail="This service cannot verify credentials.")
+
+    if not authorization or not authorization.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="A player session token is required.")
+
+    try:
+        caller = read_player(authorization[7:].strip(), secret=settings.jwt_secret)
+    except TokenError as refused:
+        raise HTTPException(status_code=401, detail=str(refused)) from refused
+
+    if caller.project != request.app.state.project_id:
+        raise HTTPException(status_code=401, detail="This token belongs to another project.")
+    return caller
+
+
+CurrentPlayer = Annotated[PlayerCaller, Depends(current_player)]
 
 
 def requires(*allowed: Role):  # type: ignore[no-untyped-def]
