@@ -21,6 +21,8 @@ from wavemaker.apps.progression.domain.curve import MAX_XP
 from wavemaker.platform import currency
 from wavemaker.platform.currency import Credited, CurrencyRefused
 
+MAX_BALANCE = 2**63 - 1
+
 CURVE = [
     {"stage": 1, "xpRequired": 0, "label": "Rookie"},
     {"stage": 2, "xpRequired": 100, "label": "Regular"},
@@ -302,17 +304,83 @@ def test_ac8_one_refused_grant_rolls_back_the_whole_reward_xp_included(
     assert display_name(session_factory, player_id) is None
 
 
-def test_ac8_with_nothing_holding_currency_a_reward_with_currency_is_refused_whole(
-    client: TestClient, no_ledger: None
-) -> None:
-    """XP without the coins would be the partial reward this route exists to prevent."""
-    headers, player_id = player(client)
-    response = reward(
-        client, player_id, {"grants": [{"currency": "coins", "amount": 1}], "xp": 100}
+def wallet_of(client: TestClient, player_id: str) -> dict[str, int]:
+    response = client.get(
+        f"/api/v1/admin/players/{player_id}/wallet", headers=account(client, EDITOR)
     )
-    assert response.status_code == 422
-    assert response.json()["detail"][0].startswith("/grants")
+    assert response.status_code == 200, response.text
+    return {b["currency"]: b["amount"] for b in response.json()["balances"]}
+
+
+def test_ac8_the_service_pays_a_rewards_currency_into_the_players_wallet(
+    client: TestClient,
+) -> None:
+    """No stand-in: the ledger is the one the economy provides, and the coins land in the same
+    wallet a grant would put them in."""
+    headers, player_id = player(client)
+    body = {
+        "grants": [{"currency": "coins", "amount": 40}, {"currency": "gems", "amount": 2}],
+        "xp": 100,
+    }
+
+    first = reward(client, player_id, body)
+    assert first.status_code == 200, first.text
+    assert [(b["currency"], b["amount"]) for b in first.json()["balances"]] == [
+        ("coins", 40),
+        ("gems", 2),
+    ]
+    assert first.json()["xp"] == 100
+
+    second = reward(client, player_id, body)
+    assert second.status_code == 200, second.text
+    assert [(b["currency"], b["amount"]) for b in second.json()["balances"]] == [
+        ("coins", 80),
+        ("gems", 4),
+    ]
+    assert wallet_of(client, player_id) == {"coins": 80, "gems": 4}
+    assert progress_of(client, headers)["xp"] == 200
+
+
+def test_ac8_a_reward_adds_to_coins_the_player_already_holds(client: TestClient) -> None:
+    _, player_id = player(client)
+    granted = client.post(
+        f"/api/v1/admin/players/{player_id}/wallet/grant",
+        json={"currency": "coins", "amount": 5},
+        headers=account(client, EDITOR),
+    )
+    assert granted.status_code == 200, granted.text
+    response = reward(client, player_id, {"grants": [{"currency": "coins", "amount": 7}]})
+    assert response.status_code == 200, response.text
+    assert wallet_of(client, player_id) == {"coins": 12}
+
+
+def test_ac8_when_the_economy_refuses_a_grant_the_xp_and_the_other_grants_roll_back(
+    client: TestClient,
+) -> None:
+    """The economy's own refusal, not a stand-in's: a balance that would not fit in a bigint.
+    The XP and the gems are written before the coins are refused, and must not survive it."""
+    headers, player_id = player(client)
+    full = client.post(
+        f"/api/v1/admin/players/{player_id}/wallet/grant",
+        json={"currency": "coins", "amount": MAX_BALANCE},
+        headers=account(client, EDITOR),
+    )
+    assert full.status_code == 200, full.text
+
+    response = reward(
+        client,
+        player_id,
+        {
+            "grants": [{"currency": "gems", "amount": 5}, {"currency": "coins", "amount": 1}],
+            "xp": 100,
+        },
+    )
+    assert response.status_code == 422, response.text
+    [problem] = response.json()["detail"]
+    assert problem.startswith("/grants/1: ")
+    assert "coins" in problem
     assert progress_of(client, headers)["xp"] == 0
+    assert wallet_of(client, player_id) == {"coins": MAX_BALANCE}
 
 
 def test_ac8_a_reward_of_xp_alone_needs_nothing_to_hold_currency(

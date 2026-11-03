@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Sequence
 
 import pytest
 
@@ -13,8 +14,11 @@ from wavemaker.apps.leaderboard.domain.board import (
     is_board_id,
     score_of,
 )
+from wavemaker.apps.progression.application.rewards import reward
 from wavemaker.apps.progression.domain.curve import (
+    Grant,
     Rejected,
+    Reward,
     Stage,
     curve_of,
     following,
@@ -23,6 +27,7 @@ from wavemaker.apps.progression.domain.curve import (
     reward_of,
 )
 from wavemaker.platform import paging
+from wavemaker.platform.currency import Credited, CurrencyLedger
 
 CURVE = [Stage(1, 0, "Rookie"), Stage(2, 100, None), Stage(3, 250, "Veteran")]
 
@@ -91,6 +96,36 @@ def test_every_problem_with_a_reward_is_reported() -> None:
         "/grants/0/amount",
         "/xp",
     ]
+
+
+class Untouchable:
+    """A store a refused reward must never reach."""
+
+    def curve(self) -> list[Stage]:
+        raise AssertionError("read the curve")
+
+    def replace_curve(self, stages: Sequence[Stage]) -> list[Stage]:
+        raise AssertionError("replaced the curve")
+
+    def xp(self, player: uuid.UUID) -> int:
+        raise AssertionError("read XP")
+
+    def reward(
+        self,
+        player: uuid.UUID,
+        xp: int,
+        grants: Sequence[Grant],
+        ledger: CurrencyLedger | None,
+    ) -> tuple[list[Credited], int]:
+        raise AssertionError("wrote a reward")
+
+
+def test_with_no_ledger_a_reward_naming_currency_is_refused_before_anything_is_written() -> None:
+    """The service always has one, from the economy. Without it — the economy taken out —
+    awarding the XP and dropping the coins would be the partial reward the route prevents."""
+    with pytest.raises(Rejected) as rejected:
+        reward(Untouchable(), None, uuid.uuid4(), Reward([Grant("coins", 1)], 100))
+    assert rejected.value.problems[0].startswith("/grants")
 
 
 @pytest.mark.parametrize("candidate", ["high_score", "a", "x" * 64, "2026_season_1"])
