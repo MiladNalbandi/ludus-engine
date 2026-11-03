@@ -12,6 +12,7 @@ from packaging.version import InvalidVersion, Version
 
 from wavemaker.platform.kernel.errors import DuplicateAppError, IncompatiblePlatformError
 from wavemaker.platform.kernel.manifest import ANY_PLATFORM, AppManifest
+from wavemaker.platform.kernel.permissions import prefixes_overlap
 
 
 class AppRegistry:
@@ -33,8 +34,24 @@ class AppRegistry:
 
     def register(self, manifest: AppManifest) -> None:
         self._refuse_duplicate(manifest)
+        self._refuse_overlapping_prefix(manifest)
         self._refuse_incompatible(manifest)
         self._apps[manifest.name] = manifest
+
+    def _refuse_overlapping_prefix(self, manifest: AppManifest) -> None:
+        """`inv` owns every table beginning `inv_`, which includes every table of `inv-x`.
+
+        Two such apps could each claim the other's tables, so the second is refused. It is a
+        name clash in all but spelling, and fixed the same way.
+        """
+        for existing in self._apps.values():
+            if prefixes_overlap(existing.table_prefix, manifest.table_prefix):
+                raise DuplicateAppError(
+                    f"Apps '{existing.name}' ({existing.source or 'unknown'}) and "
+                    f"'{manifest.name}' ({manifest.source or 'unknown'}) own overlapping table "
+                    f"prefixes, '{existing.table_prefix}' and '{manifest.table_prefix}': one "
+                    "could claim the other's tables."
+                )
 
     def _refuse_duplicate(self, manifest: AppManifest) -> None:
         existing = self._apps.get(manifest.name)

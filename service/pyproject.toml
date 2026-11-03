@@ -19,7 +19,12 @@ dependencies = [
     # Driven directly for uploads, so a file streams from the socket to its directory once.
     "python-multipart>=0.0.20",
     "uvicorn[standard]>=0.30.0",
+    # Ed25519, to verify a plugin package was signed by a key this service trusts.
+    "cryptography>=43.0.0",
 ]
+
+[project.scripts]
+wavemaker = "wavemaker.platform.cli:main"
 
 [project.optional-dependencies]
 dev = [

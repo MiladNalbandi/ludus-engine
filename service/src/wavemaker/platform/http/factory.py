@@ -7,6 +7,7 @@ half-built service answering some routes and failing others.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
@@ -24,7 +25,8 @@ from wavemaker.platform.persistence.engine import (
     create_session_factory,
     migrate,
 )
-from wavemaker.platform.plugins.loader import load_manifests
+from wavemaker.platform.plugins.loader import directory_of, load_manifests
+from wavemaker.platform.plugins.migrations import migrate_app, migrations_of
 from wavemaker.platform.plugins.mounting import builtin_manifests, mount
 from wavemaker.platform.storage.blobs import ensure_writable
 from wavemaker.platform.tenancy import ensure_project
@@ -45,8 +47,24 @@ def build_registry(settings: Settings) -> AppRegistry:
 
 
 def builtin_names() -> set[str]:
-    """The apps whose code ships with this process, and so are the only ones with routes."""
+    """The apps whose code ships with this process, imported from `wavemaker.apps`."""
     return {manifest.name for manifest in builtin_manifests()}
+
+
+def installed_directories(settings: Settings) -> dict[str, Path]:
+    """Each installed plugin's directory, from which its code and its migrations are read."""
+    return {
+        manifest.name: directory_of(manifest)
+        for manifest in load_manifests(settings.plugins_directory)
+    }
+
+
+def migrate_apps(database_url: str, registry: AppRegistry) -> None:
+    """Every app that carries its own history, built-in or installed, in name order."""
+    for manifest in registry.apps:
+        migrations = migrations_of(directory_of(manifest))
+        if migrations is not None:
+            migrate_app(database_url, manifest, migrations)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -59,6 +77,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.project_id = None
 
     app.state.settings = settings
+
+    # Routes before the database. Loading an installed plugin's code is where it is held to
+    # its routes and its module name, and a plugin refused there must not have changed the
+    # database first.
+    app.include_router(identity_router)
+    app.include_router(player_router)
+    mount(app, registry, builtin_names(), installed_directories(settings))
 
     # Checked here, before anything is served: a directory that cannot be written is a
     # deployment mistake, and the moment to say so is while somebody is watching the deploy —
@@ -85,6 +110,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         # been migrated to is the failure where every read works and one write fails hours
         # later, on a different machine, in front of players.
         migrate(settings.database_url)
+        migrate_apps(settings.database_url, registry)
         engine = create_database_engine(settings.database_url)
         app.state.session_factory = create_session_factory(engine)
         with app.state.session_factory() as session:
@@ -99,10 +125,6 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                     settings.admin_password,
                     Role.ADMIN,
                 )
-
-    app.include_router(identity_router)
-    app.include_router(player_router)
-    mount(app, registry, builtin_names())
 
     @app.get("/health")
     def health() -> dict[str, Any]:

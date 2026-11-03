@@ -38,19 +38,33 @@ def load_manifests(directory: Path | None) -> list[AppManifest]:
     manifests: list[AppManifest] = []
     for candidate in sorted(directory.iterdir()):
         manifest_file = candidate / MANIFEST_FILE
+        # A leading dot is the installer's: a package being unpacked, or the copy it is
+        # replacing. Neither is a plugin yet, or any longer.
+        if candidate.name.startswith("."):
+            continue
         if not candidate.is_dir() or not manifest_file.is_file():
             continue
-        manifests.append(_read(manifest_file))
+        manifests.append(read_manifest(manifest_file))
     return manifests
 
 
-def _read(manifest_file: Path) -> AppManifest:
-    source = str(manifest_file)
+def read_manifest(manifest_file: Path) -> AppManifest:
     try:
-        with manifest_file.open("rb") as handle:
-            document = tomllib.load(handle)
+        content = manifest_file.read_bytes()
     except OSError as unreadable:
-        raise ManifestError(f"{source}: could not be read ({unreadable}).") from unreadable
+        raise ManifestError(
+            f"{manifest_file}: could not be read ({unreadable})."
+        ) from unreadable
+    return parse_manifest(content, source=str(manifest_file))
+
+
+def parse_manifest(content: bytes, *, source: str) -> AppManifest:
+    """A manifest from its bytes, wherever they came from: a file, or an archive not yet
+    unpacked — which is how the installer reads one before anything touches the disk."""
+    try:
+        document = tomllib.loads(content.decode("utf-8"))
+    except UnicodeDecodeError as malformed:
+        raise ManifestError(f"{source}: is not UTF-8 ({malformed}).") from malformed
     except tomllib.TOMLDecodeError as malformed:
         raise ManifestError(f"{source}: is not valid TOML ({malformed}).") from malformed
 
@@ -61,4 +75,11 @@ def _read(manifest_file: Path) -> AppManifest:
             "and a version under [plugin]."
         )
 
-    return AppManifest.from_mapping(plugin, source=source)
+    return AppManifest.from_mapping(
+        plugin, permissions=document.get("permissions"), source=source
+    )
+
+
+def directory_of(manifest: AppManifest) -> Path:
+    """The directory an app was read from: the one holding its manifest."""
+    return Path(manifest.source).parent
