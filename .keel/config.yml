@@ -1,0 +1,176 @@
+# keel configuration. Written by `keel init --write`; edit freely.
+version: 4
+flow_default: full
+
+runtime:
+  services: docker      # docker | external | none
+  app: container              # host | container  (compose: deploy/docker-compose.yml)
+  agent: devcontainer         # host | devcontainer  (.devcontainer/devcontainer.json, JDK 21)
+
+# The Python platform is where all new work happens. The Java in engine/ is kept as the
+# reference the rewrite is checked against (see docs/architecture/platform.md, R9) and is
+# built by Maven in CI, not driven by keel.
+backend:
+  dir: service
+  build: ''
+  migrations: src/wavemaker/platform/persistence/migrations   # arrives with R1
+frontend:
+  dir: editor
+  package_manager: npm
+  generated: src/lib/wave-schema.ts
+# The OpenAPI document frozen at v1.0.0. FrozenContractTest fails the build on a breaking
+# change, and the Python rewrite must answer this same contract until R9.
+contract:
+  file: docs/api/openapi-v1.json
+# No E2E suite exists. api_url is loopback v4 on purpose: the engine is published on
+# 127.0.0.1 only, and 'localhost' may resolve to ::1 first.
+e2e:
+  dir: ''
+  web_url: ''
+  api_url: http://127.0.0.1:8080
+smoke:
+  dir: ''
+  max_seconds: 60
+specs:
+  dir: specs
+
+base_branch: main
+
+# Every command keel runs lives here. `keel doctor` lists which are set and which
+# tiers need them; a required command that is blank makes its tier fail loudly
+# rather than passing with the check silently skipped.
+commands:
+  api_compile: 'python -m compileall -q src tests'
+  api_test_ac: 'python -m pytest -q -k "{AC_KEY}"'
+  api_test_module: 'python -m pytest -q'
+  api_test_pkg: 'python -m pytest -q {PKG}'
+  web_typecheck: 'npm run typecheck'
+  web_test_ac: 'npx vitest run -t "{AC_KEY}"'
+  web_test_module: 'npm run test'
+  web_test_paths: 'npx vitest run {PATHS}'
+  coverage_api: 'python -m pytest -q --cov --cov-report=xml:coverage.xml'
+  coverage_web: ''
+  e2e: ''
+  smoke_e2e: ''
+  contract_lint: ''           # the frozen contract is checked by a test, not a linter
+  codegen: ''                 # the editor generates its own types with verify:types
+  # lint-imports is the architecture wall: an app importing another app fails here.
+  static_checks: 'python -m ruff check . && python -m mypy . && lint-imports'
+  migrate: ''                 # no migration runner until R1
+  testcontainers_test: ''
+  # Used by the run ladder; verified 2026-09-19 inside the dev container.
+  deps_api: 'uv pip install -e ".[dev]"'
+  deps_web: 'npm ci'
+  unit_tests: 'python -m pytest -q'
+  api_health_check: 'curl -fsS http://127.0.0.1:8080/health'
+  web_health_check: 'curl -fsS http://127.0.0.1:3000/login'
+  smoke: "curl -fsS http://127.0.0.1:8080/health | grep -q status"
+
+# Every commit is the user's own GitHub contribution. A bot author would split the credit
+# and keep the work off the contribution graph.
+commit:
+  author_name: Milad Nalbandi
+  author_email: 34091118+MiladNalbandi@users.noreply.github.com
+
+gates:
+  mode: every-ac              # every-ac | end-of-lane | end
+  ai_review_on_skip: false
+  bug_gates: true
+
+setup:
+  ladder: []                  # e.g. [toolchain, dependencies, compile, unit-tests]
+  max_parallel: 4             # rungs of one level at a time
+  fix_attempts_per_rung: 3    # after this many failures the rung becomes a blocking question
+  runbook: docs/RUNNING.md
+
+# /keel:hunt proposes these lenses and asks you to confirm the set before anything fans out.
+# A seventh lens is a line here plus a brief in the hunt skill's references/lenses.md — the
+# flow, the guards and the agents do not change.
+
+hunt:
+  lenses: [exploration, observability, security, behavioral, technical, concurrency, idempotency, contract-drift, reachability, test-integrity, data-migration]
+  # `messaging` ships a brief but stays off here: most projects have no broker, and a lens with
+  # nothing to act on spends a hunter every sweep. Add it, and `messaging: [api]` below, when
+  # there is one — it needs a dedicated broker, never a shared environment.
+  # Which half of the tree each lens reads. Two lanes means two hunters, each given half — which is
+  # what keeps a wide sweep affordable. `both` means one agent that must see both sides:
+  # contract-drift's subject is the disagreement between them, so splitting it blinds it.
+  lens_lanes:
+    exploration: [api, web]
+    observability: [api, web]
+    security: [api, web]
+    behavioral: [web, api]
+    technical: [api, web]
+    concurrency: [api]
+    idempotency: [api, web]
+    contract-drift: [both]
+    # Two hunters, each half the target list — reachability's whole brief is a time budget, and
+    # splitting the list in half is the cheapest way to keep it.
+    reachability: [api, web]
+    test-integrity: [api, web]
+    data-migration: [api]
+  # What `keel hunt start --fast` sweeps. The lenses that carry the most per token: exploration and
+  # observability arrive with proof attached, contract-drift and reachability are both nearly
+  # mechanical (one a static diff, the other one live call per target). concurrency and idempotency
+  # are left out as the most expensive to *prove* — a fast hunt narrows what is looked at, never
+  # whether a finding is verified.
+  fast_lenses: [exploration, observability, security, technical, contract-drift, reachability]
+  dedup_line_window: 10       # same file within N lines = the same finding, seen twice
+  severity_floor_5xx: high    # a proven 5xx cannot be filed below this
+  # `keel hunt start` requires --auto or --semi. --semi waits at each of these; --auto pre-approves
+  # them as the model and the report says so. There is no default: it is the first thing you decide.
+  gates: [sweep, prove, report]
+  default_scope: diff         # all | diff | <comma-separated paths>
+  max_candidates_per_lens: 12
+  prove_concurrency: 4
+  report_dir: docs/hunts
+
+loops:
+  stall_repeats: 3
+  flaky_reruns: 1
+  green_author: main          # main | subagent
+  commit_style: paired        # paired | single
+  red_author: main            # main | subagent
+
+tests:
+  per_ac_scope: changed-packages
+  module_suite_at: gate       # every-ac | gate | lane-end
+
+coverage:
+  changed_lines: 95
+  changed_branches: 90
+  # Off, not warn: nothing in this build produces a coverage report, so any other
+  # setting would gate on a file that never appears.
+  per_ac: off                 # off | warn | enforce
+  global: off                 # a number, or ratchet to never drop below the stored baseline
+  reports:
+    api: service/coverage.xml
+    web: ''
+  exclude:
+    api: []
+    web: []
+  gate_commands: ['git push', 'gh pr create', 'keel pr']
+  enabled: true
+
+stack:
+  compose: deploy/docker-compose.yml
+  per_lane_isolation: true
+
+stop_gate:
+  enabled: true
+  max_blocks_per_turn: 1
+
+caps:
+  red_turns: 8
+  green_turns: 15
+  e2e_turns: 40
+  ship_rounds: 2
+
+console:
+  enabled: false
+  endpoints: off             # off | read | write
+  db: off                    # off | read — there is no write
+  queue: off
+  commands: off              # runs a key from `commands` below, never a string from the page
+  base_url: http://localhost:8080
+  db_url_env: DATABASE_URL   # the env var holding the DSN; never a literal DSN
