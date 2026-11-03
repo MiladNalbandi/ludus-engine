@@ -104,6 +104,12 @@ textarea {
   resize: vertical;
 }
 
+input[readonly] {
+  color: var(--slate);
+  border-color: rgba(143, 166, 196, 0.35);
+  background: transparent;
+}
+
 input[type='checkbox'] {
   width: auto;
   accent-color: var(--blue);
@@ -312,6 +318,7 @@ button.small {
 
   .rail-account button {
     width: auto;
+    white-space: nowrap;
   }
 
   .screen {
@@ -442,4 +449,107 @@ label.check {
 .panel h2 {
   margin-top: 0;
   font-size: 17px;
+}
+
+/* --- level authoring: the waves are a sequence, so they are numbered -------------------------- */
+
+.level-waves {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.level-waves li {
+  display: grid;
+  grid-template-columns: 1.75rem minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.45rem 0;
+  border-bottom: 1px solid rgba(143, 166, 196, 0.12);
+}
+
+.level-position {
+  color: var(--slate);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.level-wave-name {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .level-waves li {
+    grid-template-columns: 1.75rem minmax(0, 1fr);
+  }
+
+  .level-waves li .actions {
+    grid-column: 2;
+  }
+}
+
+.level-add {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.media-upload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.sprite-thumb {
+  display: block;
+  width: 3rem;
+  height: 3rem;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: repeating-conic-gradient(rgba(143, 166, 196, 0.18) 0% 25%, transparent 0% 50%) 0 0 /
+    12px 12px;
+  border-radius: 6px;
+}
+
+.board-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.board-list li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(143, 166, 196, 0.12);
+}
+
+.board-list a[aria-current='page'] {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.button-link {
+  display: inline-block;
+  border-radius: var(--radius);
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgba(143, 166, 196, 0.55);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
 }

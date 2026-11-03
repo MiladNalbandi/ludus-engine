@@ -57,6 +57,8 @@ export function ModuleOutlet() {
     );
   }
 
+  // Keyed by the address, so moving from one level to another starts the screen afresh instead of
+  // showing the previous level's fields until the next one loads.
   const Screen = found.route.screen;
-  return <Screen params={found.params} href={href} />;
+  return <Screen key={`${slug}/${rest.join('/')}`} params={found.params} href={href} />;
 }

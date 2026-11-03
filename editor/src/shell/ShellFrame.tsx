@@ -159,7 +159,7 @@ export function ShellFrame({ children }: { children: React.ReactNode }) {
             {state.caller ? (
               <p className="rail-caller">
                 {state.caller.subject}
-                <span className="muted"> signed in as {state.caller.role}</span>
+                <span className="muted"> signed in as {state.caller.role.toLowerCase()}</span>
               </p>
             ) : null}
             <button

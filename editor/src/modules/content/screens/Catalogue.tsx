@@ -96,9 +96,14 @@ export default function CatalogueScreen({ href }: ModuleScreenProps) {
       </section>
 
       <section style={{ marginTop: '2rem' }}>
-        <h2>Levels</h2>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+          <h2>Levels</h2>
+          <Link href={href('levels', 'new')} className="button-link">
+            New level
+          </Link>
+        </div>
         {levels.length === 0 ? (
-          <p className="muted">No levels yet.</p>
+          <p className="muted">No levels yet. Create one to put waves in the order players meet them.</p>
         ) : (
           <ul className="panel" style={{ listStyle: 'none', margin: 0, padding: '0.5rem 1rem' }}>
             {levels.map((level) => (
@@ -112,7 +117,7 @@ export default function CatalogueScreen({ href }: ModuleScreenProps) {
                 }}
               >
                 <span>
-                  {level.name}{' '}
+                  <Link href={href('levels', level.id)}>{level.name}</Link>{' '}
                   <span className="muted">
                     ·{' '}
                     {/* Drafts inside a level are worth showing here: players do not receive
