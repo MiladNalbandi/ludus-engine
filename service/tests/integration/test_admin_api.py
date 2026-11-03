@@ -276,7 +276,11 @@ def test_a_rejection_names_the_document_by_position(client: TestClient) -> None:
         a_document("first", order=0), a_document("second", order=1), json.dumps(broken).encode()
     )
     refused = client.post("/api/v1/admin/waves/bulk", content=body, headers=admin(client))
-    assert refused.json()["detail"].startswith("/2"), "the third document, counting from zero"
+    detail = refused.json()["detail"]
+    assert detail.startswith("/2"), "the third document, counting from zero"
+    # The index and the rest of the message must stay apart. `/2` glued to `the document: …`
+    # reads as `/2the document`, which is neither a pointer nor a sentence.
+    assert detail.startswith(("/2/", "/2: ")), f"index run into the message: {detail!r}"
 
 
 def test_two_documents_in_one_batch_cannot_claim_the_same_position(client: TestClient) -> None:
