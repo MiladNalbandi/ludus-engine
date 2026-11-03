@@ -18,37 +18,38 @@ engine does that — Ludus tells it what to build.
 
 ## Start here
 
-| | |
-|---|---|
-| [Getting started](guides/getting-started.md) | Run the engine locally and confirm it works |
-| [The editor](guides/editor.md) | The visual editor, and why the browser never talks to the engine directly |
-| [Deployment](operations/deployment.md) | Running it somewhere real |
-| [Upgrading](operations/upgrading.md) | The versioning promise, and what it does not cover |
-| [Configuration](operations/configuration.md) | Every environment variable, and which ones have security consequences |
+|                                              |                                                                           |
+| -------------------------------------------- | ------------------------------------------------------------------------- |
+| [Getting started](guides/getting-started.md) | Run the engine locally and confirm it works                               |
+| [The editor](guides/editor.md)               | The visual editor, and why the browser never talks to the engine directly |
+| [Deployment](operations/deployment.md)       | Running it somewhere real                                                 |
+| [Upgrading](operations/upgrading.md)         | The versioning promise, and what it does not cover                        |
+| [Configuration](operations/configuration.md) | Every environment variable, and which ones have security consequences     |
 
 ## Concepts
 
-| | |
-|---|---|
-| [The content model](concepts/content-model.md) | Documents, schemas, drafts and publication |
+|                                                     |                                                                      |
+| --------------------------------------------------- | -------------------------------------------------------------------- |
+| [The content model](concepts/content-model.md)      | Documents, schemas, drafts and publication                           |
 | [Caching and change detection](concepts/caching.md) | How clients know content changed, and why one hash backs two signals |
 
 ## Architecture
 
-| | |
-|---|---|
-| [Overview](architecture/overview.md) | The pieces, the modules, and two ideas worth understanding early |
-| [Hexagonal rules](architecture/hexagonal.md) | The layering, and how the build enforces it |
-| [Decision records](architecture/adr/) | Why things are the way they are, including rejected options |
+|                                                |                                                                                               |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [Overview](architecture/overview.md)           | The pieces, the modules, and two ideas worth understanding early                              |
+| [Hexagonal rules](architecture/hexagonal.md)   | The layering, and how the build enforces it                                                   |
+| [Decision records](architecture/adr/)          | Why things are the way they are, including rejected options                                   |
+| [WaveMaker platform](architecture/platform.md) | **Proposal.** The modular plugin platform this becomes, and how the Python rewrite gets there |
 
 ## Project
 
-| | |
-|---|---|
-| [Roadmap](roadmap.md) | Where this is going and in what order |
-| [Contributing](../CONTRIBUTING.md) | Build, test, and the rules a change has to respect |
+|                                           |                                                               |
+| ----------------------------------------- | ------------------------------------------------------------- |
+| [Roadmap](roadmap.md)                     | Where this is going and in what order                         |
+| [Contributing](../CONTRIBUTING.md)        | Build, test, and the rules a change has to respect            |
 | [Brand assets](../assets/brand/README.md) | The mark, the palette, and which variant to use at which size |
-| [Security policy](../SECURITY.md) | Reporting a vulnerability |
+| [Security policy](../SECURITY.md)         | Reporting a vulnerability                                     |
 
 ## A note on these docs
 
