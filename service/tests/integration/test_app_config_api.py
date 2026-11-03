@@ -181,5 +181,3 @@ def test_the_configuration_belongs_to_a_project_and_there_is_one_per_project(
         )
     assert constraints["p"] == "PRIMARY KEY (project_id)"
     assert constraints["f"].startswith("FOREIGN KEY (project_id) REFERENCES project(id)")
-
-
