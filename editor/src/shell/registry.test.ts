@@ -16,7 +16,9 @@ import { builtInModules } from '@/modules';
  */
 const Screen: ComponentType<ModuleScreenProps> = () => null;
 
-function module(overrides: Partial<EditorModule> & Pick<EditorModule, 'app' | 'slug'>): EditorModule {
+function module(
+  overrides: Partial<EditorModule> & Pick<EditorModule, 'app' | 'slug'>,
+): EditorModule {
   return {
     api: MODULE_API_VERSION,
     label: overrides.app,
@@ -129,8 +131,43 @@ describe('what the registry refuses', () => {
 
   it('refuses a module written for another version of the module interface', () => {
     expect(() =>
-      createModuleRegistry([{ ...content, api: (MODULE_API_VERSION + 1) as typeof MODULE_API_VERSION }]),
+      createModuleRegistry([
+        { ...content, api: (MODULE_API_VERSION + 1) as typeof MODULE_API_VERSION },
+      ]),
     ).toThrow(/interface version/);
+  });
+
+  it('accepts modules written for interface version 1 and version 2 side by side', () => {
+    const registry = createModuleRegistry([
+      { ...content, api: 1 },
+      { ...inventory, api: 2, styles: '.panel { color: red }' },
+    ]);
+
+    expect(registry.all().map((entry) => entry.api)).toEqual([1, 2]);
+  });
+
+  it('refuses styles on a version 1 module, which predates them', () => {
+    expect(() => createModuleRegistry([{ ...content, api: 1, styles: '.x {}' }])).toThrow(
+      /styles, which need module interface version 2/,
+    );
+  });
+
+  it('refuses a module missing a field, naming the field rather than failing inside', () => {
+    // A plugin's module is whatever its bundle returned; the compiler never saw it.
+    const loose = (value: unknown) => value as EditorModule;
+    expect(() => createModuleRegistry([loose(null)])).toThrow(/must be an object/);
+    expect(() => createModuleRegistry([loose({ ...content, label: undefined })])).toThrow(
+      /no label/,
+    );
+    expect(() => createModuleRegistry([loose({ ...content, routes: 'home' })])).toThrow(
+      /no list of routes/,
+    );
+    expect(() =>
+      createModuleRegistry([loose({ ...content, routes: [{ path: '', title: 'Home' }] })]),
+    ).toThrow(/screen component/);
+    expect(() => createModuleRegistry([loose({ ...content, api: '2' })])).toThrow(
+      /interface version/,
+    );
   });
 
   it('refuses a module with no home screen', () => {
@@ -211,7 +248,9 @@ describe('resolving an address to a screen', () => {
 
   it('says an address is unknown when no module or route claims it', () => {
     expect(registry.resolve(reported('content'), 'nowhere', [])).toEqual({ kind: 'unknown' });
-    expect(registry.resolve(reported('content'), 'content', ['waves'])).toEqual({ kind: 'unknown' });
+    expect(registry.resolve(reported('content'), 'content', ['waves'])).toEqual({
+      kind: 'unknown',
+    });
     expect(registry.resolve(reported('content'), 'content', ['waves', 'a', 'b'])).toEqual({
       kind: 'unknown',
     });
@@ -273,6 +312,8 @@ describe('the modules this editor ships', () => {
   it('puts content first, so signing in lands on the catalogue', () => {
     const registry = createModuleRegistry(builtInModules);
 
-    expect(registry.visible(reported('media', 'content', 'economy'))[0]?.module.app).toBe('content');
+    expect(registry.visible(reported('media', 'content', 'economy'))[0]?.module.app).toBe(
+      'content',
+    );
   });
 });
