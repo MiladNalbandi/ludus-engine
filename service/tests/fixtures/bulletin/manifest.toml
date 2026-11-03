@@ -1,0 +1,14 @@
+# The fixture plugin for R8: a backend app with one editor screen in ui/.
+#
+# Built with `wavemaker plugin build`, published to a throwaway registry and installed by the
+# tests, exactly as an author's plugin would be. Nothing in the editor or the service names it.
+[plugin]
+name = "bulletin"
+version = "1.0.0"
+requires_platform = ">=0.1"
+
+# The editor screen: ui/module.js, written for module interface version 2 — an ES module whose
+# default export is a factory the shell calls with React and its request helpers.
+[ui]
+entry = "module.js"
+api = 2
