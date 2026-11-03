@@ -135,4 +135,6 @@ def test_a_batch_comes_back_in_the_order_asked_for(client: TestClient) -> None:
 
 
 def test_health_reports_the_content_app(client: TestClient) -> None:
+    # Membership, not the whole list: the whole list is test_health's to pin, and it grows
+    # every time an app ships.
     assert {"name": "content", "version": "1.0.0"} in client.get("/health").json()["apps"]

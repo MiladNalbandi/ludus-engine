@@ -150,7 +150,10 @@ def test_ac7_the_filter_graph_is_built_from_numbers_only() -> None:
 def test_ac7_a_mix_request_is_read_into_tracks() -> None:
     first, second = uuid.uuid4(), uuid.uuid4()
     mix = read_mix(
-        {"filename": "boss.ogg", "tracks": [{"clipId": str(first)}, {"clipId": str(second), "gainDb": -3}]},
+        {
+            "filename": "boss.ogg",
+            "tracks": [{"clipId": str(first)}, {"clipId": str(second), "gainDb": -3}],
+        },
         max_tracks=8,
     )
     assert mix.filename == "boss.ogg"
@@ -167,16 +170,29 @@ def test_ac7_a_mix_request_is_read_into_tracks() -> None:
         ({"filename": "m.ogg"}, "/tracks"),
         ({"filename": "m.ogg", "tracks": []}, "/tracks"),
         ({"filename": "m.ogg", "tracks": [{"clipId": "nope"}]}, "/tracks/0/clipId"),
-        ({"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=1)), "gainDb": "loud"}]},
-         "/tracks/0/gainDb"),
-        ({"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=1)), "gainDb": float("nan")}]},
-         "/tracks/0/gainDb"),
-        ({"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=1)), "gainDb": 1e300}]},
-         "/tracks/0/gainDb"),
-        ({"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=1)), "gainDb": True}]},
-         "/tracks/0/gainDb"),
-        ({"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=i))} for i in range(9)]},
-         "/tracks"),
+        (
+            {"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=1)), "gainDb": "loud"}]},
+            "/tracks/0/gainDb",
+        ),
+        (
+            {
+                "filename": "m.ogg",
+                "tracks": [{"clipId": str(uuid.UUID(int=1)), "gainDb": float("nan")}],
+            },
+            "/tracks/0/gainDb",
+        ),
+        (
+            {"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=1)), "gainDb": 1e300}]},
+            "/tracks/0/gainDb",
+        ),
+        (
+            {"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=1)), "gainDb": True}]},
+            "/tracks/0/gainDb",
+        ),
+        (
+            {"filename": "m.ogg", "tracks": [{"clipId": str(uuid.UUID(int=i))} for i in range(9)]},
+            "/tracks",
+        ),
     ],
 )
 def test_ac7_a_bad_mix_request_names_the_field(body: object, pointer: str) -> None:

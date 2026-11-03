@@ -1,0 +1,4 @@
+[plugin]
+name = "media"
+version = "1.0.0"
+requires_platform = ">=0.1"

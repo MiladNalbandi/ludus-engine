@@ -18,6 +18,13 @@ class Settings(BaseSettings):
 
     plugins_directory: Path | None = None
 
+    # Where uploaded files are written: audio, sprites, anything an app stores as bytes rather
+    # than rows. No default, for the same reason as the plugins directory. Unset means this
+    # service stores no files, and the routes that would need it say so with a 503; a guessed
+    # directory would be one inside the container, which works until the next deploy and then
+    # has lost every upload. Under Docker it has to be a volume.
+    blob_directory: Path | None = None
+
     # No default either. A service with no database answers an empty catalogue honestly; one
     # pointed at a guessed local database would look like it was working and serve nothing
     # anybody wrote.

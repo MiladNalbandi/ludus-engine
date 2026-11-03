@@ -26,6 +26,7 @@ from wavemaker.platform.persistence.engine import (
 )
 from wavemaker.platform.plugins.loader import load_manifests
 from wavemaker.platform.plugins.mounting import builtin_manifests, mount
+from wavemaker.platform.storage.blobs import ensure_writable
 from wavemaker.platform.tenancy import ensure_project
 
 
@@ -58,6 +59,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.project_id = None
 
     app.state.settings = settings
+
+    # Checked here, before anything is served: a directory that cannot be written is a
+    # deployment mistake, and the moment to say so is while somebody is watching the deploy —
+    # not hours later, when an author uploads something and gets a 500.
+    app.state.blob_directory = (
+        ensure_writable(settings.blob_directory) if settings.blob_directory else None
+    )
 
     if settings.database_url:
         if not settings.jwt_secret:

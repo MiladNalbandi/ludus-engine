@@ -186,7 +186,10 @@ def test_ac1_audio_and_sprites_are_separate_catalogues(client: TestClient) -> No
     sprite = upload(client, "sprites", PNG, "image/png").json()
     assert client.get("/api/v1/admin/audio", headers=bearer(client)).json() == []
     assert client.get(f"/api/v1/public/audio/{sprite['id']}").status_code == 404
-    assert client.delete(f"/api/v1/admin/audio/{sprite['id']}", headers=bearer(client)).status_code == 404
+    assert (
+        client.delete(f"/api/v1/admin/audio/{sprite['id']}", headers=bearer(client)).status_code
+        == 404
+    )
     assert client.get(f"/api/v1/public/sprites/{sprite['id']}").status_code == 200
 
 
@@ -227,7 +230,9 @@ def test_ac2_a_sprite_is_served_with_the_type_its_bytes_have(client: TestClient)
 
 
 @pytest.mark.ac("AC-2")
-@pytest.mark.parametrize("route,body,kind", [("audio", OGG, "audio/ogg"), ("sprites", PNG, "image/png")])
+@pytest.mark.parametrize(
+    "route,body,kind", [("audio", OGG, "audio/ogg"), ("sprites", PNG, "image/png")]
+)
 @pytest.mark.parametrize("form", ['"{tag}"', 'W/"{tag}"', '"stale", "{tag}"', "*"])
 def test_ac2_a_client_that_has_the_bytes_gets_a_304(
     client: TestClient, route: str, body: bytes, kind: str, form: str
@@ -324,7 +329,9 @@ def test_ac3_a_twelve_megabyte_upload_and_download_are_streamed(
     assert downloaded.status == 200
     assert downloaded.body_bytes == TWELVE_MEGABYTES
     assert downloaded.largest_chunk <= 1024 * 1024, "the response was sent as one piece"
-    assert download_peak < 4 * 1024 * 1024, f"the download peaked at {download_peak / 2**20:.1f} MiB"
+    assert download_peak < 4 * 1024 * 1024, (
+        f"the download peaked at {download_peak / 2**20:.1f} MiB"
+    )
 
     # And the bytes on disk are the bytes that were sent.
     digest = hashlib.sha256()
@@ -356,7 +363,10 @@ def test_ac4_svg_labelled_as_a_png_is_still_refused(client: TestClient, blobs: P
 
 @pytest.mark.ac("AC-4")
 def test_ac4_html_labelled_as_a_gif_is_refused(client: TestClient) -> None:
-    assert upload(client, "sprites", b"<html><script>x</script></html>", "image/gif").status_code == 415
+    assert (
+        upload(client, "sprites", b"<html><script>x</script></html>", "image/gif").status_code
+        == 415
+    )
 
 
 # --- AC-5: refusals are 4xx, never 500, and leave nothing behind --------------------------
@@ -365,8 +375,12 @@ def test_ac4_html_labelled_as_a_gif_is_refused(client: TestClient) -> None:
 @pytest.mark.ac("AC-5")
 @pytest.mark.parametrize(
     ("route", "content_type"),
-    [("audio", "text/html"), ("audio", "image/svg+xml"), ("sprites", "audio/ogg"),
-     ("sprites", "application/octet-stream")],
+    [
+        ("audio", "text/html"),
+        ("audio", "image/svg+xml"),
+        ("sprites", "audio/ogg"),
+        ("sprites", "application/octet-stream"),
+    ],
 )
 def test_ac5_a_wrong_content_type_is_a_415(
     client: TestClient, blobs: Path, route: str, content_type: str
@@ -377,7 +391,9 @@ def test_ac5_a_wrong_content_type_is_a_415(
 
 
 @pytest.mark.ac("AC-5")
-@pytest.mark.parametrize("route,body,kind", [("audio", OGG, "audio/ogg"), ("sprites", PNG, "image/png")])
+@pytest.mark.parametrize(
+    "route,body,kind", [("audio", OGG, "audio/ogg"), ("sprites", PNG, "image/png")]
+)
 def test_ac5_an_oversized_upload_is_a_413(
     database_url: str, blobs: Path, route: str, body: bytes, kind: str
 ) -> None:
@@ -507,7 +523,8 @@ def recording_ffmpeg(tmp_path: Path) -> tuple[Path, Path]:
     binary = stand_in(
         tmp_path,
         "import json, os, sys, pathlib\n"
-        f"pathlib.Path({str(record)!r}).write_text(json.dumps({{'argv': sys.argv, 'cwd': os.getcwd()}}))\n"
+        "ran = {'argv': sys.argv, 'cwd': os.getcwd()}\n"
+        f"pathlib.Path({str(record)!r}).write_text(json.dumps(ran))\n"
         "pathlib.Path(sys.argv[-1]).write_bytes(b'OggS' + b'mixed' * 100)\n",
     )
     return binary, record
@@ -526,9 +543,7 @@ def test_ac7_mixing_without_a_mixer_configured_is_a_503(client: TestClient) -> N
 
 
 @pytest.mark.ac("AC-7")
-def test_ac7_a_mix_becomes_an_ordinary_clip(
-    database_url: str, blobs: Path, tmp_path: Path
-) -> None:
+def test_ac7_a_mix_becomes_an_ordinary_clip(database_url: str, blobs: Path, tmp_path: Path) -> None:
     binary, record = recording_ffmpeg(tmp_path)
     app = build(database_url, blobs, ffmpeg_binary=binary)
     with TestClient(app) as client:
@@ -538,8 +553,10 @@ def test_ac7_a_mix_becomes_an_ordinary_clip(
 
         mixed = mix(
             client,
-            {"filename": "boss.ogg", "tracks": [{"clipId": first["id"]},
-                                                {"clipId": second["id"], "gainDb": -6}]},
+            {
+                "filename": "boss.ogg",
+                "tracks": [{"clipId": first["id"]}, {"clipId": second["id"], "gainDb": -6}],
+            },
         )
         assert mixed.status_code == 201, mixed.text
         clip = mixed.json()
@@ -578,7 +595,8 @@ def test_ac7_a_track_that_is_not_a_clip_here_is_named(
         clip = upload(client, "audio", OGG, "audio/ogg").json()
         sprite = upload(client, "sprites", PNG, "image/png").json()
         refused = mix(
-            client, {"filename": "m.ogg", "tracks": [{"clipId": clip["id"]}, {"clipId": sprite["id"]}]}
+            client,
+            {"filename": "m.ogg", "tracks": [{"clipId": clip["id"]}, {"clipId": sprite["id"]}]},
         )
         assert refused.status_code == 422
         assert refused.json()["detail"].startswith("/tracks/1")
@@ -617,7 +635,9 @@ def test_ac7_a_mixer_that_fails_does_not_leak_what_it_said(
 def test_ac7_a_mix_over_the_output_cap_is_refused(
     database_url: str, blobs: Path, tmp_path: Path
 ) -> None:
-    binary = stand_in(tmp_path, "import sys, pathlib\npathlib.Path(sys.argv[-1]).write_bytes(b'x' * 5000)")
+    binary = stand_in(
+        tmp_path, "import sys, pathlib\npathlib.Path(sys.argv[-1]).write_bytes(b'x' * 5000)"
+    )
     app = build(database_url, blobs, ffmpeg_binary=binary, mix_max_output_bytes=1000)
     with TestClient(app) as client:
         clip = upload(client, "audio", OGG, "audio/ogg").json()
@@ -655,8 +675,10 @@ def test_ac7_real_ffmpeg_mixes_two_clips_into_ogg(database_url: str, blobs: Path
         high = upload(client, "audio", sine_wav(440), "audio/wav", filename="high.wav").json()
         mixed = mix(
             client,
-            {"filename": "chord.ogg", "tracks": [{"clipId": low["id"]},
-                                                 {"clipId": high["id"], "gainDb": -3.5}]},
+            {
+                "filename": "chord.ogg",
+                "tracks": [{"clipId": low["id"]}, {"clipId": high["id"], "gainDb": -3.5}],
+            },
         )
         assert mixed.status_code == 201, mixed.text
         served = client.get(f"/api/v1/public/audio/{mixed.json()['id']}")

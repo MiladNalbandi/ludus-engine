@@ -43,7 +43,9 @@ def test_ac8_a_process_that_floods_its_output_and_hangs_is_still_killed(tmp_path
     """Ten megabytes is far past any pipe buffer. Through a pipe that nobody drains, the
     process blocks on its write and never reaches the sleep; read before waiting and the
     caller blocks on the read. Through a file, the limit is the only thing that decides."""
-    flood = "import sys, time; sys.stdout.write('x' * 10_000_000); sys.stdout.flush(); time.sleep(60)"
+    flood = (
+        "import sys, time; sys.stdout.write('x' * 10_000_000); sys.stdout.flush(); time.sleep(60)"
+    )
     started = time.monotonic()
     with pytest.raises(ProcessTimedOut):
         run_bounded([PYTHON, "-c", flood], cwd=tmp_path, log=tmp_path / "tool.log", timeout=1.0)
@@ -84,8 +86,12 @@ def test_ac7_arguments_reach_the_process_verbatim_with_no_shell_between(tmp_path
     record = tmp_path / "argv.json"
     hostile = ["; touch pwned", "`touch pwned`", "$(touch pwned)", "a b", "'\"", "*"]
     run_bounded(
-        [PYTHON, "-c", f"import json, sys; open({str(record)!r}, 'w').write(json.dumps(sys.argv[1:]))",
-         *hostile],
+        [
+            PYTHON,
+            "-c",
+            f"import json, sys; open({str(record)!r}, 'w').write(json.dumps(sys.argv[1:]))",
+            *hostile,
+        ],
         cwd=tmp_path,
         log=tmp_path / "tool.log",
         timeout=10.0,
