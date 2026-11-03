@@ -1,6 +1,6 @@
 'use client';
 
-import type { BehaviourEditorProps } from '@/components/behaviour/registry';
+import type { BehaviourEditorProps } from '@/modules/content/components/behaviour/registry';
 
 /**
  * The small set of field controls the panels are built from.

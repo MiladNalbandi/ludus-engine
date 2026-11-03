@@ -4,7 +4,7 @@ import {
   simulatorRegistry,
   type MovementContext,
   type Vector,
-} from '@/simulator/registry';
+} from '@/modules/content/simulator/registry';
 
 /**
  * Where everything is at a given moment.

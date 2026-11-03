@@ -10,7 +10,7 @@ import {
   toSequence,
   toTimeline,
   totalDuration,
-} from '@/lib/timeline';
+} from '@/modules/content/lib/timeline';
 
 /**
  * The conversion, and the one case in it that is not arithmetic.
@@ -20,7 +20,7 @@ import {
  * which is discovered by playing it.
  */
 const SCHEMA = JSON.parse(
-  readFileSync(resolve(__dirname, '..', '..', '..', 'contracts', 'schemas', 'wave', 'v1.json'), 'utf8'),
+  readFileSync(resolve(__dirname, '..', '..', '..', '..', '..', 'contracts', 'schemas', 'wave', 'v1.json'), 'utf8'),
 ) as {
   $defs: {
     movementType: { enum: MovementType[] };
@@ -28,7 +28,7 @@ const SCHEMA = JSON.parse(
   };
 };
 
-const SAMPLES = resolve(__dirname, '..', '..', '..', 'samples', 'waves');
+const SAMPLES = resolve(__dirname, '..', '..', '..', '..', '..', 'samples', 'waves');
 
 function step(type: MovementType, duration: number, extra: Partial<MovementStep> = {}): MovementStep {
   return { type, duration, ...extra } as MovementStep;

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react';
 import type { Wave } from '@/lib/wave-schema';
-import { DEFAULT_FIELD, stateAt, waveDuration } from '@/simulator/simulate';
+import { DEFAULT_FIELD, stateAt, waveDuration } from '@/modules/content/simulator/simulate';
 
 /**
  * The wave drawn at the playhead's moment.

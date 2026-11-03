@@ -2,11 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Wave } from '@/lib/wave-schema';
-import { useEditor } from '@/stores/editor';
+import { useEditor } from '@/modules/content/stores/editor';
 
 const DEMO = JSON.parse(
   readFileSync(
-    resolve(__dirname, '..', '..', '..', 'samples', 'waves', 'demo_crossfire.json'),
+    resolve(__dirname, '..', '..', '..', '..', '..', 'samples', 'waves', 'demo_crossfire.json'),
     'utf8',
   ),
 ) as Wave;

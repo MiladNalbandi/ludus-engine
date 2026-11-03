@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { MovementStep, MovementType, Wave } from '@/lib/wave-schema';
-import { move, restart, toSequence, toTimeline, type TimelineBlock } from '@/lib/timeline';
+import { move, restart, toSequence, toTimeline, type TimelineBlock } from '@/modules/content/lib/timeline';
 
 /**
  * The wave being edited.

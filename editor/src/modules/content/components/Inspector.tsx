@@ -1,9 +1,9 @@
 'use client';
 
-import { behaviorEditorRegistry } from '@/components/behaviour/registry';
-import { RawConfigEditor } from '@/components/behaviour/fields';
-import { NumberField } from '@/components/behaviour/fields';
-import { useEditor } from '@/stores/editor';
+import { behaviorEditorRegistry } from '@/modules/content/components/behaviour/registry';
+import { RawConfigEditor } from '@/modules/content/components/behaviour/fields';
+import { NumberField } from '@/modules/content/components/behaviour/fields';
+import { useEditor } from '@/modules/content/stores/editor';
 
 /**
  * The panel for whichever movement is selected.

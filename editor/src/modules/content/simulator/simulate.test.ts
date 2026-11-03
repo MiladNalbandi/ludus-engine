@@ -2,11 +2,11 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Wave } from '@/lib/wave-schema';
-import { registerBuiltInMovements } from '@/simulator/movements';
-import { simulatorRegistry } from '@/simulator/registry';
-import { DEFAULT_FIELD, seekTo, stateAt, waveDuration } from '@/simulator/simulate';
+import { registerBuiltInMovements } from '@/modules/content/simulator/movements';
+import { simulatorRegistry } from '@/modules/content/simulator/registry';
+import { DEFAULT_FIELD, seekTo, stateAt, waveDuration } from '@/modules/content/simulator/simulate';
 
-const SAMPLES = resolve(__dirname, '..', '..', '..', 'samples', 'waves');
+const SAMPLES = resolve(__dirname, '..', '..', '..', '..', '..', 'samples', 'waves');
 
 /**
  * A valid wave with its spawn rules replaced.
@@ -38,7 +38,7 @@ beforeAll(() => {
 describe('the registry', () => {
   it('has a simulator for every movement type the schema allows', () => {
     const schema = JSON.parse(
-      readFileSync(resolve(__dirname, '..', '..', '..', 'contracts', 'schemas', 'wave', 'v1.json'), 'utf8'),
+      readFileSync(resolve(__dirname, '..', '..', '..', '..', '..', 'contracts', 'schemas', 'wave', 'v1.json'), 'utf8'),
     ) as { $defs: { movementType: { enum: string[] } } };
 
     // The point of the registry is that a new movement type is a registration rather than a new

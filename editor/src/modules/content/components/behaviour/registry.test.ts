@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { behaviorEditorRegistry } from '@/components/behaviour/registry';
-import { registerBuiltInBehaviourEditors } from '@/components/behaviour/panels';
+import { behaviorEditorRegistry } from '@/modules/content/components/behaviour/registry';
+import { registerBuiltInBehaviourEditors } from '@/modules/content/components/behaviour/panels';
 
 beforeEach(() => {
   behaviorEditorRegistry.reset();
@@ -14,7 +14,7 @@ describe('the behaviour editor registry', () => {
 
     const schema = JSON.parse(
       readFileSync(
-        resolve(__dirname, '..', '..', '..', '..', 'contracts', 'schemas', 'wave', 'v1.json'),
+        resolve(__dirname, '..', '..', '..', '..', '..', '..', 'contracts', 'schemas', 'wave', 'v1.json'),
         'utf8',
       ),
     ) as { $defs: { movementType: { enum: string[] } } };

@@ -9,7 +9,7 @@ import {
   type MovementContext,
   type MovementSimulator,
   type Vector,
-} from '@/simulator/registry';
+} from '@/modules/content/simulator/registry';
 
 /**
  * The eleven movement behaviours, each registered under its type.

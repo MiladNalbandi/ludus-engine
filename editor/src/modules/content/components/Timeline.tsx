@@ -1,7 +1,7 @@
 'use client';
 
-import { useEditor } from '@/stores/editor';
-import { totalDuration } from '@/lib/timeline';
+import { useEditor } from '@/modules/content/stores/editor';
+import { totalDuration } from '@/modules/content/lib/timeline';
 
 /**
  * The movement sequence as a row of blocks, with a playhead.

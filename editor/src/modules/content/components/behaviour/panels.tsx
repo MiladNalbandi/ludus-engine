@@ -5,11 +5,11 @@ import {
   NumberField,
   RawConfigEditor,
   ToggleField,
-} from '@/components/behaviour/fields';
+} from '@/modules/content/components/behaviour/fields';
 import {
   behaviorEditorRegistry,
   type BehaviourEditorProps,
-} from '@/components/behaviour/registry';
+} from '@/modules/content/components/behaviour/registry';
 
 /**
  * One panel per movement type, registered rather than switched on.
