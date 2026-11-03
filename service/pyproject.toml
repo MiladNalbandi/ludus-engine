@@ -14,6 +14,8 @@ dependencies = [
     "pyjwt>=2.9.0",
     "argon2-cffi>=23.1.0",
     "jsonschema>=4.23.0",
+    # Driven directly for uploads, so a file streams from the socket to its directory once.
+    "python-multipart>=0.0.20",
     "uvicorn[standard]>=0.30.0",
 ]
 

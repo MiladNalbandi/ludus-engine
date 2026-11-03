@@ -37,6 +37,7 @@ def test_ac2_with_no_plugins_configured_only_the_built_in_apps_are_loaded() -> N
         assert client.get("/health").json()["apps"] == [
             {"name": "content", "version": "1.0.0"},
             {"name": "economy", "version": "1.0.0"},
+            {"name": "media", "version": "1.0.0"},
         ]
 
 
@@ -52,6 +53,7 @@ def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> N
         {"name": "economy", "version": "1.0.0"},
         {"name": "inventory", "version": "1.0.0"},
         {"name": "leaderboard", "version": "2.1.0"},
+        {"name": "media", "version": "1.0.0"},
     ], "installed plugins and built-in apps are one list, in name order"
 
 

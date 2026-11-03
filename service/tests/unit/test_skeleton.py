@@ -29,6 +29,6 @@ def test_every_app_that_ships_is_a_package_with_a_manifest() -> None:
     load, with nothing to say so."""
     root = Path(wavemaker.apps.__path__[0])
     found = sorted(module.name for module in pkgutil.iter_modules(wavemaker.apps.__path__))
-    assert found == ["content", "economy"]
+    assert found == ["content", "economy", "media"]
     for name in found:
         assert (root / name / "manifest.toml").is_file(), f"{name} ships no manifest.toml"
