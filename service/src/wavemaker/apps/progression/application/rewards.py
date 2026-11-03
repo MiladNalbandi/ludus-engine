@@ -5,8 +5,8 @@ the gems has been given something the game never offered and cannot be told why,
 of a reward is written in one transaction.
 
 The coins are not this app's. They go through the platform's currency port, which the app that
-holds currency provides. When none has — the economy is switched off, or not yet wired to the
-port — a reward that names a currency is refused whole, before anything is written. Awarding
+holds currency provides — in this service, the economy, when it is loaded. When none has, a
+reward that names a currency is refused whole, before anything is written. Awarding
 the XP and dropping the coins would be the partial reward this use case exists to prevent.
 """
 

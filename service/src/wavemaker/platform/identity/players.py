@@ -21,6 +21,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from wavemaker.platform.kernel.errors import PlatformError
+from wavemaker.platform.kernel.storable import storable
 
 MAX_EXTERNAL_ID_LENGTH = 190
 MAX_DISPLAY_NAME_LENGTH = 120
@@ -49,7 +50,7 @@ class Player:
 def external_id_of(value: object) -> str:
     if not isinstance(value, str) or not value.strip():
         raise PlayerError("/externalId", "a session needs the game's own identifier for the player")
-    trimmed = value.strip()
+    trimmed = storable("/externalId", value.strip())
     if len(trimmed) > MAX_EXTERNAL_ID_LENGTH:
         raise PlayerError(
             "/externalId", f"an identifier is at most {MAX_EXTERNAL_ID_LENGTH} characters"
@@ -63,7 +64,7 @@ def display_name_of(value: object) -> str | None:
         return None
     if not isinstance(value, str):
         raise PlayerError("/displayName", "a display name is text")
-    trimmed = value.strip()
+    trimmed = storable("/displayName", value.strip())
     if len(trimmed) > MAX_DISPLAY_NAME_LENGTH:
         raise PlayerError(
             "/displayName", f"a display name is at most {MAX_DISPLAY_NAME_LENGTH} characters"

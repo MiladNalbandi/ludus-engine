@@ -21,6 +21,11 @@ is not in this project, in the same statement, with no gap for a delete to fall 
 who *is* in another project, and already holds that currency there, is caught by the upsert's
 own `where`: the conflict target is (player_id, currency), so without it a grant from one
 project would add to another's balance.
+
+**A grant from another app is the same statement.** `PostgresLedger` is what this app provides
+to the platform's currency port, so a reward can credit coins in its own transaction. It runs
+the grant's upsert on the session it is handed and does not commit: the wallet route and the
+ledger share one statement, so there is one place for its arithmetic and its project filter.
 """
 
 from __future__ import annotations
@@ -34,7 +39,16 @@ from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
-from wavemaker.apps.economy.domain.wallet import Balance, NoSuchPlayer, NotEnough, TooLarge
+from wavemaker.apps.economy.domain.wallet import (
+    Balance,
+    InvalidRequest,
+    NoSuchPlayer,
+    NotEnough,
+    TooLarge,
+    currency_code,
+    positive_amount,
+)
+from wavemaker.platform.currency import Credited, CurrencyRefused
 
 FOREIGN_KEY_VIOLATION = "23503"
 CHECK_VIOLATION = "23514"
@@ -59,21 +73,7 @@ class PostgresWallets:
 
     def grant(self, player: uuid.UUID, currency: str, amount: int) -> Balance:
         try:
-            row = self._session.execute(
-                text("""
-                    insert into economy_balance as balance
-                        (project_id, player_id, currency, amount, updated_at)
-                    values (:project, :player, :currency, :amount, :now)
-                    on conflict (player_id, currency) do update
-                        set amount = balance.amount + excluded.amount,
-                            updated_at = excluded.updated_at
-                        -- The key is (player_id, currency), so the row this conflicts with
-                        -- may be another project's. Without this the grant would add to it.
-                        where balance.project_id = excluded.project_id
-                    returning currency, amount, updated_at
-                """),
-                self._parameters(player, currency, amount),
-            ).one_or_none()
+            row = _credit(self._session, self._project, player, currency, amount)
             self._session.commit()
         except DBAPIError as refused:
             self._session.rollback()
@@ -81,10 +81,7 @@ class PostgresWallets:
             if state == FOREIGN_KEY_VIOLATION:
                 raise NoSuchPlayer("There is no such player in this project.") from refused
             if state == NUMERIC_OUT_OF_RANGE:
-                raise TooLarge(
-                    f"/amount: that would take the {currency} balance past the largest one "
-                    "that can be stored."
-                ) from refused
+                raise TooLarge(f"/amount: {_too_large(currency)}") from refused
             raise
         if row is None:
             # It conflicted with a row the project filter excluded: this player exists, in
@@ -123,6 +120,79 @@ class PostgresWallets:
             "amount": amount,
             "now": datetime.now(UTC),
         }
+
+
+class PostgresLedger:
+    """The economy's side of the platform's currency port: a grant inside a caller's own
+    transaction, so a reward's coins and its XP are kept or lost together.
+
+    The same statement as `PostgresWallets.grant`, and the same rules, because it is a second
+    way into the same balances. What differs is that it never commits or rolls back. The caller
+    owns the transaction; a refusal here is raised as `CurrencyRefused` and the caller rolls
+    back everything it wrote, this credit included.
+
+    A database refusal leaves the caller's transaction failed, so nothing more can be done in it
+    but roll back — which is what a refused reward does anyway.
+    """
+
+    def credit(
+        self,
+        session: Session,
+        project: uuid.UUID,
+        player: uuid.UUID,
+        currency: str,
+        amount: int,
+    ) -> Credited:
+        try:
+            code, amount = currency_code(currency), positive_amount(amount)
+        except InvalidRequest as invalid:
+            # The caller names the place; the field inside a grant is said in words.
+            raise CurrencyRefused(str(invalid).removeprefix(f"{invalid.pointer}: ")) from invalid
+        try:
+            row = _credit(session, project, player, code, amount)
+        except DBAPIError as refused:
+            state = _sqlstate(refused)
+            if state == FOREIGN_KEY_VIOLATION:
+                raise CurrencyRefused("there is no such player in this project") from refused
+            if state == NUMERIC_OUT_OF_RANGE:
+                raise CurrencyRefused(_too_large(code)) from refused
+            raise
+        if row is None:
+            # A player of another project, holding this currency there: see `_credit`.
+            raise CurrencyRefused("there is no such player in this project")
+        return Credited(currency=row.currency, amount=int(row.amount), updated_at=row.updated_at)
+
+
+def _credit(
+    session: Session, project: uuid.UUID, player: uuid.UUID, currency: str, amount: int
+) -> Any:
+    """Add `amount` to a balance, creating it on the first grant, in one statement. Neither
+    commits nor rolls back. The row it leaves, or None when the player is another project's."""
+    return session.execute(
+        text("""
+            insert into economy_balance as balance
+                (project_id, player_id, currency, amount, updated_at)
+            values (:project, :player, :currency, :amount, :now)
+            on conflict (player_id, currency) do update
+                set amount = balance.amount + excluded.amount,
+                    updated_at = excluded.updated_at
+                -- The key is (player_id, currency), so the row this conflicts with
+                -- may be another project's. Without this the grant would add to it.
+                where balance.project_id = excluded.project_id
+            returning currency, amount, updated_at
+        """),
+        {
+            "project": project,
+            "player": player,
+            "currency": currency,
+            "amount": amount,
+            "now": datetime.now(UTC),
+        },
+    ).one_or_none()
+
+
+def _too_large(currency: str) -> str:
+    return f"that would take the {currency} balance past the largest one that can be stored."
 
 
 def _sqlstate(error: DBAPIError) -> str | None:

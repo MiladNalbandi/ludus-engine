@@ -13,12 +13,16 @@ against a real PostgreSQL in a container instead.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
+from typing import Any
 
 from alembic import command
 from alembic.config import Config
-from sqlalchemy import Engine, create_engine
+from sqlalchemy import Engine, create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
+
+from wavemaker.platform.kernel.storable import UnstorableText, unstorable
 
 MIGRATIONS = Path(__file__).resolve().parent / "migrations"
 
@@ -29,8 +33,40 @@ def create_database_engine(url: str) -> Engine:
     Without it the first request after a database restart, or after a connection has been idle
     long enough for a proxy to drop it, fails with a stale socket rather than quietly opening
     a new one.
+
+    Every statement's parameters pass through `_refuse_unstorable_text` on the way out.
     """
-    return create_engine(url, pool_pre_ping=True, future=True)
+    engine = create_engine(url, pool_pre_ping=True, future=True)
+    event.listen(engine, "before_cursor_execute", _refuse_unstorable_text)
+    return engine
+
+
+def _refuse_unstorable_text(
+    connection: Any,
+    cursor: Any,
+    statement: str,
+    parameters: Any,
+    context: Any,
+    executemany: bool,
+) -> None:
+    """Refuse text PostgreSQL cannot hold before it is sent, whichever route sent it.
+
+    A route that stores client text checks each field itself, so its refusal names the field.
+    This is for the one that does not — a lookup by a path segment, or the next route somebody
+    writes — so that it still answers the caller's 422 instead of the driver's 500. It raises
+    `UnstorableText`, which the HTTP layer answers; nothing has reached the database yet.
+    """
+    pending: list[Any] = [parameters]
+    while pending:
+        value = pending.pop()
+        if isinstance(value, str):
+            reason = unstorable(value)
+            if reason:
+                raise UnstorableText(None, reason)
+        elif isinstance(value, Mapping):
+            pending.extend(value.values())
+        elif isinstance(value, list | tuple):
+            pending.extend(value)
 
 
 def create_session_factory(engine: Engine) -> sessionmaker[Session]:

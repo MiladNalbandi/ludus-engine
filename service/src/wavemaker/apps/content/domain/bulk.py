@@ -16,6 +16,7 @@ from typing import Any
 
 from wavemaker.apps.content.domain.wave import Rejected
 from wavemaker.platform.kernel.errors import PlatformError
+from wavemaker.platform.kernel.storable import storable
 
 DECODER = json.JSONDecoder()
 
@@ -104,6 +105,7 @@ def read_batch_ids(body: Any) -> tuple[str, ...]:
     for index, wave_id in enumerate(ids):
         if not isinstance(wave_id, str):
             raise Rejected(f"/ids/{index}: a wave is named by its id, as a string.")
+        storable(f"/ids/{index}", wave_id)
         if wave_id in first_seen:
             raise Rejected(
                 f"/ids/{index}: '{wave_id}' is already named at /ids/{first_seen[wave_id]}."

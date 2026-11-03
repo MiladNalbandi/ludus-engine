@@ -6,6 +6,7 @@ test's reason: their rows are committed and nothing can roll them back.
 
 from __future__ import annotations
 
+import importlib
 import threading
 import uuid
 from collections.abc import Callable, Iterator
@@ -15,8 +16,10 @@ import pytest
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
+from wavemaker.apps.economy.adapters.postgres import PostgresWallets
 from wavemaker.apps.progression.adapters.postgres import PostgresProgression
-from wavemaker.apps.progression.domain.curve import Stage
+from wavemaker.apps.progression.domain.curve import Grant, Stage
+from wavemaker.platform import currency
 from wavemaker.platform.identity import players
 from wavemaker.platform.persistence.engine import create_session_factory
 from wavemaker.platform.tenancy import ensure_project
@@ -101,3 +104,31 @@ def test_ac6_concurrent_replacements_of_the_curve_all_succeed_and_one_wins_whole
     with factory() as session:
         final = PostgresProgression(session, project).curve()
     assert final in [curve(index) for index in range(THREADS)], "one whole curve, not a blend"
+
+
+@pytest.mark.parametrize("round_number", range(ROUNDS))
+def test_ac8_twenty_concurrent_rewards_with_coins_lose_neither_coins_nor_xp(
+    factory: sessionmaker[Session], project: uuid.UUID, round_number: int
+) -> None:
+    """Through the ledger the economy provides, as the service uses it. The player has neither
+    an XP row nor a balance, so every thread races to create both, in one transaction each."""
+    importlib.import_module("wavemaker.apps.economy")
+    ledger = currency.provided()
+    assert ledger is not None, "loading the economy app provides no currency ledger"
+    with factory() as session:
+        player = players.start(session, project, f"device-{uuid.uuid4()}").id
+
+    results = all_at_once(
+        factory,
+        project,
+        lambda _, progression: progression.reward(player, 1, [Grant("coins", 1)], ledger),
+    )
+
+    assert [r for r in results if isinstance(r, Exception)] == []
+    rewarded = [r for r in results if not isinstance(r, Exception)]
+    assert sorted(r[1] for r in rewarded) == list(range(1, THREADS + 1))
+    coins = sorted(balance.amount for balances, _ in rewarded for balance in balances)
+    assert coins == list(range(1, THREADS + 1)), "each reward saw its own coin"
+    with factory() as session:
+        assert PostgresProgression(session, project).xp(player) == THREADS
+        assert [b.amount for b in PostgresWallets(session, project).balances(player)] == [THREADS]

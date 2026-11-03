@@ -21,6 +21,7 @@ from wavemaker.apps.content.application.ports import WaveRepository
 from wavemaker.apps.content.domain import hashing
 from wavemaker.apps.content.domain.etag import matches, quote
 from wavemaker.apps.content.domain.wave import WaveSummary
+from wavemaker.platform.kernel.storable import storable
 
 router = APIRouter(prefix="/api/v1/public", tags=["content"])
 
@@ -131,7 +132,10 @@ def get_published_wave_document(
 
 @router.post("/waves/batch")
 def batch_get_published_waves(request: dict[str, Any], repository: Repository) -> Response:
-    ids = [str(wave_id) for wave_id in request.get("ids", [])]
+    ids = [
+        storable(f"/ids/{index}", str(wave_id))
+        for index, wave_id in enumerate(request.get("ids", []))
+    ]
     found = repository.published_documents(ids)
     return Response(content=_as_object(found), media_type="application/json")
 
