@@ -11,6 +11,11 @@ import { fileURLToPath } from 'node:url';
  * Vite Vitest ships at that point.
  */
 export default defineConfig({
+  // Next.js requires `"jsx": "preserve"` in tsconfig, because Next compiles JSX itself. Vitest 3
+  // compiled it anyway through esbuild; Vitest 5 runs on Vite 8, whose transformer honours
+  // `preserve` and leaves the JSX in place, so a test importing a .tsx file fails to parse. The
+  // tests are the only place this matters, so the transform is set here rather than in tsconfig.
+  oxc: { jsx: { runtime: 'automatic' } },
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
