@@ -174,3 +174,12 @@ console:
   commands: off              # runs a key from `commands` below, never a string from the page
   base_url: http://localhost:8080
   db_url_env: DATABASE_URL   # the env var holding the DSN; never a literal DSN
+
+# The Java engine is kept as a reference until R9 (#77) and is built by Maven in CI, not by keel.
+# Without this, keel detects pom.xml at the root and offers kotlin-spring as a second API stack
+# beside python, which is how earlier flows ended up running Maven against Python criteria.
+# django is the stack of an abandoned attempt and has nothing to build.
+stacks:
+  ignore:
+  - django
+  - kotlin-spring
