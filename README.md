@@ -21,9 +21,11 @@
   <a href="https://github.com/miladnalbandi/ludus-engine/issues/18"><img alt="Roadmap" src="https://img.shields.io/badge/roadmap-%2318-5B4FE9"></a>
 </p>
 
-> **Status: early, and it works end to end.** Author a wave, publish it, and a game client fetches
-> it over cacheable HTTP with no credential. Waves are the only content type and there is no editor
-> yet. The roadmap below is honest about what does and does not exist yet.
+> **Status: moving to Python.** Ludus is being rebuilt as **WaveMaker**, a modular game backend in
+> Python and FastAPI where every feature is a plugin you can publish and install. The Python service
+> already serves and authors content, signs people in, and runs the web editor unchanged. The
+> Java `v1.0.0` engine stays in this repository as the reference the rewrite is checked against,
+> until every v1 contract test passes on Python ([#77](https://github.com/MiladNalbandi/ludus-engine/issues/77)).
 
 ## What it is, and what it is not
 
@@ -46,7 +48,7 @@ cp deploy/.env.example deploy/.env
 docker compose -f deploy/docker-compose.yml up
 ```
 
-Then open:
+That starts the Java `v1.0.0` engine, which is still the one the Quickstart deploys. Then open:
 
 | | |
 |---|---|
@@ -54,37 +56,76 @@ Then open:
 | OpenAPI document | http://localhost:8080/api-docs |
 | Health | http://localhost:8080/actuator/health |
 
-To build and test from source you need JDK 21 and Docker:
+### The Python service
+
+You need Python 3.12 and Docker — the tests run against a real PostgreSQL in a container.
 
 ```bash
-./mvnw verify
+cd service
+uv venv --python 3.12 .venv && . .venv/bin/activate
+uv pip install -e ".[dev]"
+python -m pytest -q        # 179 tests
+lint-imports               # the architecture walls
 ```
+
+Run it against a database:
+
+```bash
+export WAVEMAKER_DATABASE_URL=postgresql+psycopg://user:pass@localhost:5432/wavemaker
+export WAVEMAKER_JWT_SECRET="$(openssl rand -base64 48)"
+export WAVEMAKER_ADMIN_EMAIL=you@example.com WAVEMAKER_ADMIN_PASSWORD=change-me
+python -m uvicorn --factory wavemaker.platform.http.factory:create_app --port 8080
+```
+
+It migrates the database and creates the first administrator on start, and refuses to start
+without a signing key of at least 32 bytes. See [service/README.md](service/README.md).
+
+To build and test the Java engine you need JDK 21: `./mvnw verify`.
 
 ## Architecture
 
 ```
-        ┌────────────────┐        authoring        ┌──────────────────┐
-        │     editor     │ ──────────────────────▶ │                  │
-        │   (web, TS)    │                         │   Ludus engine   │
-        └────────────────┘                         │  (Java, Spring)  │
-                                                   │                  │
-        ┌────────────────┐    content + player     │                  │
-        │   your game    │ ◀─────────────────────▶ │                  │
-        │ (Unity, Godot) │        state            └────────┬─────────┘
-        └────────────────┘                                  │
-                                                       PostgreSQL
+   ┌────────────────┐     authoring      ┌──────────────────────────────────┐
+   │     editor     │ ─────────────────▶ │            WaveMaker             │
+   │ (Next.js, TS)  │                    │       (Python, FastAPI)          │
+   └────────────────┘                    │                                  │
+                                         │  core   identity · tenancy ·     │
+   ┌────────────────┐  content + player  │         http · plugin loader     │
+   │   your game    │ ◀────────────────▶ │  apps   [content] [economy] …    │
+   │ (Unity, Godot) │       state        │         each one a plugin        │
+   └────────────────┘                    └────────────────┬─────────────────┘
+                                                          │
+                                                     PostgreSQL
 ```
 
-The engine is a hexagonal (ports and adapters) codebase, and the layering is enforced by the
-build rather than by convention:
+A **modular monolith**: one service to run, with real walls between the parts. The core knows
+nothing about games. Each app is a folder with a `manifest.toml`, and the core loads it without
+knowing what is in it — which is what lets an app later leave this repository as a package and
+come back through `plugin install`.
 
-- `engine-domain` and `engine-application` declare **no framework dependencies**, so importing
-  Spring into either is a build failure, not something a reviewer has to catch.
-- ArchUnit covers what the module graph cannot see — dependency direction, framework types
-  leaking into the inner layers, and field injection.
+Each app is **hexagonal** (ports and adapters): the game rules sit in the middle and know nothing
+about FastAPI or PostgreSQL. The walls are checks, not conventions — `lint-imports` fails the build
+when:
 
-Both guardrails are tested by deliberately violating them. See
+- the core imports an app,
+- one app imports another, or
+- the kernel imports a framework.
+
+Each was tested by breaking it on purpose. The design, and the reasoning behind every choice, is in
+[docs/architecture/platform.md](docs/architecture/platform.md).
+
+The Java engine (`engine/`) is hexagonal too, enforced by the Maven enforcer and ArchUnit. See
 [docs/architecture/hexagonal.md](docs/architecture/hexagonal.md).
+
+| | Python service | Java reference |
+|---|---|---|
+| Language | Python 3.12 | Java 21 |
+| Web | FastAPI | Spring Boot |
+| Database | PostgreSQL 16, SQLAlchemy, Alembic | PostgreSQL 16, Flyway |
+| Auth | PyJWT, Argon2id | Spring Security |
+| Tests | pytest, Testcontainers | JUnit, ArchUnit |
+| Architecture checks | import-linter | Maven enforcer, ArchUnit |
+| Lint and types | ruff, mypy `--strict` | — |
 
 ## The content contract
 
@@ -97,7 +138,29 @@ every build. If a sample and the contract disagree, CI fails.
 
 ## Roadmap
 
-Tracked in [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18), with one issue per phase and the reasoning behind the ordering.
+### WaveMaker — the Python platform
+
+Each release is a working service, and the frozen HTTP contract does not change during the
+rewrite: if the contract tests pass, the Python is correct.
+
+| | Release | |
+|---|---|---|
+| ✅ | R0 | The core boots, loads apps, and refuses the ones that must not run |
+| ✅ | R1 | Content read side, on PostgreSQL, with ETag caching |
+| ✅ | R2 | Identity, and authoring — **the editor runs on Python unchanged** |
+| 📋 | [R2c](https://github.com/MiladNalbandi/ludus-engine/issues/70) | Level authoring routes |
+| 📋 | [R3](https://github.com/MiladNalbandi/ludus-engine/issues/71) | Players and economy |
+| 📋 | [R4](https://github.com/MiladNalbandi/ludus-engine/issues/72) | Inventory, the first app built plugin-first |
+| 📋 | [R5](https://github.com/MiladNalbandi/ludus-engine/issues/73) | **Publish and install a plugin** — the release that makes this a platform |
+| 📋 | [R6](https://github.com/MiladNalbandi/ludus-engine/issues/74) | Leaderboards and progression |
+| 📋 | [R7](https://github.com/MiladNalbandi/ludus-engine/issues/75) | Media: audio and sprites |
+| 📋 | [R8](https://github.com/MiladNalbandi/ludus-engine/issues/76) | The editor as a shell plus app modules |
+| 📋 | [R9](https://github.com/MiladNalbandi/ludus-engine/issues/77) | Remove the Java |
+
+### The Java engine, `v1.x`
+
+Tracked in [#18](https://github.com/MiladNalbandi/ludus-engine/issues/18). These releases shipped in
+Java; the features from `v1.1.0` on are now planned as WaveMaker apps instead.
 
 | | Release | |
 |---|---|---|
