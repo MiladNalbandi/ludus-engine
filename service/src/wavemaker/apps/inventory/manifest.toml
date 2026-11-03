@@ -2,3 +2,18 @@
 name = "inventory"
 version = "1.0.0"
 requires_platform = ">=0.1"
+# Imported directly, and not promised by the platform. Checked when the package is installed;
+# never installed by the platform.
+python_dependencies = ["jsonschema>=4.23.0", "referencing>=0.35.0"]
+
+# What an installed copy is held to. The paths are the frozen v1 contract's, which put
+# inventory under /admin and /player/me rather than under /api/v1/inventory.
+[permissions]
+tables = "own"
+routes = [
+    "/api/v1/admin/items",
+    "/api/v1/admin/item-schema",
+    "/api/v1/admin/players/{player_id}/inventory",
+    "/api/v1/player/me/inventory",
+]
+outbound_http = false
