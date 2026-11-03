@@ -1,91 +1,89 @@
-name: ludus
+name: wavemaker
 
 services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: ${LUDUS_DB_NAME:-ludus}
-      POSTGRES_USER: ${LUDUS_DB_USER:-ludus}
-      POSTGRES_PASSWORD: ${LUDUS_DB_PASSWORD:?set LUDUS_DB_PASSWORD in deploy/.env}
+      POSTGRES_DB: ${WAVEMAKER_DB_NAME:-wavemaker}
+      POSTGRES_USER: ${WAVEMAKER_DB_USER:-wavemaker}
+      POSTGRES_PASSWORD: ${WAVEMAKER_DB_PASSWORD:?set WAVEMAKER_DB_PASSWORD in deploy/.env}
     volumes:
-      - ludus-db:/var/lib/postgresql/data
+      - wavemaker-db:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${LUDUS_DB_USER:-ludus} -d ${LUDUS_DB_NAME:-ludus}"]
+      test: ["CMD-SHELL", "pg_isready -U ${WAVEMAKER_DB_USER:-wavemaker} -d ${WAVEMAKER_DB_NAME:-wavemaker}"]
       interval: 5s
       timeout: 3s
       retries: 12
     restart: unless-stopped
     # Not published to the host. Nothing outside this stack needs to reach the database.
 
-  engine:
+  service:
     build:
       context: ..
-      dockerfile: deploy/Dockerfile.engine
-    image: ghcr.io/miladnalbandi/ludus-engine:${LUDUS_VERSION:-latest}
+      dockerfile: deploy/Dockerfile.service
+      args:
+        WITH_FFMPEG: ${WAVEMAKER_WITH_FFMPEG:-false}
+    image: ghcr.io/miladnalbandi/wavemaker:${WAVEMAKER_VERSION:-latest}
     depends_on:
       postgres:
         condition: service_healthy
+    # Every WAVEMAKER_* setting in deploy/.env reaches the service as it is written there, so a
+    # setting left commented out is one the service never sees and keeps its own default. That
+    # matters: the service reads an empty value as a value, and an empty path is a path. The
+    # lines under `environment` are the ones compose has to compute or must refuse without, and
+    # they win over the file.
+    env_file:
+      - path: .env
+        required: false
     environment:
-      LUDUS_DB_HOST: postgres
-      LUDUS_DB_PORT: 5432
-      LUDUS_DB_NAME: ${LUDUS_DB_NAME:-ludus}
-      LUDUS_DB_USER: ${LUDUS_DB_USER:-ludus}
-      LUDUS_DB_PASSWORD: ${LUDUS_DB_PASSWORD}
-      LUDUS_LOG_LEVEL: ${LUDUS_LOG_LEVEL:-INFO}
-      LUDUS_TENANCY_MODE: ${LUDUS_TENANCY_MODE:-single}
+      # Built from the database settings above, on the compose network. The password goes into
+      # a URL, so it must not contain characters a URL gives a meaning to: '@', ':', '/', '?',
+      # '#' or '%'. The one the guide generates never does.
+      WAVEMAKER_DATABASE_URL: "postgresql+psycopg://${WAVEMAKER_DB_USER:-wavemaker}:${WAVEMAKER_DB_PASSWORD}@postgres:5432/${WAVEMAKER_DB_NAME:-wavemaker}"
       # Required, with no default anywhere. Compose refuses here rather than letting the
       # container start and exit, because a message from compose names the file to edit and a
       # container that died needs someone to go and read its logs first.
-      LUDUS_JWT_SECRET: "${LUDUS_JWT_SECRET:?set LUDUS_JWT_SECRET in deploy/.env, generated with `openssl rand -base64 48`}"
-      LUDUS_JWT_ISSUER: ${LUDUS_JWT_ISSUER:-ludus}
-      LUDUS_JWT_ACCESS_TTL: ${LUDUS_JWT_ACCESS_TTL:-15m}
-      LUDUS_JWT_REFRESH_TTL: ${LUDUS_JWT_REFRESH_TTL:-30d}
-      # Optional. Only used to create the first administrator of an empty project; once one
-      # exists these do nothing, so an install past its first start can leave them unset.
-      LUDUS_ADMIN_EMAIL: ${LUDUS_ADMIN_EMAIL:-}
-      LUDUS_ADMIN_PASSWORD: ${LUDUS_ADMIN_PASSWORD:-}
-      # Audio bytes live on a volume rather than in the database. Losing this volume loses every
-      # uploaded clip while the rows describing them survive, so it is a real backup target.
-      LUDUS_AUDIO_DIRECTORY: /var/lib/ludus/audio
-      # Item art, on its own volume for the same reasons as audio.
-      LUDUS_SPRITE_DIRECTORY: /var/lib/ludus/sprites
-      LUDUS_AUDIO_MAX_FILE_SIZE: ${LUDUS_AUDIO_MAX_FILE_SIZE:-64MB}
-      # Mixing is off unless this is 'ffmpeg' AND the image actually carries FFmpeg, which the
-      # standard one does not. See deploy/Dockerfile.engine-ffmpeg.
-      LUDUS_AUDIO_MIXER_MODE: ${LUDUS_AUDIO_MIXER_MODE:-none}
-      LUDUS_AUDIO_MIXER_TIMEOUT: ${LUDUS_AUDIO_MIXER_TIMEOUT:-60s}
-      LUDUS_AUDIO_MIXER_MAX_TRACKS: ${LUDUS_AUDIO_MIXER_MAX_TRACKS:-8}
+      WAVEMAKER_JWT_SECRET: "${WAVEMAKER_JWT_SECRET:?set WAVEMAKER_JWT_SECRET in deploy/.env, generated with `openssl rand -base64 48`}"
+      # Fixed to the paths the volumes below are mounted on. The image sets the same values;
+      # they are repeated here so that a line in .env cannot point the service at a directory
+      # inside the container, which works until the next deploy and then has lost everything.
+      WAVEMAKER_BLOB_DIRECTORY: /var/lib/wavemaker/blobs
+      WAVEMAKER_PLUGINS_DIRECTORY: /var/lib/wavemaker/plugins
     volumes:
-      - ludus-audio:/var/lib/ludus/audio
-      - ludus-sprites:/var/lib/ludus/sprites
+      # Uploaded audio and sprites. Losing this volume loses every uploaded file while the rows
+      # describing them survive, so it is a real backup target, next to the database.
+      - wavemaker-blobs:/var/lib/wavemaker/blobs
+      # Installed plugins, for the same reason: inside the container they would be gone on the
+      # next deploy while the database still recorded them as installed.
+      - wavemaker-plugins:/var/lib/wavemaker/plugins
     ports:
-      # Bound to loopback by default. Put a reverse proxy in front before exposing this;
-      # /actuator/prometheus is reachable by anything that can reach the port.
-      - "127.0.0.1:${LUDUS_PORT:-8080}:8080"
+      # Bound to loopback by default. Put a reverse proxy in front before exposing this.
+      - "127.0.0.1:${WAVEMAKER_PORT:-8080}:8080"
     restart: unless-stopped
 
   editor:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.editor
-    image: ghcr.io/miladnalbandi/ludus-editor:${LUDUS_VERSION:-latest}
+    image: ghcr.io/miladnalbandi/ludus-editor:${WAVEMAKER_VERSION:-latest}
     depends_on:
-      engine:
-        condition: service_started
+      service:
+        condition: service_healthy
     environment:
-      # The engine on the compose network, not through the published port. The browser never
-      # talks to the engine directly -- every call goes through the editor's own route handlers --
-      # so the engine does not have to be reachable from outside at all.
-      LUDUS_ENGINE_URL: http://engine:8080
+      # The service on the compose network, not through the published port. The browser never
+      # talks to the service directly -- every call goes through the editor's own route
+      # handlers -- so the service does not have to be reachable from outside at all. The
+      # editor reads both of these under the names it has always had.
+      LUDUS_ENGINE_URL: http://service:8080
       # Off by default, because a Secure cookie is silently dropped over plain HTTP and "silently
       # dropped" reads as "logged out again" with nothing in any log. Set it to true once the
       # editor is served over HTTPS, which is also when it starts to matter.
       LUDUS_EDITOR_HTTPS: ${LUDUS_EDITOR_HTTPS:-false}
     ports:
-      - "127.0.0.1:${LUDUS_EDITOR_PORT:-3000}:3000"
+      - "127.0.0.1:${WAVEMAKER_EDITOR_PORT:-3000}:3000"
     restart: unless-stopped
 
 volumes:
-  ludus-db:
-  ludus-sprites:
-  ludus-audio:
+  wavemaker-db:
+  wavemaker-blobs:
+  wavemaker-plugins:
