@@ -14,15 +14,11 @@ from __future__ import annotations
 import uuid
 from collections.abc import Mapping, Sequence
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, cast
+from typing import Any, cast
 
-from sqlalchemy import text
+from sqlalchemy import CursorResult, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
-
-if TYPE_CHECKING:
-    # Named only in casts: the type checker needs it, the running service does not.
-    from sqlalchemy import CursorResult
 
 from wavemaker.apps.content.domain.document import OrderTaken, WaveDocument
 from wavemaker.apps.content.domain.level import LevelDraft
@@ -212,7 +208,7 @@ class PostgresWaveRepository:
 
     def delete(self, wave_id: str) -> bool:
         result = cast(
-            "CursorResult[Any]",
+            CursorResult[Any],
             self._session.execute(
                 text("delete from wave where project_id = :p and wave_id = :w"),
                 {"p": self._project, "w": wave_id},
@@ -331,7 +327,7 @@ class PostgresWaveRepository:
         if key is None:
             return False
         result = cast(
-            "CursorResult[Any]",
+            CursorResult[Any],
             self._session.execute(
                 text("delete from wave_level where project_id = :p and id = :id"),
                 {"p": self._project, "id": key},
@@ -352,7 +348,7 @@ class PostgresWaveRepository:
             {"p": self._project},
         )
         changed = cast(
-            "CursorResult[Any]",
+            CursorResult[Any],
             self._session.execute(
                 text("""
                 update wave_level set active = true, updated_at = :now

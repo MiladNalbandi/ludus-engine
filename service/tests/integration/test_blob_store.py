@@ -77,7 +77,8 @@ def test_ac5_an_upload_that_is_never_committed_cannot_be_opened(tmp_path: Path) 
     blob = uuid.uuid4()
     writer = blobs.begin(blob, limit=1024)
     writer.write(b"partial")
-    assert blobs.open(blob) is None
+    opened = blobs.open(blob)
+    assert opened is None
     writer.abort()
     assert list((tmp_path / "media-audio").iterdir()) == []
 
@@ -106,7 +107,8 @@ def test_open_streams_and_delete_removes(tmp_path: Path) -> None:
     assert first is True
     second = blobs.delete(blob)
     assert second is False
-    assert blobs.open(blob) is None
+    opened = blobs.open(blob)
+    assert opened is None
 
 
 @pytest.mark.ac("AC-9")

@@ -13,6 +13,7 @@ import uuid
 from collections.abc import Callable, Iterator
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from typing import TypeVar
 
 import pytest
 from sqlalchemy import Engine, create_engine, event, text
@@ -269,7 +270,12 @@ def factory(engine: Engine) -> sessionmaker[Session]:
     return create_session_factory(engine)
 
 
-def all_at_once[T](
+# A classic TypeVar rather than `def all_at_once[T]`: CodeQL does not read the 3.12 syntax and
+# reports `T` in the nested function as an uninitialised local.
+T = TypeVar("T")
+
+
+def all_at_once(  # noqa: UP047 - the TypeVar above, kept for CodeQL
     factory: sessionmaker[Session], work: Callable[[Session], T]
 ) -> list[T | Exception]:
     gate = threading.Barrier(THREADS)

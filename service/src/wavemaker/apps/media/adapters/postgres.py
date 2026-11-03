@@ -66,7 +66,7 @@ class PostgresAssetCatalogue:
 
     def remove(self, kind: AssetKind, asset_id: uuid.UUID) -> bool:
         result = cast(
-            "CursorResult[Any]",
+            CursorResult[Any],
             self._session.execute(
                 text(f"delete from {TABLES[kind]} where project_id = :p and id = :id"),
                 {"p": self._project, "id": asset_id},
