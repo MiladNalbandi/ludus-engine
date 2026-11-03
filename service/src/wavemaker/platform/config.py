@@ -18,6 +18,15 @@ class Settings(BaseSettings):
 
     plugins_directory: Path | None = None
 
+    # Where `wavemaker plugin install` finds packages: a directory holding index.json and the
+    # archives it lists. Read only by the install command, never by a running service.
+    plugin_registry: Path | None = None
+
+    # The public keys a plugin may be signed with, one PEM file per key. No default and no
+    # fallback: unset trusts nobody, so nothing can be installed until somebody decides whose
+    # signature counts.
+    trusted_keys_directory: Path | None = None
+
     # Where uploaded files are written: audio, sprites, anything an app stores as bytes rather
     # than rows. No default, for the same reason as the plugins directory. Unset means this
     # service stores no files, and the routes that would need it say so with a 503; a guessed
