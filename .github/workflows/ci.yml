@@ -335,6 +335,55 @@ jobs:
           LUDUS_E2E_PASSWORD: ci-not-a-real-password
         run: npm run e2e
 
+      # R8's second half, from #76: installing a plugin with a ui/ folder adds its screen to the
+      # editor with no change to the editor, and removing the plugin removes it. The spec
+      # installs and removes the plugin itself, and the service reads its plugins only when it
+      # starts, so the spec runs and restarts a service of its own rather than the compose one.
+      # It is given what that needs: a Python with the service installed, a PostgreSQL of its
+      # own, and an editor built from source and pointed at the address the spec serves on.
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: '3.12'
+
+      - name: A plugin brings its own screen, in a browser
+        env:
+          CI: 'true'
+          PLUGIN_SERVICE: http://127.0.0.1:8000
+          PLUGIN_EDITOR: http://localhost:3001
+        run: |
+          python -m venv /tmp/wavemaker
+          /tmp/wavemaker/bin/pip install -q -e service
+
+          docker run -d --name plugin-ui-db -e POSTGRES_PASSWORD=ci-not-a-real-password \
+            -p 127.0.0.1:5433:5432 postgres:16-alpine > /dev/null
+          # Over TCP, inside the container: during its first start PostgreSQL listens on a
+          # socket only, so a socket check would pass before the service could connect.
+          for i in $(seq 1 60); do
+            docker exec plugin-ui-db pg_isready -q -h 127.0.0.1 -U postgres && break
+            sleep 1
+          done
+
+          cd editor
+          LUDUS_ENGINE_URL="$PLUGIN_SERVICE" npm run build
+          LUDUS_ENGINE_URL="$PLUGIN_SERVICE" nohup npx next start -p 3001 > /tmp/plugin-editor.log 2>&1 &
+          for i in $(seq 1 60); do
+            curl -fsS "$PLUGIN_EDITOR/login" > /dev/null 2>&1 && break
+            sleep 1
+          done
+
+          LUDUS_E2E_SERVICE_PYTHON=/tmp/wavemaker/bin/python \
+          WAVEMAKER_DATABASE_URL=postgresql+psycopg://postgres:ci-not-a-real-password@127.0.0.1:5433/postgres \
+          WAVEMAKER_JWT_SECRET="$(openssl rand -base64 48 | tr -d '\n')" \
+          LUDUS_EDITOR_URL="$PLUGIN_EDITOR" \
+          LUDUS_ENGINE_URL="$PLUGIN_SERVICE" \
+          LUDUS_E2E_EMAIL=ci@example.test \
+          LUDUS_E2E_PASSWORD=ci-not-a-real-password \
+            npx playwright test e2e/plugin-ui.spec.ts
+
+      - name: The plugin editor's log, when it failed
+        if: failure()
+        run: cat /tmp/plugin-editor.log || true
+
       - name: The browser trace, when it failed
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
@@ -414,4 +463,6 @@ jobs:
 
       - name: Tear down
         if: always()
-        run: $COMPOSE down -v
+        run: |
+          docker rm -f plugin-ui-db > /dev/null 2>&1 || true
+          $COMPOSE down -v
