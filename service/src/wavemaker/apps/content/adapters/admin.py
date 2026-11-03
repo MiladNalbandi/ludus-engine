@@ -18,14 +18,15 @@ from collections.abc import Iterator
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Request, Response
 
 from wavemaker.apps.content.adapters import schema
 from wavemaker.apps.content.adapters.postgres import PostgresWaveRepository
 from wavemaker.apps.content.application.ports import WaveStore
-from wavemaker.apps.content.domain.bulk import BulkError, split_documents
+from wavemaker.apps.content.domain.bulk import BulkError, read_batch_ids, split_documents
 from wavemaker.apps.content.domain.document import DocumentError, OrderTaken, WaveDocument
-from wavemaker.apps.content.domain.wave import LevelSummary, WaveSummary
+from wavemaker.apps.content.domain.level import LevelDraft
+from wavemaker.apps.content.domain.wave import LevelSummary, Rejected, WaveSummary
 from wavemaker.platform.identity.http import requires
 from wavemaker.platform.identity.tokens import Role
 
@@ -210,14 +211,93 @@ def _published(store: WaveStore, wave_id: str, published: bool) -> dict[str, Any
     return _summary(changed)
 
 
-@router.get("/wave-levels", dependencies=[READER])
+async def _json(request: Request) -> Any:
+    """A body that is JSON, or a 400. Whether it is an acceptable one is a 422, decided later."""
+    raw = await request.body()
+    try:
+        return json.loads(raw)
+    except (json.JSONDecodeError, UnicodeDecodeError) as broken:
+        raise HTTPException(status_code=400, detail=f"This is not JSON: {broken}") from broken
+
+
+@router.post("/waves/batch-delete", dependencies=[WRITER], operation_id="batchDeleteWaves")
+async def batch_delete_waves(request: Request, store: Store) -> dict[str, int]:
+    """All or nothing. An id that is not there refuses the batch rather than being skipped:
+    "delete these six" is a statement about a known set, and a caller with a typo has a
+    different catalogue than they think — better learned now than from the five that went."""
+    try:
+        ids = read_batch_ids(await _json(request))
+        return {"deleted": store.delete_all(ids)}
+    except Rejected as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from refused
+
+
+# --- levels -----------------------------------------------------------------------------------
+
+# The contract names the path parameter `id`. Spelled `level_id` in Python so it does not
+# shadow the builtin, and aliased so the served path is the contract's.
+LevelId = Annotated[str, Path(alias="id")]
+
+
+async def _draft(request: Request) -> LevelDraft:
+    try:
+        return LevelDraft.read(await _json(request))
+    except Rejected as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from refused
+
+
+def _found(level: LevelSummary | None) -> dict[str, Any]:
+    if level is None:
+        # A malformed id lands here too. Saying "malformed" would tell a caller which ids are
+        # well formed, and there is nothing they could do with that.
+        raise HTTPException(status_code=404, detail="No such level.")
+    return _level(level)
+
+
+@router.get("/wave-levels", dependencies=[READER], operation_id="listWaveLevels")
 def list_wave_levels(store: Store) -> list[dict[str, Any]]:
     return [_level(level) for level in store.all_levels()]
 
 
-@router.post("/wave-levels/{level_id}/activate", dependencies=[WRITER])
-def activate_wave_level(level_id: str, store: Store) -> dict[str, Any]:
-    activated = store.activate_level(level_id)
-    if activated is None:
+@router.post(
+    "/wave-levels", dependencies=[WRITER], status_code=201, operation_id="createWaveLevel"
+)
+async def create_wave_level(request: Request, store: Store) -> dict[str, Any]:
+    """Waves in play order, drafts allowed. Creating a level never activates it."""
+    draft = await _draft(request)
+    try:
+        return _level(store.create_level(draft))
+    except Rejected as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from refused
+
+
+@router.get("/wave-levels/{id}", dependencies=[READER], operation_id="getWaveLevel")
+def get_wave_level(level_id: LevelId, store: Store) -> dict[str, Any]:
+    return _found(store.level(level_id))
+
+
+@router.put("/wave-levels/{id}", dependencies=[WRITER], operation_id="updateWaveLevel")
+async def update_wave_level(level_id: LevelId, request: Request, store: Store) -> dict[str, Any]:
+    """Rename and resequence. The wave list is replaced wholesale, in the order given."""
+    draft = await _draft(request)
+    try:
+        return _found(store.update_level(level_id, draft))
+    except Rejected as refused:
+        raise HTTPException(status_code=422, detail=str(refused)) from refused
+
+
+@router.delete(
+    "/wave-levels/{id}", dependencies=[WRITER], status_code=204, operation_id="deleteWaveLevel"
+)
+def delete_wave_level(level_id: LevelId, store: Store) -> Response:
+    """The waves stay; only their membership of this level goes."""
+    if not store.delete_level(level_id):
         raise HTTPException(status_code=404, detail="No such level.")
-    return _level(activated)
+    return Response(status_code=204)
+
+
+@router.post(
+    "/wave-levels/{id}/activate", dependencies=[WRITER], operation_id="activateWaveLevel"
+)
+def activate_wave_level(level_id: LevelId, store: Store) -> dict[str, Any]:
+    return _found(store.activate_level(level_id))
