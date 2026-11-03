@@ -34,20 +34,24 @@ def test_ac2_with_no_plugins_configured_only_the_built_in_apps_are_loaded() -> N
     """No plugins directory means no *installed* apps. The apps that ship are still there,
     because they are read by the same loader from the package's own apps directory."""
     with TestClient(create_app(Settings(plugins_directory=None))) as client:
-        assert client.get("/health").json()["apps"] == [{"name": "content", "version": "1.0.0"}]
+        assert client.get("/health").json()["apps"] == [
+            {"name": "content", "version": "1.0.0"},
+            {"name": "economy", "version": "1.0.0"},
+        ]
 
 
 def test_ac6_health_lists_every_loaded_app_with_its_version(tmp_path: Path) -> None:
     write_plugin(tmp_path, "inventory", '[plugin]\nname = "inventory"\nversion = "1.0.0"\n')
-    write_plugin(tmp_path, "economy", '[plugin]\nname = "economy"\nversion = "2.1.0"\n')
+    write_plugin(tmp_path, "leaderboard", '[plugin]\nname = "leaderboard"\nversion = "2.1.0"\n')
 
     with TestClient(create_app(Settings(plugins_directory=tmp_path))) as client:
         apps = client.get("/health").json()["apps"]
 
     assert apps == [
         {"name": "content", "version": "1.0.0"},
-        {"name": "economy", "version": "2.1.0"},
+        {"name": "economy", "version": "1.0.0"},
         {"name": "inventory", "version": "1.0.0"},
+        {"name": "leaderboard", "version": "2.1.0"},
     ], "installed plugins and built-in apps are one list, in name order"
 
 
