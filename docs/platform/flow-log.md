@@ -46,8 +46,62 @@ at the Python project, which is done.
 
 ## WaveMaker
 
-| R   | Flow                                              | Ended at | Criteria | Tokens |  Cost |
-| --- | ------------------------------------------------- | -------- | -------- | -----: | ----: |
-| —   | _(scaffold and config: done by hand, not a flow)_ | —        | —        |      0 | $0.00 |
+Every release shipped. Two kinds of agent did the work, and they are recorded separately because
+only one of them is billed by keel.
 
-Nothing has run yet. Each row is added as its flow finishes.
+### keel flows and side agents
+
+keel's own figures (`keel_budget`, `keel_flows`, `keel_agents`). **$9.69, 2,325,602 tokens, and
+nothing shipped through keel.**
+
+| Work | keel | Ended at | Tokens | Cost | Outcome |
+| --- | --- | --- | ---: | ---: | --- |
+| #70 R2c — level authoring | `harness` flow | failed at `check` | 2,064,949 | $8.16 | Nothing usable. Every failure was environmental: keel's container on omarchy has no Docker socket, so the PostgreSQL tests could not start. Stopped by hand; the cap had already been raised once from 500,000. |
+| The initiative, R2c → R9 | `goals-plan` flow | waiting at `plan_gate` | 83,203 | $0.49 | A sound plan. Its gate can only be answered by a person, in keel's Inbox. |
+| #72 R4 — inventory | side agent (Sonnet) | idle | — | $0.61 | Stopped to ask about R3, believing it unmerged: keel's clone had not fetched. Not used. |
+| #74 R6 — leaderboards | side agent (Sonnet) | idle | — | $0.44 | Same environment as #70; not used. |
+
+The side agents ran on Sonnet, not the Opus that was asked for: changing the project's model needs
+the owner's yes in keel's own form, and it was never given.
+
+### Claude Code sub-agents and hand-built releases
+
+On the owner's subscription, so they carry no keel cost; the token counts and durations are the
+agents' own. Each landed as one PR through branch protection, with every check green.
+
+| R | Built by | PR | Tokens | Time | Tests after |
+| --- | --- | --- | ---: | ---: | ---: |
+| R0 — core and plugin loader | hand | #64 | — | — | 30 |
+| R1a — content read side | hand | #66 | — | — | 75 |
+| R1b — PostgreSQL | hand | #67 | — | — | 99 |
+| R2a — identity | hand | #68 | — | — | 124 |
+| R2b — authoring, editor on Python | hand | #69 | — | — | 179 |
+| R3 — players and economy | sub-agent | #82 | 273,571 | 27 min | 306 |
+| R7 — media | sub-agent | #83 | 294,209 | 34 min | 446 |
+| R2c — level authoring (#70) | sub-agent | #84 | 226,088 | 23 min | 523 |
+| R4 — inventory | sub-agent | #86 | 327,371 | 34 min | 764 |
+| R6 — leaderboards and progression | sub-agent | #87 | 299,782 | 39 min | 940 |
+| R8 — editor shell, first half | sub-agent | #88 | 322,330 | 29 min | 155 editor |
+| R5 — publish and install a plugin | sub-agent | #89 | 378,686 | 69 min | 1,083 |
+| Rewards pay currency; #85 | sub-agent | #90 | 284,949 | 35 min | 1,158 |
+| R8 — plugin screens, second half | sub-agent | #91 | 355,645 | 29 min | 1,200 / 198 editor |
+| R9 — remove the Java | sub-agent | #92 | 470,727 | 43 min | 1,303 |
+
+The same ticket, both ways: **#70 cost keel $8.16 and 2.06 million tokens and shipped nothing; a
+sub-agent built it in 23 minutes and 226,088 tokens, with 77 tests, and it merged.**
+
+### What made keel expensive here
+
+All of it is the environment and setup, not the idea of keel, and it is written up as twelve
+proposed keel-v2 changes. The three that account for most of the cost:
+
+1. **No environment check before a flow builds.** keel retried an environment failure as if the
+   code were wrong, and asked for more budget to do it again.
+2. **keel's project clone on omarchy was 35 commits behind**, with nothing reporting it, so flows and
+   side agents decided from stale code.
+3. **Approvals this client could not show were reported as "you said no".**
+
+keel was still worth having on the way: its dependency gate found a critical Next.js vulnerability
+in the editor (#80), it caught a test signing key as a likely secret, and it kept every merged
+migration untouched — which is why parallel releases were joined with merge revisions (`0004m`,
+`0006m`) rather than by rewriting history.
