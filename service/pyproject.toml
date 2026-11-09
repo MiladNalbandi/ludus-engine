@@ -18,7 +18,7 @@ dependencies = [
     "referencing>=0.35.0",
     # Driven directly for uploads, so a file streams from the socket to its directory once.
     "python-multipart>=0.0.20",
-    "uvicorn[standard]>=0.30.0",
+    "uvicorn[standard]>=0.54.0",
     # Ed25519, to verify a plugin package was signed by a key this service trusts.
     "cryptography>=50.0.2",
 ]
