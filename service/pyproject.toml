@@ -17,7 +17,7 @@ dependencies = [
     # Imported directly by inventory, to build a registry that can never fetch a reference.
     "referencing>=0.35.0",
     # Driven directly for uploads, so a file streams from the socket to its directory once.
-    "python-multipart>=0.0.20",
+    "python-multipart>=0.0.33",
     "uvicorn[standard]>=0.30.0",
     # Ed25519, to verify a plugin package was signed by a key this service trusts.
     "cryptography>=50.0.2",
